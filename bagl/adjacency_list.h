@@ -6,9 +6,9 @@
 #include <unordered_map>
 #include <utility>
 
-#include "bagl/adjacency_iterator.h"
+#include "bagl/adjacency_range.h"
 #include "bagl/detail/adjlist_containers.h"
-#include "bagl/detail/adjlist_iterators.h"
+#include "bagl/detail/adjlist_ranges.h"
 #include "bagl/graph_concepts.h"
 #include "bagl/graph_mutability_traits.h"
 #include "bagl/more_property_maps.h"
@@ -214,8 +214,8 @@ struct tree_storage_traits<adj_list_as_tree_storage<OutEdgeListS, VertexListS, D
 template <typename VertexProperty, typename EdgeProperty, typename OutEdgeListS, typename VertexListS,
           typename DirectedS>
 struct tree_traits<adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperty, EdgeProperty>> {
-  using child_vertex_iterator =
-      typename adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperty, EdgeProperty>::adjacency_iterator;
+  using child_vertex_range =
+      typename adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperty, EdgeProperty>::adjacency_range;
 };
 
 #define BGL_ADJACENCY_LIST_ARGS \
@@ -690,7 +690,7 @@ class adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, 
   using edges_size_type = typename bidir_storage_type::edges_size_type;
   using degree_size_type = edges_size_type;
 
-  using vertex_iterator = typename bidir_storage_type::vertex_range;
+  using vertex_range = typename bidir_storage_type::vertex_range;
 
   using bidir_out_edge_range = typename bidir_storage_type::out_edge_range;
   using bidir_in_edge_range = typename bidir_storage_type::in_edge_range;

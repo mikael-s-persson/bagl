@@ -1,7 +1,7 @@
 // Copyright 2013-2024 Mikael Persson.
 
-#ifndef BAGL_BAGL_ADJLIST_ITERATORS_H_
-#define BAGL_BAGL_ADJLIST_ITERATORS_H_
+#ifndef BAGL_BAGL_ADJLIST_RANGES_H_
+#define BAGL_BAGL_ADJLIST_RANGES_H_
 
 #include <iterator>
 #include <ranges>
@@ -164,4 +164,4 @@ auto adjlist_undir_eiter_range(BidirEdgeRange&& r) {
 
 }  // namespace bagl::adjlist_detail
 
-#endif  // BAGL_BAGL_ADJLIST_ITERATORS_H_
+#endif  // BAGL_BAGL_ADJLIST_RANGES_H_

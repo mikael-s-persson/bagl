@@ -7,7 +7,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "bagl/detail/adjlist_iterators.h"
+#include "bagl/detail/adjlist_ranges.h"
 #include "bagl/detail/container_generators.h"
 #include "bagl/graph_selectors.h"  // for directed_s, undirected_s, bidirectional_s
 

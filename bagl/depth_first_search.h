@@ -7,6 +7,7 @@
 #define BAGL_BAGL_DEPTH_FIRST_SEARCH_H_
 
 #include <concepts>
+#include <ranges>
 #include <utility>
 #include <vector>
 
@@ -67,50 +68,53 @@ void depth_first_visit_impl(const G& g, graph_vertex_descriptor_t<G> u, V& vis, 
   using ColorValue = property_value_t<ColorMap>;
   static_assert(concepts::ColorValue<ColorValue>);
   using Color = color_traits<ColorValue>;
-  using Iter = graph_out_edge_iterator_t<G>;
-  using std::tuple<Vertex, std::optional<Edge>, Iter, Iter> VertexInfo;
+  using OutEdgeRange = graph_out_edge_range_t<G>;
+  using Iter = std::ranges::iterator_t<OutEdgeRange>;
+  using std::tuple<Vertex, std::optional<Edge>, OutEdgeRange, Iter> VertexInfo;
 
   std::optional<Edge> src_e;
-  Iter ei, ei_end;
+  OutEdgeRange er;
+  Iter ei;
   std::vector<VertexInfo> stack;
 
   // Possible optimization for vertex list graphs
-  // if constexpr (is_vertex_list_graph_v<G> && std::random_access_iterator<graph_vertex_iterator_t<G>>) {
-  //   auto v_rg = vertices(g);
-  //   stack.reserve(std::distance(v_rg.begin(), v_rg.end()));
+  // if constexpr (is_vertex_list_graph_v<G> && std::ranges::random_access_range<graph_vertex_range_t<G>>) {
+  //   stack.reserve(vertices(g).size());
   // }
 
   put(color, u, Color::gray());
   vis.discover_vertex(u, g);
-  std::tie(ei, ei_end) = out_edges(u, g);
+  er = out_edges(u, g);
   if (func(u, g)) {
     // If this vertex terminates the search, we push empty range
-    stack.emplace_back(u, std::nullopt, ei_end, ei_end);
+    stack.emplace_back(u, std::nullopt, er, er.end());
   } else {
-    stack.emplace_back(u, std::nullopt, ei, ei_end);
+    stack.emplace_back(u, std::nullopt, er, er.begin());
   }
   while (!stack.empty()) {
-    std::tie(u, src_e, ei, ei_end) = stack.back();
+    std::tie(u, src_e, er, ei) = stack.back();
     stack.pop_back();
     // finish_edge has to be called here, not after the
     // loop. Think of the pop as the return from a recursive call.
     if (src_e.has_value()) {
       invoke_finish_edge(vis, src_e.value(), g);
     }
-    while (ei != ei_end) {
+    while (ei != er.end()) {
       Vertex v = target(*ei, g);
       vis.examine_edge(*ei, g);
       ColorValue v_color = get(color, v);
       if (v_color == Color::white()) {
         vis.tree_edge(*ei, g);
         src_e = *ei;
-        stack.emplace_back(u, src_e, ++ei, ei_end);
+        stack.emplace_back(u, src_e, er, ++ei);
         u = v;
         put(color, u, Color::gray());
         vis.discover_vertex(u, g);
-        std::tie(ei, ei_end) = out_edges(u, g);
+        er = out_edges(u, g);
         if (func(u, g)) {
-          ei = ei_end;
+          ei = er.end();
+        } else {
+          ei = er.begin();
         }
       } else {
         if (v_color == Color::gray()) {

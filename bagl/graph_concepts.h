@@ -7,6 +7,7 @@
 #define BAGL_BAGL_GRAPH_CONCEPTS_H_
 
 #include <concepts>
+#include <ranges>
 #include <type_traits>
 
 #include "bagl/buffer_concepts.h"
@@ -22,15 +23,20 @@ concept Graph = std::regular<graph_vertex_descriptor_t<G>> && std::semiregular<g
     std::semiregular<graph_directed_category_t<G>> && std::semiregular<graph_edge_parallel_category_t<G>> &&
     std::semiregular<graph_traversal_category_t<G>>;
 
+template <typename R, typename G>
+concept EdgeRange = std::ranges::forward_range<R> && std::convertible_to<std::ranges::range_value_t<R>, graph_edge_descriptor_t<G>>;
+
+template <typename R, typename G>
+concept VertexRange = std::ranges::forward_range<R> && std::convertible_to<std::ranges::range_value_t<R>, graph_vertex_descriptor_t<G>>;
+
 template <typename G>
 concept IncidenceGraph =
-    Graph<G> && std::regular<graph_edge_descriptor_t<G>> && std::forward_iterator<graph_out_edge_iterator_t<G>> &&
+    Graph<G> && std::regular<graph_edge_descriptor_t<G>> &&
     !std::is_same_v<graph_degree_size_type_t<G>, void> &&
     std::convertible_to<graph_traversal_category_t<G>, incidence_graph_tag> &&
-    requires(const G& g, graph_vertex_descriptor_t<G> u, graph_out_edge_iterator_t<G>& ei) {
-  std::tie(ei, ei) = out_edges(u, g);
+    requires(const G& g, graph_vertex_descriptor_t<G> u) {
+  { out_edges(u, g) } -> EdgeRange<G>;
   { out_degree(u, g) } -> std::integral;
-  { *ei } -> std::convertible_to<graph_edge_descriptor_t<G>>;
 }
 &&requires(const G& g, graph_edge_descriptor_t<G> e) {
   { source(e, g) } -> std::convertible_to<graph_vertex_descriptor_t<G>>;
@@ -38,39 +44,35 @@ concept IncidenceGraph =
 };
 
 template <typename G>
-concept BidirectionalGraph = IncidenceGraph<G> && std::forward_iterator<graph_in_edge_iterator_t<G>> &&
+concept BidirectionalGraph = IncidenceGraph<G> &&
     std::convertible_to<graph_traversal_category_t<G>, bidirectional_graph_tag> &&
-    requires(const G& g, graph_vertex_descriptor_t<G> u, graph_in_edge_iterator_t<G>& ei) {
-  std::tie(ei, ei) = in_edges(u, g);
+    requires(const G& g, graph_vertex_descriptor_t<G> u) {
+  { in_edges(u, g) } -> EdgeRange<G>;
   { in_degree(u, g) } -> std::integral;
   { degree(u, g) } -> std::integral;
-  { *ei } -> std::convertible_to<graph_edge_descriptor_t<G>>;
 };
 
 template <typename G>
-concept AdjacencyGraph = Graph<G> && std::forward_iterator<graph_adjacency_iterator_t<G>> &&
+concept AdjacencyGraph = Graph<G> &&
     std::convertible_to<graph_traversal_category_t<G>, adjacency_graph_tag> &&
-    requires(const G& g, graph_vertex_descriptor_t<G> u, graph_adjacency_iterator_t<G>& ui) {
-  std::tie(ui, ui) = adjacent_vertices(u, g);
-  { *ui } -> std::convertible_to<graph_vertex_descriptor_t<G>>;
+    requires(const G& g, graph_vertex_descriptor_t<G> u) {
+  { adjacent_vertices(u, g) } -> VertexRange<G>;
 };
 
 template <typename G>
-concept VertexListGraph = Graph<G> && std::forward_iterator<graph_vertex_iterator_t<G>> &&
+concept VertexListGraph = Graph<G> &&
     std::integral<graph_vertices_size_type_t<G>> &&
     std::convertible_to<graph_traversal_category_t<G>, vertex_list_graph_tag> &&
-    requires(const G& g, graph_vertex_iterator_t<G>& ui) {
-  std::tie(ui, ui) = vertices(g);
-  { *ui } -> std::convertible_to<graph_vertex_descriptor_t<G>>;
+    requires(const G& g) {
+  { vertices(g) } -> VertexRange<G>;
 };
 
 template <typename G>
 concept EdgeListGraph = Graph<G> && std::regular<graph_edge_descriptor_t<G>> &&
-    std::forward_iterator<graph_edge_iterator_t<G>> && std::integral<graph_edges_size_type_t<G>> &&
+    std::integral<graph_edges_size_type_t<G>> &&
     std::convertible_to<graph_traversal_category_t<G>, edge_list_graph_tag> &&
-    requires(const G& g, graph_edge_iterator_t<G>& ei) {
-  std::tie(ei, ei) = edges(g);
-  { *ei } -> std::convertible_to<graph_edge_descriptor_t<G>>;
+    requires(const G& g) {
+  { edges(g) } -> EdgeRange<G>;
   { num_edges(g) } -> std::integral;
 } && requires(const G& g, graph_edge_descriptor_t<G> e) {
   { source(e, g) } -> std::convertible_to<graph_vertex_descriptor_t<G>>;
@@ -105,8 +107,7 @@ struct dummy_edge_predicate {
 
 template <typename G>
 concept MutableIncidenceGraph = MutableGraph<G> &&
-    requires(G& g, graph_vertex_descriptor_t<G> u, graph_out_edge_iterator_t<G> ei) {
-  remove_edge(ei, g);
+    requires(G& g, graph_vertex_descriptor_t<G> u) {
   remove_out_edge_if(
       u, [](graph_edge_descriptor_t<G>) { return false; }, g);
 };

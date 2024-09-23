@@ -13,13 +13,13 @@
 
 namespace bagl {
 
-template <typename Graph, typename Node, typename ChIt, typename Derived>
+template <typename Graph, typename Node, typename ChRg, typename Derived>
 class graph_as_tree_base {
   using Tree = Derived;
 
  public:
   using node_descriptor = Node;
-  using children_iterator = ChIt;
+  using children_range = ChRg;
 
   graph_as_tree_base(Graph& g, Node root) : g_(g), root_(root) {}
 
@@ -43,10 +43,10 @@ class graph_as_tree_base {
 struct graph_as_tree_tag {};
 
 template <typename Graph, typename ParentMap, typename Node = graph_vertex_descriptor_t<Graph>,
-          typename ChIt = graph_adjacency_iterator_t<Graph> >
-class graph_as_tree : public graph_as_tree_base<Graph, Node, ChIt, graph_as_tree<Graph, ParentMap, Node, ChIt> > {
+          typename ChRg = graph_adjacency_range_t<Graph> >
+class graph_as_tree : public graph_as_tree_base<Graph, Node, ChRg, graph_as_tree<Graph, ParentMap, Node, ChRg> > {
   using self = graph_as_tree;
-  using super = graph_as_tree_base<Graph, Node, ChIt, self>;
+  using super = graph_as_tree_base<Graph, Node, ChRg, self>;
 
  public:
   graph_as_tree(Graph& g, Node root) : super(g, root) {}

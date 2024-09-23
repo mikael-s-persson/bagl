@@ -13,31 +13,31 @@ namespace bagl {
 namespace tree_traits_detail {
 
 BAGL_GRAPH_HAS_TRAIT_MEMBER(node_descriptor, void)
-BAGL_GRAPH_HAS_TRAIT_MEMBER(children_iterator, void)
+BAGL_GRAPH_HAS_TRAIT_MEMBER(children_range, void)
 
 }  // namespace tree_traits_detail
 
 template <typename T>
 struct tree_traits {
   using node_descriptor = tree_traits_detail::get_node_descriptor_or_not<G>;
-  using children_iterator = tree_traits_detail::get_children_iterator_or_not<G>;
+  using children_range = tree_traits_detail::get_children_range_or_not<G>;
 };
 template <typename T>
 using tree_node_descriptor_t = typename tree_traits<T>::node_descriptor;
 template <typename T>
-using tree_children_iterator_t = typename tree_traits<T>::children_iterator;
+using tree_children_range_t = typename tree_traits<T>::children_range;
 
 template <typename Tree, typename TreeVisitor>
 void traverse_tree(tree_node_descriptor_t<Tree> v, Tree& t, TreeVisitor visitor) {
   using StackElem =
-      std::tuple<tree_node_descriptor_t<Tree>, bool, tree_children_iterator_t<Tree>, tree_children_iterator_t<Tree>>;
+      std::tuple<tree_node_descriptor_t<Tree>, bool, tree_children_range_t<Tree>, std::ranges::iterator_t<tree_children_range_t<Tree>>>;
   std::vector<StackElem> stack;
-  auto [vi, vi_end] = children(v, t);
-  stack.emplace_back(v, false, vi, vi_end);
+  auto vr = children(v, t);
+  stack.emplace_back(v, false, vr, vr.begin());
   visitor.preorder(v, t);
   while (!stack.empty()) {
-    auto& [u, ud, ui, ui_end] = stack.back();
-    if (ui == ui_end) {
+    auto& [u, ud, ur, ui] = stack.back();
+    if (ui == ur.end()) {
       if (!ud) {
         visitor.inorder(u, t);
       }
@@ -50,9 +50,9 @@ void traverse_tree(tree_node_descriptor_t<Tree> v, Tree& t, TreeVisitor visitor)
       continue;
     }
     auto w = *ui;
-    ui++;
-    auto [wi, wi_end] = children(w, t);
-    stack.emplace_back(w, false, wi, wi_end);
+    ++ui;
+    auto wr = children(w, t);
+    stack.emplace_back(w, false, wr, wr.begin());
     visitor.preorder(w, t);
   }
 }

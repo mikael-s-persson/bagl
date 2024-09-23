@@ -21,6 +21,7 @@ class null_archetype {
   null_archetype& operator=(const null_archetype&) = default;
   null_archetype(null_archetype&&)  noexcept = default;
   null_archetype& operator=(null_archetype&&)  noexcept = default;
+  ~null_archetype() = default;
 
  public:
   explicit null_archetype(dummy_constructor /*unused*/) {}
@@ -28,26 +29,6 @@ class null_archetype {
 
 struct null_graph_archetype : public null_archetype<> {
   struct traversal_category {};
-};
-
-template <class T, int I = 0>
-class input_iterator_archetype {
- private:
-  using self = input_iterator_archetype;
- public:
-  using iterator_category = std::input_iterator_tag;
-  using value_type = T;
-  struct reference {
-    // NOLINTNEXTLINE
-    operator const value_type&() const { return std::declval<T>(); }
-  };
-  using pointer = const T*;
-  using difference_type = std::ptrdiff_t;
-  bool operator==(const self&) const { return true; }
-  bool operator!=(const self&) const { return true; }
-  reference operator*() const { return reference(); }
-  self& operator++() { return *this; }
-  self operator++(int) { return *this; }
 };
 }  // namespace graph_archetypes_detail
 
@@ -71,15 +52,15 @@ struct incidence_graph_archetype : public Base
         bool operator==(const edge_descriptor&) const { return false; }
         bool operator!=(const edge_descriptor&) const { return false; }
     };
-    using out_edge_iterator = graph_archetypes_detail::input_iterator_archetype< edge_descriptor >;
+    using out_edge_range =  std::ranges::single_view<edge_descriptor >;
 
     using directed_category = Directed;
     using edge_parallel_category = ParallelCategory;
 
-    using adjacency_iterator = void;
-    using in_edge_iterator = void;
-    using vertex_iterator = void;
-    using edge_iterator = void;
+    using adjacency_range = void;
+    using in_edge_range = void;
+    using vertex_range = void;
+    using edge_range = void;
 
     static vertex_descriptor null_vertex() { return vertex_descriptor(); }
 };
@@ -101,8 +82,8 @@ V target(
 template < typename V, typename D, typename P, typename B >
 auto out_edges(const V&, const incidence_graph_archetype< V, D, P, B >&)
 {
-    using Iter = typename incidence_graph_archetype< V, D, P, B >::out_edge_iterator;
-    return std::pair{Iter{}, Iter{}};
+    using Rg = typename incidence_graph_archetype< V, D, P, B >::out_edge_range;
+    return Rg{{}};
 }
 
 template < typename V, typename D, typename P, typename B >
@@ -125,15 +106,15 @@ struct adjacency_graph_archetype : public Base
     using vertices_size_type = unsigned int;
     using edges_size_type = unsigned int;
     using edge_descriptor = void;
-    using adjacency_iterator = graph_archetypes_detail::input_iterator_archetype< Vertex >;
+    using adjacency_range = std::ranges::single_view< Vertex >;
 
     using directed_category = Directed;
     using edge_parallel_category = ParallelCategory;
 
-    using in_edge_iterator = void;
-    using out_edge_iterator = void;
-    using vertex_iterator = void;
-    using edge_iterator = void;
+    using in_edge_range = void;
+    using out_edge_range = void;
+    using vertex_range = void;
+    using edge_range = void;
 
     static vertex_descriptor null_vertex() { return vertex_descriptor(); }
 };
@@ -141,8 +122,8 @@ struct adjacency_graph_archetype : public Base
 template < typename V, typename D, typename P, typename B >
 auto adjacent_vertices(const V&, const adjacency_graph_archetype< V, D, P, B >&)
 {
-    using Iter = typename adjacency_graph_archetype< V, D, P, B >::adjacency_iterator;
-    return std::pair{Iter{}, Iter{}};
+    using Rg = typename adjacency_graph_archetype< V, D, P, B >::adjacency_range;
+    return Rg{{}};
 }
 
 template < typename V, typename D, typename P, typename B >
@@ -167,18 +148,18 @@ struct vertex_list_graph_archetype : public Base
     using vertex_descriptor = Vertex;
     using degree_size_type = unsigned int;
     using edge_descriptor = typename Incidence::edge_descriptor;
-    using out_edge_iterator = typename Incidence::out_edge_iterator;
-    using adjacency_iterator = typename Adjacency::adjacency_iterator;
+    using out_edge_range = typename Incidence::out_edge_range;
+    using adjacency_range = typename Adjacency::adjacency_range;
 
-    using vertex_iterator = graph_archetypes_detail::input_iterator_archetype< Vertex >;
+    using vertex_range = std::ranges::single_view< Vertex >;
     using vertices_size_type = unsigned int;
     using edges_size_type = unsigned int;
 
     using directed_category = Directed;
     using edge_parallel_category = ParallelCategory;
 
-    using in_edge_iterator = void;
-    using edge_iterator = void;
+    using in_edge_range = void;
+    using edge_range = void;
 
     static vertex_descriptor null_vertex() { return vertex_descriptor(); }
 };
@@ -186,8 +167,8 @@ struct vertex_list_graph_archetype : public Base
 template < typename V, typename D, typename P, typename B >
 auto vertices(const vertex_list_graph_archetype< V, D, P, B >&)
 {
-    using Iter = typename vertex_list_graph_archetype< V, D, P, B >::vertex_iterator;
-    return std::pair{Iter{}, Iter{}};
+    using Rg = typename vertex_list_graph_archetype< V, D, P, B >::vertex_range;
+    return Rg{{}};
 }
 
 template < typename V, typename D, typename P, typename B >

@@ -2,10 +2,9 @@
 // Authors: Andrew Lumsdaine, Lie-Quan Lee, Jeremy G. Siek
 // Copyright 2024 Mikael Persson - Modernized to C++20
 
-#ifndef BAGL_BAGL_ADJACENCY_ITERATOR_H_
-#define BAGL_BAGL_ADJACENCY_ITERATOR_H_
+#ifndef BAGL_BAGL_ADJACENCY_RANGE_H_
+#define BAGL_BAGL_ADJACENCY_RANGE_H_
 
-#include <iterator>
 #include <ranges>
 
 #include "bagl/graph_traits.h"
@@ -24,4 +23,4 @@ auto inv_adjacency_range(InEdgeRange&& r, const Graph& g) {
 
 }  // namespace bagl
 
-#endif  // BAGL_BAGL_ADJACENCY_ITERATOR_H_
+#endif  // BAGL_BAGL_ADJACENCY_RANGE_H_
