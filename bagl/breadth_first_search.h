@@ -39,7 +39,7 @@ template <concepts::IncidenceGraph G, class Buffer, concepts::BFSVisitor<G> V,
 void breadth_first_visit(const G& g, SourceIterator sources_begin, SourceIterator sources_end, Buffer& Q, V vis,
                          ColorMap color) {
   using Vertex = graph_vertex_descriptor_t<G>;
-  using ColorValue = property_value_t<ColorMap>;
+  using ColorValue = property_traits_value_t<ColorMap>;
   using Color = color_traits<ColorValue>;
 
   for (; sources_begin != sources_end; ++sources_begin) {
@@ -86,7 +86,7 @@ template <concepts::VertexListGraph G, class SourceIterator, class Buffer, conce
 void breadth_first_search(const G& g, SourceIterator sources_begin, SourceIterator sources_end, Buffer& Q, V vis,
                           ColorMap color) {
   // Initialization
-  using ColorValue = property_value_t<ColorMap>;
+  using ColorValue = property_traits_value_t<ColorMap>;
   using Color = color_traits<ColorValue>;
   for (auto v : vertices(g)) {
     vis.initialize_vertex(v, g);
@@ -104,8 +104,8 @@ void breadth_first_search(const G& g, graph_vertex_descriptor_t<G> s, Buffer& Q,
 template <class Visitors = null_visitors>
 class bfs_visitor {
  public:
-  bfs_visitor() {}
-  bfs_visitor(Visitors vis) : vis_(vis) {}
+  bfs_visitor() = default;
+  explicit bfs_visitor(Visitors vis) : vis_(vis) {}
 
   template <class Vertex, class Graph>
   void initialize_vertex(Vertex u, Graph& g) {

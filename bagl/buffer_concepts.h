@@ -9,7 +9,7 @@
 #include "bagl/has_trait_member.h"
 #include "bagl/property_map.h"
 
-namespace bagl {
+namespace bagl::concepts {
 
 namespace buffer_concepts_detail {
 
@@ -46,6 +46,6 @@ concept KeyedUpdatableQueue = UpdatableQueue<Q> &&
   { q.keys() } -> std::convertible_to<buffer_concepts_detail::get_key_map_or_not<Q>>;
 };
 
-}  // namespace bagl
+}  // namespace bagl::concepts
 
 #endif  // BAGL_BAGL_BUFFER_CONCEPTS_H_

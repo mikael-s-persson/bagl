@@ -183,9 +183,9 @@ class named_graph {
   /// Construct an instance of the named graph mixin, using the given
   /// function object to extract a name from the bundled property
   /// associated with a vertex.
-  explicit named_graph(const extract_name_type& extract = extract_name_type(),
-                       const vertex_constructor_type& vertex_constructor = vertex_constructor_type())
-      : extract(extract), named_vertices(), vertex_constructor(vertex_constructor) {}
+  explicit named_graph(const extract_name_type& a_extract = extract_name_type(),
+                       const vertex_constructor_type& a_vertex_constructor = vertex_constructor_type())
+      : extract(a_extract), named_vertices(), vertex_constructor(a_vertex_constructor) {}
 
   /// Notify the named_graph that we have added the given vertex. The
   /// name of the vertex will be added to the mapping.
@@ -202,8 +202,8 @@ class named_graph {
                   "would need to be completely rebuilt after each deletion.  See "
                   "https://svn.boost.org/trac/boost/ticket/7863 for more information "
                   "and a test case.");
-    const auto& vertex_name = extract_name(derived()[vertex]);
-    named_vertices.erase(vertex_name);
+    const auto& vname = extract_name(derived()[vertex]);
+    named_vertices.erase(vname);
   }
 
   /// Notify the named_graph that we are clearing the graph.

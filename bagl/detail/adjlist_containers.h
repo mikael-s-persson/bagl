@@ -60,15 +60,6 @@ struct adjlist_edge_stored_type {
 
 template <typename VertexListS, typename OutEdgeListS, typename DirectedS, typename VertexProperties,
           typename EdgeProperties>
-void swap(adjlist_edge_stored_type<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>& lhs,
-          adjlist_edge_stored_type<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>& rhs) {
-  using std::swap;
-  swap(lhs.target, rhs.target);
-  swap(lhs.data, rhs.data);
-}
-
-template <typename VertexListS, typename OutEdgeListS, typename DirectedS, typename VertexProperties,
-          typename EdgeProperties>
 std::size_t hash_value(
     const adjlist_edge_stored_type<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>& ep) {
   return desc_get_hash(ep.target);

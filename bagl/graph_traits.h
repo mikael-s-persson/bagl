@@ -247,6 +247,12 @@ T target(std::pair<T, T> p, const G&) {
   return p.second;
 }
 
+template <typename G>
+auto get_default_starting_vertex(const G& g) {
+  auto v_rg = vertices(g);
+  return (v_rg.empty()) ? graph_traits<G>::null_vertex() : *v_rg.begin();
+}
+
 }  // namespace bagl
 
 #endif  // BAGL_BAGL_GRAPH_TRAITS_H_

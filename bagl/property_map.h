@@ -52,20 +52,20 @@ using property_traits_category_t = typename property_traits<PA>::category;
 // property_traits category tags
 
 namespace property_map_detail {
-enum ePropertyMapID { READABLE_PA, WRITABLE_PA, READ_WRITE_PA, LVALUE_PA, OP_BRACKET_PA, RAND_ACCESS_ITER_PA, LAST_PA };
+enum e_property_map_id { readable_pa, writable_pa, read_write_pa, lvalue_pa, op_bracket_pa, rand_access_iter_pa, last_pa };
 }
 struct readable_property_map_tag {
-  static constexpr auto id = property_map_detail::READABLE_PA;
+  static constexpr auto id = property_map_detail::readable_pa;
 };
 struct writable_property_map_tag {
-  static constexpr auto id = property_map_detail::WRITABLE_PA;
+  static constexpr auto id = property_map_detail::writable_pa;
 };
 struct read_write_property_map_tag : public readable_property_map_tag, public writable_property_map_tag {
-  static constexpr auto id = property_map_detail::READ_WRITE_PA;
+  static constexpr auto id = property_map_detail::read_write_pa;
 };
 
 struct lvalue_property_map_tag : public read_write_property_map_tag {
-  static constexpr auto id = property_map_detail::LVALUE_PA;
+  static constexpr auto id = property_map_detail::lvalue_pa;
 };
 
 //=========================================================================
@@ -89,12 +89,12 @@ struct property_traits<const T*> {
 // V must be convertible to T
 template <typename T, typename V>
 void put(T* pa, std::ptrdiff_t k, V&& val) {
-  pa[k] = std::forward<V>(val);
+  pa[k] = std::forward<V>(val); // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 }
 
 template <typename T>
 const T& get(const T* pa, std::ptrdiff_t k) {
-  return pa[k];
+  return pa[k]; // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 }
 
 //=========================================================================
@@ -121,7 +121,7 @@ concept ReadWritePropertyMap = std::convertible_to<property_traits_category_t<PM
 template <typename PMap, typename Key>
 concept LvaluePropertyMap = std::convertible_to<property_traits_category_t<PMap>, lvalue_property_map_tag> &&
     ReadablePropertyMap<PMap, Key> && requires(PMap& pmap, const Key& k) {
-  { pmap[k] } -> std::same_as<property_traits_value_t<PMap>&> || std::same_as<const property_traits_value_t<PMap>&>;
+  { pmap[k] } -> std::convertible_to<const property_traits_value_t<PMap>&>;
 };
 
 template <typename PMap, typename Key>
@@ -140,7 +140,7 @@ struct readable_property_map_archetype {
   using category = readable_property_map_tag;
 };
 template <typename K, typename V>
-const V& get(const readable_property_map_archetype<K, V>&, const K&) {
+const V& get(const readable_property_map_archetype<K, V>& /*unused*/, const K& /*unused*/) {
   return std::declval<V>();
 }
 
@@ -152,7 +152,7 @@ struct writable_property_map_archetype {
   using category = writable_property_map_tag;
 };
 template <typename K, typename V, std::convertible_to<V> U>
-void put(const writable_property_map_archetype<K, V>&, const K&, U&&) {}
+void put(const writable_property_map_archetype<K, V>& /*unused*/, const K& /*unused*/, U&& /*unused*/) {}
 
 template <typename KeyArchetype, typename ValueArchetype>
 struct read_write_property_map_archetype : readable_property_map_archetype<KeyArchetype, ValueArchetype>,
@@ -169,7 +169,7 @@ struct lvalue_property_map_archetype : readable_property_map_archetype<KeyArchet
   using value_type = ValueArchetype;
   using reference = const ValueArchetype&;
   using category = lvalue_property_map_tag;
-  const value_type& operator[](const key_type&) const { return std::declval<value_type>(); }
+  const value_type& operator[](const key_type& /*unused*/) const { return std::declval<value_type>(); }
 };
 
 template <typename KeyArchetype, typename ValueArchetype>
@@ -179,7 +179,7 @@ struct mutable_lvalue_property_map_archetype : readable_property_map_archetype<K
   using value_type = ValueArchetype;
   using reference = ValueArchetype&;
   using category = lvalue_property_map_tag;
-  value_type& operator[](const key_type&) const { return std::declval<value_type>(); }
+  value_type& operator[](const key_type& /*unused*/) const { return std::declval<value_type>(); }
 };
 
 template <typename T>
@@ -204,7 +204,7 @@ void put(const put_get_helper<PropertyMap>& pa, const K& k, U&& u) {
 // Adapter to turn a RandomAccessIterator into a property map
 
 template <std::random_access_iterator RandomAccessIterator, typename IndexMap>
-requires ReadablePropertyMap<IndexMap, property_traits_key_t<IndexMap>>
+requires concepts::ReadablePropertyMap<IndexMap, property_traits_key_t<IndexMap>>
 class iterator_property_map : public put_get_helper<iterator_property_map<RandomAccessIterator, IndexMap>> {
  public:
   using key_type = property_traits_key_t<IndexMap>;
@@ -212,7 +212,7 @@ class iterator_property_map : public put_get_helper<iterator_property_map<Random
   using value_type = std::decay_t<reference>;
   using category = lvalue_property_map_tag;
 
-  iterator_property_map(RandomAccessIterator iter = RandomAccessIterator(), IndexMap index = IndexMap())
+  explicit iterator_property_map(RandomAccessIterator iter = RandomAccessIterator(), IndexMap index = IndexMap())
       : iter_(std::move(iter)), index_(std::move(index)) {}
   reference operator[](const key_type& k) const { return *(iter_ + get(index_, k)); }
 
@@ -222,13 +222,13 @@ class iterator_property_map : public put_get_helper<iterator_property_map<Random
 };
 
 template <std::random_access_iterator RAIter, typename IndexMap>
-requires ReadablePropertyMap<IndexMap, property_traits_key_t<IndexMap>>
+requires concepts::ReadablePropertyMap<IndexMap, property_traits_key_t<IndexMap>>
 auto make_iterator_property_map(RAIter iter, IndexMap id) {
   return iterator_property_map<RAIter, IndexMap>(std::move(iter), std::move(id));
 }
 
 template <std::random_access_iterator RandomAccessIterator, typename IndexMap>
-requires ReadablePropertyMap<IndexMap, property_traits_key_t<IndexMap>>
+requires concepts::ReadablePropertyMap<IndexMap, property_traits_key_t<IndexMap>>
 class safe_iterator_property_map : public put_get_helper<safe_iterator_property_map<RandomAccessIterator, IndexMap>> {
  public:
   using key_type = property_traits_key_t<IndexMap>;
@@ -236,10 +236,10 @@ class safe_iterator_property_map : public put_get_helper<safe_iterator_property_
   using value_type = std::decay_t<reference>;
   using category = lvalue_property_map_tag;
 
-  safe_iterator_property_map(RandomAccessIterator first, property_traits_value_t<IndexMap> n = 0,
+  explicit safe_iterator_property_map(RandomAccessIterator first, property_traits_value_t<IndexMap> n = 0,
                              IndexMap index = IndexMap())
       : iter_(std::move(first)), n_(n), index_(std::move(index)) {}
-  safe_iterator_property_map() {}
+  safe_iterator_property_map() = default;
   reference operator[](const key_type& k) const {
     assert(get(index_, k) < n_);
     return *(iter_ + get(index_, k));
@@ -253,7 +253,7 @@ class safe_iterator_property_map : public put_get_helper<safe_iterator_property_
 };
 
 template <std::random_access_iterator RAIter, typename IndexMap>
-requires ReadablePropertyMap<IndexMap, property_traits_key_t<IndexMap>>
+requires concepts::ReadablePropertyMap<IndexMap, property_traits_key_t<IndexMap>>
 auto make_safe_iterator_property_map(RAIter iter, property_traits_value_t<IndexMap> n, IndexMap id) {
   return safe_iterator_property_map<RAIter, IndexMap>(std::move(iter), n, std::move(id));
 }
@@ -295,7 +295,7 @@ class const_associative_property_map
   using value_type = std::decay_t<reference>;
   using category = lvalue_property_map_tag;
   const_associative_property_map() : c_(nullptr) {}
-  const_associative_property_map(const C& c) : c_(&c) {}
+  explicit const_associative_property_map(const C& c) : c_(&c) {}
   reference operator[](const key_type& k) const { return c_->find(k)->second; }
 
  private:
@@ -374,10 +374,10 @@ using identity_property_map = typed_identity_property_map<std::size_t>;
 namespace property_map_detail {
 struct dummy_pmap_reference {
   template <class T>
-  dummy_pmap_reference& operator=(const T&) {
+  dummy_pmap_reference& operator=(const T& /*unused*/) {
     return *this;
   }
-  operator int() { return 0; }
+  operator int() { return 0; } // NOLINT
 };
 }  // namespace property_map_detail
 
@@ -389,7 +389,7 @@ class dummy_property_map : public put_get_helper<dummy_property_map> {
   using category = read_write_property_map_tag;
   template <typename T>
   reference operator[](T&& /*unused*/) const {
-    return reference();
+    return {};
   }
 };
 

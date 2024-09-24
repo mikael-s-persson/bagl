@@ -10,10 +10,12 @@
 #include <ranges>
 #include <utility>
 #include <vector>
+#include <tuple>
 
 #include "bagl/graph_concepts.h"
 #include "bagl/graph_traits.h"
 #include "bagl/has_trait_member.h"
+#include "bagl/partial_range.h"
 #include "bagl/properties.h"
 #include "bagl/visitors.h"
 
@@ -61,20 +63,16 @@ BAGL_GRAPH_HAS_MEMBER_FUNCTION(finish_edge)
 
 template <concepts::IncidenceGraph G, concepts::DFSVisitor<G> V,
           concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> ColorMap, typename TerminatorFunc>
-void depth_first_visit_impl(const G& g, graph_vertex_descriptor_t<G> u, V& vis, ColorMap color,
+void depth_first_visit_impl(const G& g, graph_vertex_descriptor_t<G> start, V& vis, ColorMap color,
                             TerminatorFunc func = TerminatorFunc()) {
   using Vertex = graph_vertex_descriptor_t<G>;
   using Edge = graph_edge_descriptor_t<G>;
-  using ColorValue = property_value_t<ColorMap>;
+  using ColorValue = property_traits_value_t<ColorMap>;
   static_assert(concepts::ColorValue<ColorValue>);
   using Color = color_traits<ColorValue>;
   using OutEdgeRange = graph_out_edge_range_t<G>;
-  using Iter = std::ranges::iterator_t<OutEdgeRange>;
-  using std::tuple<Vertex, std::optional<Edge>, OutEdgeRange, Iter> VertexInfo;
+  using VertexInfo = std::tuple<Vertex, std::optional<Edge>, partial_view<OutEdgeRange>>;
 
-  std::optional<Edge> src_e;
-  OutEdgeRange er;
-  Iter ei;
   std::vector<VertexInfo> stack;
 
   // Possible optimization for vertex list graphs
@@ -82,48 +80,51 @@ void depth_first_visit_impl(const G& g, graph_vertex_descriptor_t<G> u, V& vis, 
   //   stack.reserve(vertices(g).size());
   // }
 
-  put(color, u, Color::gray());
-  vis.discover_vertex(u, g);
-  er = out_edges(u, g);
-  if (func(u, g)) {
+  put(color, start, Color::gray());
+  vis.discover_vertex(start, g);
+  auto start_oe = partial_view(out_edges(start, g));
+  if (func(start, g)) {
     // If this vertex terminates the search, we push empty range
-    stack.emplace_back(u, std::nullopt, er, er.end());
+    // This will run the loop once leading to "finish_vertex" on start.
+    start_oe.move_begin_to_end();
+    stack.emplace_back(start, std::nullopt, std::move(start_oe));
   } else {
-    stack.emplace_back(u, std::nullopt, er, er.begin());
+    stack.emplace_back(start, std::nullopt, std::move(start_oe));
   }
   while (!stack.empty()) {
-    std::tie(u, src_e, er, ei) = stack.back();
+    auto [u, u_src_e, u_er] = std::move(stack.back());
     stack.pop_back();
     // finish_edge has to be called here, not after the
     // loop. Think of the pop as the return from a recursive call.
-    if (src_e.has_value()) {
-      invoke_finish_edge(vis, src_e.value(), g);
+    if (u_src_e.has_value()) {
+      invoke_finish_edge(vis, u_src_e.value(), g);
     }
-    while (ei != er.end()) {
-      Vertex v = target(*ei, g);
-      vis.examine_edge(*ei, g);
+    while (!u_er.empty()) {
+      auto u_ei = u_er.begin();
+      Vertex v = target(*u_ei, g);
+      vis.examine_edge(*u_ei, g);
       ColorValue v_color = get(color, v);
       if (v_color == Color::white()) {
-        vis.tree_edge(*ei, g);
-        src_e = *ei;
-        stack.emplace_back(u, src_e, er, ++ei);
+        vis.tree_edge(*u_ei, g);
+        // Re-stack the remaining edges of u.
+        u_er.move_begin_to(std::next(u_ei));
+        stack.emplace_back(u, *u_ei, std::move(u_er));
+        // v becomes the new u.
         u = v;
         put(color, u, Color::gray());
         vis.discover_vertex(u, g);
-        er = out_edges(u, g);
+        u_er = partial_view(out_edges(u, g));
         if (func(u, g)) {
-          ei = er.end();
-        } else {
-          ei = er.begin();
+          u_er.move_begin_to_end(); // break
         }
       } else {
         if (v_color == Color::gray()) {
-          vis.back_edge(*ei, g);
+          vis.back_edge(*u_ei, g);
         } else {
-          vis.forward_or_cross_edge(*ei, g);
+          vis.forward_or_cross_edge(*u_ei, g);
         }
-        invoke_finish_edge(vis, *ei, g);
-        ++ei;
+        invoke_finish_edge(vis, *u_ei, g);
+        u_er.move_begin_to(std::next(u_ei));
       }
     }
     put(color, u, Color::black());
@@ -137,7 +138,7 @@ template <concepts::VertexListGraph G, concepts::DFSVisitor<G> V,
           concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> ColorMap>
 void depth_first_search(const G& g, V vis, ColorMap color, graph_vertex_descriptor_t<G> start_vertex) {
   using Vertex = graph_vertex_descriptor_t<G>;
-  using ColorValue = property_value_t<ColorMap>;
+  using ColorValue = property_traits_value_t<ColorMap>;
   using Color = color_traits<ColorValue>;
 
   for (Vertex u : vertices(g)) {
@@ -145,7 +146,7 @@ void depth_first_search(const G& g, V vis, ColorMap color, graph_vertex_descript
     vis.initialize_vertex(u, g);
   }
 
-  if (start_vertex != depth_first_search_detail::get_default_starting_vertex(g)) {
+  if (start_vertex != get_default_starting_vertex(g)) {
     vis.start_vertex(start_vertex, g);
     depth_first_search_detail::depth_first_visit_impl(g, start_vertex, vis, color,
                                                       depth_first_search_detail::nontruth2());
@@ -168,14 +169,14 @@ void depth_first_search(const G& g, V vis, ColorMap color) {
     return;
   }
 
-  depth_first_search(g, vis, color, depth_first_search_detail::get_default_starting_vertex(g));
+  depth_first_search(g, vis, color, get_default_starting_vertex(g));
 }
 
 template <typename Visitors = null_visitors>
 class dfs_visitor {
  public:
-  dfs_visitor() {}
-  dfs_visitor(Visitors vis) : vis_(vis) {}
+  dfs_visitor() = default;
+  explicit dfs_visitor(Visitors vis) : vis_(vis) {}
 
   template <typename Vertex, typename Graph>
   void initialize_vertex(Vertex u, const Graph& g) {

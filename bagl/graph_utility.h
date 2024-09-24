@@ -37,11 +37,11 @@ auto opposite(graph_edge_descriptor_t<Graph> e, graph_vertex_descriptor_t<Graph>
   using vertex_descriptor = graph_vertex_descriptor_t<Graph>;
   if (v == source(e, g)) {
     return target(e, g);
-  } else if (v == target(e, g)) {
-    return source(e, g);
-  } else {
-    return vertex_descriptor{};
   }
+  if (v == target(e, g)) {
+    return source(e, g);
+  }
+  return vertex_descriptor{};
 }
 
 //===========================================================================
@@ -173,7 +173,7 @@ bool in_edge_set(Graph& g, Vertex u, Vertex v) {
 
 // is x a descendant of y?
 template <typename ParentMap>
-bool is_descendant(property_value_t<ParentMap> x, property_value_t<ParentMap> y, ParentMap parent) {
+bool is_descendant(property_traits_value_t<ParentMap> x, property_traits_value_t<ParentMap> y, ParentMap parent) {
   // x is the root of the tree
   while (get(parent, x) != x) {
     if (get(parent, x) == y) {
@@ -186,11 +186,11 @@ bool is_descendant(property_value_t<ParentMap> x, property_value_t<ParentMap> y,
 
 // is y reachable from x?
 template <typename IncidenceGraph, typename VertexColorMap>
-inline bool is_reachable(graph_vertex_descriptor_<IncidenceGraph> x, graph_vertex_descriptor_<IncidenceGraph> y,
+inline bool is_reachable(graph_vertex_descriptor_t<IncidenceGraph> x, graph_vertex_descriptor_t<IncidenceGraph> y,
                          const IncidenceGraph& g,
                          VertexColorMap color)  // should start out white for every vertex
 {
-  using ColorValue = property_value_t<VertexColorMap>;
+  using ColorValue = property_traits_value_t<VertexColorMap>;
   dfs_visitor<> vis;
   depth_first_visit(g, x, vis, color);
   return get(color, y) != color_traits<ColorValue>::white();
@@ -200,7 +200,7 @@ inline bool is_reachable(graph_vertex_descriptor_<IncidenceGraph> x, graph_verte
 // Is the directed graph strongly connected?
 template <typename VertexListGraph, typename VertexColorMap>
 inline bool is_connected(const VertexListGraph& g, VertexColorMap color) {
-  using ColorValue = property_value_t<VertexColorMap>;
+  using ColorValue = property_traits_value_t<VertexColorMap>;
   using Color = color_traits<ColorValue>;
   for (auto u : vertices(g)) {
     for (auto v : vertices(g)) {
@@ -226,7 +226,7 @@ bool is_self_loop(graph_edge_descriptor_t<Graph> e, const Graph& g) {
 // added to the remaining
 template <typename EdgeProperty>
 struct add_removed_edge_property {
-  add_removed_edge_property(EdgeProperty ep) : ep(ep) {}
+  explicit add_removed_edge_property(EdgeProperty a_ep) : ep(a_ep) {}
 
   template <typename Edge>
   void operator()(Edge stay, Edge away) {
@@ -239,7 +239,7 @@ struct add_removed_edge_property {
 template <typename Graph>
 struct add_removed_edge_capacity : add_removed_edge_property<property_map_t<Graph, edge_capacity_t> > {
   using base = add_removed_edge_property<property_map_t<Graph, edge_capacity_t> >;
-  add_removed_edge_capacity(Graph& g) : base(get(edge_capacity, g)) {}
+  explicit add_removed_edge_capacity(Graph& g) : base(get(edge_capacity, g)) {}
 };
 
 template <typename Graph>

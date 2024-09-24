@@ -6,7 +6,9 @@
 
 #include <tuple>
 
+#include "bagl/graph_traits.h"
 #include "bagl/has_trait_member.h"
+#include "bagl/partial_range.h"
 
 namespace bagl {
 
@@ -19,8 +21,8 @@ BAGL_GRAPH_HAS_TRAIT_MEMBER(children_range, void)
 
 template <typename T>
 struct tree_traits {
-  using node_descriptor = tree_traits_detail::get_node_descriptor_or_not<G>;
-  using children_range = tree_traits_detail::get_children_range_or_not<G>;
+  using node_descriptor = tree_traits_detail::get_node_descriptor_or_not<T>;
+  using children_range = tree_traits_detail::get_children_range_or_not<T>;
 };
 template <typename T>
 using tree_node_descriptor_t = typename tree_traits<T>::node_descriptor;
@@ -29,15 +31,13 @@ using tree_children_range_t = typename tree_traits<T>::children_range;
 
 template <typename Tree, typename TreeVisitor>
 void traverse_tree(tree_node_descriptor_t<Tree> v, Tree& t, TreeVisitor visitor) {
-  using StackElem =
-      std::tuple<tree_node_descriptor_t<Tree>, bool, tree_children_range_t<Tree>, std::ranges::iterator_t<tree_children_range_t<Tree>>>;
+  using StackElem = std::tuple<tree_node_descriptor_t<Tree>, bool, partial_view<tree_children_range_t<Tree>>>;
   std::vector<StackElem> stack;
-  auto vr = children(v, t);
-  stack.emplace_back(v, false, vr, vr.begin());
+  stack.emplace_back(v, false, partial_view(children(v, t)));
   visitor.preorder(v, t);
   while (!stack.empty()) {
-    auto& [u, ud, ur, ui] = stack.back();
-    if (ui == ur.end()) {
+    auto& [u, ud, ur] = stack.back();
+    if (ur.empty()) {
       if (!ud) {
         visitor.inorder(u, t);
       }
@@ -49,21 +49,46 @@ void traverse_tree(tree_node_descriptor_t<Tree> v, Tree& t, TreeVisitor visitor)
       }
       continue;
     }
+    auto ui = ur.begin();
     auto w = *ui;
-    ++ui;
-    auto wr = children(w, t);
-    stack.emplace_back(w, false, wr, wr.begin());
+    ur.move_begin_to(++ui);
+    stack.emplace_back(w, false, partial_view(children(w, t)));
     visitor.preorder(w, t);
   }
 }
 
 struct null_tree_visitor {
   template <typename Node, typename Tree>
-  void preorder(Node, Tree&) {}
+  void preorder(Node /*unused*/, Tree& /*unused*/) {}
   template <typename Node, typename Tree>
-  void inorder(Node, Tree&) {}
+  void inorder(Node /*unused*/, Tree& /*unused*/) {}
   template <typename Node, typename Tree>
-  void postorder(Node, Tree&) {}
+  void postorder(Node /*unused*/, Tree& /*unused*/) {}
+};
+
+template <typename VertexDescriptor, typename EdgeDescriptor,
+          typename StorageTag>
+struct tree_storage {
+  using type = typename StorageTag::template bind<VertexDescriptor,
+                                                  EdgeDescriptor>::type;
+};
+
+template <typename StorageTag>
+struct tree_storage_traits {
+  static constexpr bool is_rand_access_v = false;
+  static constexpr bool is_bidir_v = true;
+  static constexpr bool is_directed_v = true;
+
+  using directed_category = std::conditional_t<
+      is_bidir_v, bidirectional_tag,
+      std::conditional_t<is_directed_v, directed_tag, undirected_tag>>;
+
+  using edge_parallel_category = disallow_parallel_edge_tag;
+
+  using vertices_size_type = std::size_t;
+  using vertex_descriptor = typename StorageTag::vertex_descriptor;
+  using edges_size_type = std::size_t;
+  using edge_descriptor = typename StorageTag::edge_descriptor;
 };
 
 }  // namespace bagl

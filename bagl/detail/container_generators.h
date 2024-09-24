@@ -3,8 +3,10 @@
 #ifndef BAGL_BAGL_DETAIL_CONTAINER_GENERATORS_H_
 #define BAGL_BAGL_DETAIL_CONTAINER_GENERATORS_H_
 
+#include <limits>
 #include <list>
 #include <set>
+#include <ranges>
 #include <type_traits>
 #include <unordered_set>
 #include <variant>
@@ -459,6 +461,16 @@ template <typename Container>
 auto get_end_iter(Container* c) {
   return get_end_iter(*c);
 }
+
+template <typename Container>
+auto get_range(Container& c) {
+  return std::views::all(c);
+}
+template <typename Container>
+auto get_range(Container* c) {
+  return get_range(*c);
+}
+
 
 /*************************************************************************
  *        descriptor / value translation functions for all container types

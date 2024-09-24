@@ -24,10 +24,10 @@ concept Graph = std::regular<graph_vertex_descriptor_t<G>> && std::semiregular<g
     std::semiregular<graph_traversal_category_t<G>>;
 
 template <typename R, typename G>
-concept EdgeRange = std::ranges::forward_range<R> && std::convertible_to<std::ranges::range_value_t<R>, graph_edge_descriptor_t<G>>;
+concept EdgeRange = std::ranges::input_range<R> && std::convertible_to<std::ranges::range_value_t<R>, graph_edge_descriptor_t<G>>;
 
 template <typename R, typename G>
-concept VertexRange = std::ranges::forward_range<R> && std::convertible_to<std::ranges::range_value_t<R>, graph_vertex_descriptor_t<G>>;
+concept VertexRange = std::ranges::input_range<R> && std::convertible_to<std::ranges::range_value_t<R>, graph_vertex_descriptor_t<G>>;
 
 template <typename G>
 concept IncidenceGraph =
@@ -93,7 +93,7 @@ concept EdgeMutableGraph = Graph<G> && std::regular<graph_edge_descriptor_t<G>> 
 
 template <typename G>
 concept VertexMutableGraph = Graph<G> && requires(G& g, graph_vertex_descriptor_t<G> u) {
-  u = add_vertex(g);
+  { add_vertex(g) } -> std::convertible_to<graph_vertex_descriptor_t<G>>;
   remove_vertex(u, g);
 };
 
@@ -124,20 +124,28 @@ concept MutableEdgeListGraph = EdgeMutableGraph<G> && requires(G& g) {
 };
 
 template <typename G>
-concept VertexMutablePropertyGraph = VertexMutableGraph<G> && requires(G& g, const vertex_property_type<G>& vp) {
+concept VertexMutablePropertyGraph = VertexMutableGraph<G> && requires(G& g, graph_vertex_descriptor_t<G> v, const vertex_property_type<G>& vp) {
   { add_vertex(vp, g) } -> std::convertible_to<graph_vertex_descriptor_t<G>>;
+  { add_vertex(std::move(vp), g) } -> std::convertible_to<graph_vertex_descriptor_t<G>>;
+  remove_vertex(v, &vp, g);
 };
 
 template <typename G>
 concept EdgeMutablePropertyGraph = EdgeMutableGraph<G> &&
     requires(G& g, graph_vertex_descriptor_t<G> u, graph_edge_descriptor_t<G> e, const edge_property_type<G>& ep) {
-  std::tie(e, std::declval<bool&>()) = add_edge(u, u, ep, g);
+  { add_edge(u, u, ep, g) } -> std::convertible_to<std::pair<graph_edge_descriptor_t<G>, bool>>;
+  { add_edge(u, u, std::move(ep), g) } -> std::convertible_to<std::pair<graph_edge_descriptor_t<G>, bool>>;
+  remove_edge(u, u, &ep, g);
+  remove_edge(e, &ep, g);
 };
 
 template <typename G>
+concept MutablePropertyGraph = EdgeMutablePropertyGraph<G> && VertexMutablePropertyGraph<G>;
+
+template <typename G>
 concept AdjacencyMatrix = Graph<G> && std::regular<graph_edge_descriptor_t<G>> &&
-    requires(const G& g, graph_vertex_descriptor_t<G> u, graph_edge_descriptor_t<G> e) {
-  std::tie(e, std::declval<bool&>()) = edge(u, u, g);
+    requires(const G& g, graph_vertex_descriptor_t<G> u) {
+  { edge(u, u, g) } -> std::convertible_to<std::pair<graph_edge_descriptor_t<G>, bool>>;
 };
 
 template <typename G, typename Key, typename Property>
@@ -190,10 +198,10 @@ concept ColorValue = std::regular<T> && requires {
 
 template <typename T, typename V>
 concept BasicMatrix = requires(const T& m, int i) {
-  { A[i][i] } -> std::convertible_to<V>;
+  { m[i][i] } -> std::convertible_to<V>;
 }
 &&requires(T& m, int i) {
-  { A[i][i] } -> std::convertible_to<V&>;
+  { m[i][i] } -> std::convertible_to<V&>;
 };
 
 // The following concepts describe aspects of numeric values and measure
