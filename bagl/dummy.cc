@@ -2,6 +2,7 @@
 #include "bagl/adjacency_list.h"
 #include "bagl/adjacency_range.h"
 #include "bagl/bfl_d_ary_tree.h"
+#include "bagl/bst_inorder_iterator.h"
 #include "bagl/breadth_first_search.h"
 #include "bagl/buffer_concepts.h"
 #include "bagl/container_traits.h"
@@ -34,6 +35,7 @@
 #include "tree_adaptor.h"
 #include "tree_concepts.h"
 #include "bagl/tree_traits.h"
+#include "vebl_d_ary_tree.h"
 #include "bagl/vector_property_map.h"
 #include "bagl/visitors.h"
 

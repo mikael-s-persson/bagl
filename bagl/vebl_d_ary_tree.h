@@ -4,38 +4,36 @@
 #define BAGL_BAGL_VEBL_D_ARY_TREE_H_
 
 #include <ranges>
-#include <stdexcept>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
-#include "bagl/properties.h"
 #include "bagl/detail/vebl_tree_ranges.h"
 #include "bagl/more_property_maps.h"
-#include "bagl/tree_concepts.h"
+#include "bagl/properties.h"
 #include "bagl/tree_traits.h"
 
 namespace bagl {
 
 // This library provides a class that implements a D-Ary von Emde Boas Layout tree that stores
 // elements in a contiguous array in a cache-friendly recursive layout. This type
-// of tree structure is good for both breadth-first search and depth-first search because 
-// of locality of reference issues. Ideally, for the least amount of wasted memory, the tree 
-// should be kept balanced, and this implementation assumes that. 
+// of tree structure is good for both breadth-first search and depth-first search because
+// of locality of reference issues. Ideally, for the least amount of wasted memory, the tree
+// should be kept balanced, and this implementation assumes that.
 
 struct vebl_d_ary_tree_tag {};
 
 /**
  * This class implements a D-Ary von Emde Boas Layout tree that stores
  * elements in a contiguous array in a cache-friendly recursive layout. This type
- * of tree structure is good for both breadth-first search and depth-first search because 
- * of locality of reference issues. Ideally, for the least amount of wasted memory, the tree 
- * should be kept balanced, and this implementation assumes that. 
+ * of tree structure is good for both breadth-first search and depth-first search because
+ * of locality of reference issues. Ideally, for the least amount of wasted memory, the tree
+ * should be kept balanced, and this implementation assumes that.
  * \tparam Arity The arity of the tree, e.g., 2 means a binary-tree.
  * \tparam VertexProperties A type to be attached to each vertex in the tree.
  * \tparam EdgeProperties A type to be attached to each edge in the tree.
  */
-template <std::size_t Arity = 2, typename VertexProperties = no_property,
-          typename EdgeProperties = no_property>
+template <std::size_t Arity = 2, typename VertexProperties = no_property, typename EdgeProperties = no_property>
 class vebl_d_ary_tree {
  public:
   using self = vebl_d_ary_tree<Arity, VertexProperties, EdgeProperties>;
@@ -47,8 +45,7 @@ class vebl_d_ary_tree {
   using edge_bundled = edge_property_type;
   using graph_bundled = void;
 
-  using value_type = bfl_detail::bfltree_value_type<vertex_property_type,
-                                                       edge_property_type>;
+  using value_type = bfl_detail::bfltree_value_type<vertex_property_type, edge_property_type>;
 
   using container_type = std::vector<value_type>;
 
@@ -60,27 +57,33 @@ class vebl_d_ary_tree {
   using degree_size_type = vertices_size_type;
 
   /**
-     * This static member function outputs the null-vertex (invalid vertex descriptor).
-     * \return A null-vertex descriptor (invalid vertex descriptor).
-     */
-  static vertex_descriptor null_vertex() {
-    return std::numeric_limits<std::size_t>::max();
+   * This static member function outputs the null-vertex (invalid vertex descriptor).
+   * \return A null-vertex descriptor (invalid vertex descriptor).
+   */
+  static vertex_descriptor null_vertex() { return std::numeric_limits<std::size_t>::max(); }
+
+  static edge_descriptor null_edge() { return edge_descriptor(null_vertex()); }
+
+  static auto make_unsafe_vertex_range(std::size_t first, std::size_t last) { return std::views::iota(first, last); }
+  using unsafe_vertex_range = decltype(make_unsafe_vertex_range(0, 1));
+
+  using vertex_validity = bfl_detail::vebltree_vertex_validity<container_type, Arity>;
+  auto make_valid_vertex_range(std::size_t first, std::size_t last) const {
+    return make_unsafe_vertex_range(first, last) | std::views::filter(vertex_validity{&m_vertices, &m_depth_recs});
   }
+  using vertex_range = decltype(std::declval<const self&>().make_valid_vertex_range(0, 1));
 
-  using edge_validity =
-      bfl_detail::vebltree_edge_validity<container_type, Arity>;
-  using edge_iterator =
-      filter_iterator<edge_validity, bfl_detail::bfltree_eiter>;
-  using out_edge_iterator = edge_iterator;
-  using in_edge_iterator = bfl_detail::bfltree_eiter;
+  template <typename VertexRange>
+  static auto view_vertex_range_as_edges(VertexRange v_rg) {
+    return v_rg | std::views::transform([](std::size_t u) { return edge_descriptor{u}; });
+  }
+  using in_edge_range = decltype(view_vertex_range_as_edges(std::declval<unsafe_vertex_range>()));
+  using edge_range = decltype(view_vertex_range_as_edges(std::declval<vertex_range>()));
+  using out_edge_range = edge_range;
 
-  using vertex_validity =
-      bfl_detail::vebltree_vertex_validity<container_type, Arity>;
-  using vertex_iterator =
-      filter_iterator<vertex_validity, bfl_detail::bfltree_viter>;
-  using adjacency_iterator = vertex_iterator;
-  using child_vertex_iterator = vertex_iterator;
-  using inv_adjacency_iterator = bfl_detail::bfltree_viter;
+  using adjacency_range = vertex_range;
+  using child_vertex_range = vertex_range;
+  using inv_adjacency_range = unsafe_vertex_range;
 
   using directed_category = directed_tag;
   using edge_parallel_category = disallow_parallel_edge_tag;
@@ -93,30 +96,25 @@ class vebl_d_ary_tree {
 
   using graph_tag = vebl_d_ary_tree_tag;
 
-  //private:
+  // private:
   container_type m_vertices;
   vertices_size_type m_vertex_count{0};
 
   bfl_detail::vebl_depth_records m_depth_recs;
 
   value_type& get_vertex_value_impl(vertex_descriptor v) {
-    return m_vertices[bfl_detail::convert_bfl_to_vebl<Arity>(v,
-                                                                m_depth_recs)];
+    return m_vertices[bfl_detail::convert_bfl_to_vebl<Arity>(v, m_depth_recs)];
   }
   const value_type& get_vertex_value_impl(vertex_descriptor v) const {
-    return m_vertices[bfl_detail::convert_bfl_to_vebl<Arity>(v,
-                                                                m_depth_recs)];
+    return m_vertices[bfl_detail::convert_bfl_to_vebl<Arity>(v, m_depth_recs)];
   }
 
-  static vertex_descriptor get_child_impl(vertex_descriptor v,
-                                          std::size_t edge_id) {
-    return Arity * v + 1 + edge_id;
-  }
+  static vertex_descriptor get_child_impl(vertex_descriptor v, std::size_t edge_id) { return Arity * v + 1 + edge_id; }
 
   /**
-     * Construct the D-ary BF-tree with a given reserved depth.
-     * \param aDepth The depth of the graph to reserve space for.
-     */
+   * Construct the D-ary BF-tree with a given reserved depth.
+   * \param aDepth The depth of the graph to reserve space for.
+   */
   explicit vebl_d_ary_tree(vertices_size_type aDepth = 0) {
     m_depth_recs.T.push_back(0);
     m_depth_recs.B.push_back(1);
@@ -128,32 +126,32 @@ class vebl_d_ary_tree {
   }
 
   /**
-     * Checks if the tree is empty.
-     * \return True if the tree is empty.
-     */
-  bool empty() const { return m_vertex_count == 0; }
+   * Checks if the tree is empty.
+   * \return True if the tree is empty.
+   */
+  [[nodiscard]] bool empty() const { return m_vertex_count == 0; }
 
   /**
-     * Returns the size of the tree (the number of vertices it contains).
-     * \return The size of the tree (the number of vertices it contains).
-     */
-  std::size_t size() const { return m_vertex_count; }
+   * Returns the size of the tree (the number of vertices it contains).
+   * \return The size of the tree (the number of vertices it contains).
+   */
+  [[nodiscard]] std::size_t size() const { return m_vertex_count; }
 
   /**
-     * Returns the maximum vertex capacity of the tree (the number of vertices it can contain).
-     * \return The maximum vertex capacity of the tree (the number of vertices it can contain).
-     */
-  std::size_t capacity() const { return m_vertices.capacity(); }
+   * Returns the maximum vertex capacity of the tree (the number of vertices it can contain).
+   * \return The maximum vertex capacity of the tree (the number of vertices it can contain).
+   */
+  [[nodiscard]] std::size_t capacity() const { return m_vertices.capacity(); }
 
   /**
-     * Returns the depth of the tree.
-     * \return The depth of the tree.
-     */
-  std::size_t depth() const { return m_depth_recs.T.size(); }
+   * Returns the depth of the tree.
+   * \return The depth of the tree.
+   */
+  [[nodiscard]] std::size_t depth() const { return m_depth_recs.T.size(); }
 
   /**
-     * Standard swap function.
-     */
+   * Standard swap function.
+   */
   void swap(self& rhs) {
     using std::swap;
     m_vertices.swap(rhs.m_vertices);
@@ -164,8 +162,8 @@ class vebl_d_ary_tree {
   }
 
   /**
-     * Clears the tree of all vertices and edges.
-     */
+   * Clears the tree of all vertices and edges.
+   */
   void clear() {
     m_vertices.clear();
     m_vertices.resize(1);
@@ -179,64 +177,53 @@ class vebl_d_ary_tree {
   }
 
   /**
-     * Indexing operator. Returns a reference to the vertex-property associated to the given vertex descriptor.
-     * \param v The vertex descriptor of the sought-after vertex-property.
-     * \return The vertex-property, by reference, associated to the given vertex descriptor.
-     */
-  vertex_property_type& operator[](const vertex_descriptor& v) {
-    return get_vertex_value_impl(v).vertex();
-  }
+   * Indexing operator. Returns a reference to the vertex-property associated to the given vertex descriptor.
+   * \param v The vertex descriptor of the sought-after vertex-property.
+   * \return The vertex-property, by reference, associated to the given vertex descriptor.
+   */
+  vertex_property_type& operator[](const vertex_descriptor& v) { return get_vertex_value_impl(v).vertex(); }
   /**
-     * Indexing operator. Returns a const-reference to the vertex-property associated to the given vertex descriptor.
-     * \param v The vertex descriptor of the sought-after vertex-property.
-     * \return The vertex-property, by const-reference, associated to the given vertex descriptor.
-     */
-  const vertex_property_type& operator[](const vertex_descriptor& v) const {
-    return get_vertex_value_impl(v).vertex();
-  }
+   * Indexing operator. Returns a const-reference to the vertex-property associated to the given vertex descriptor.
+   * \param v The vertex descriptor of the sought-after vertex-property.
+   * \return The vertex-property, by const-reference, associated to the given vertex descriptor.
+   */
+  const vertex_property_type& operator[](const vertex_descriptor& v) const { return get_vertex_value_impl(v).vertex(); }
   /**
-     * Indexing operator. Returns a reference to the edge-property associated to the given edge descriptor.
-     * \param e The edge descriptor of the sought-after edge-property.
-     * \return The edge-property, by reference, associated to the given edge descriptor.
-     */
-  edge_property_type& operator[](const edge_descriptor& e) {
-    return get_vertex_value_impl(e.target_vertex).edge();
-  }
+   * Indexing operator. Returns a reference to the edge-property associated to the given edge descriptor.
+   * \param e The edge descriptor of the sought-after edge-property.
+   * \return The edge-property, by reference, associated to the given edge descriptor.
+   */
+  edge_property_type& operator[](const edge_descriptor& e) { return get_vertex_value_impl(e.target_vertex).edge(); }
   /**
-     * Indexing operator. Returns a const-reference to the edge-property associated to the given edge descriptor.
-     * \param e The edge descriptor of the sought-after edge-property.
-     * \return The edge-property, by const-reference, associated to the given edge descriptor.
-     */
+   * Indexing operator. Returns a const-reference to the edge-property associated to the given edge descriptor.
+   * \param e The edge descriptor of the sought-after edge-property.
+   * \return The edge-property, by const-reference, associated to the given edge descriptor.
+   */
   const edge_property_type& operator[](const edge_descriptor& e) const {
     return get_vertex_value_impl(e.target_vertex).edge();
   }
 
   /**
-     * Adds a child vertex to the given parent vertex, and initializes the properties of the newly created 
-     * vertex and edge to the given property values.
-     * \param v The parent vertex to which a child will be added.
-     * \param vp The property value for the newly created vertex.
-     * \param ep The property value for the newly created edge.
-     * \return A pair consisting of the newly created vertex and edge (descriptors).
-     */
+   * Adds a child vertex to the given parent vertex, and initializes the properties of the newly created
+   * vertex and edge to the given property values.
+   * \param v The parent vertex to which a child will be added.
+   * \param vp The property value for the newly created vertex.
+   * \param ep The property value for the newly created edge.
+   * \return A pair consisting of the newly created vertex and edge (descriptors).
+   */
   template <typename VP, typename EP>
-  std::pair<vertex_descriptor, edge_descriptor> add_child(vertex_descriptor v,
-                                                          VP&& vp, EP&& ep) {
-    if ((v >= m_vertices.size()) ||
-        !bfl_detail::bfltree_is_vertex_valid(get_vertex_value_impl(v))) {
-      return {null_vertex(), edge_descriptor(null_vertex())};
+  std::tuple<vertex_descriptor, edge_descriptor, bool> add_child(vertex_descriptor v, VP&& vp, EP&& ep) {
+    if ((v >= m_vertices.size()) || !bfl_detail::bfltree_is_vertex_valid(get_vertex_value_impl(v))) {
+      return {null_vertex(), null_edge(), false};
     }
     vertex_descriptor result = get_child_impl(v, 0);
     for (; result < get_child_impl(v, Arity); ++result) {
-      if ((result >= m_vertices.size()) ||
-          !bfl_detail::bfltree_is_vertex_valid(
-              get_vertex_value_impl(result))) {
+      if ((result >= m_vertices.size()) || !bfl_detail::bfltree_is_vertex_valid(get_vertex_value_impl(result))) {
         break;
       }
     }
     if (result == get_child_impl(v, Arity)) {
-      return std::pair<vertex_descriptor, edge_descriptor>(
-          null_vertex(), edge_descriptor(null_vertex()));
+      return {null_vertex(), null_edge(), false};
     }
 
     if (result >= m_vertices.size()) {
@@ -249,12 +236,11 @@ class vebl_d_ary_tree {
     result_prop.edge() = std::forward<EP>(ep);
     ++(get_vertex_value_impl(v).out_degree);
     ++m_vertex_count;
-    return std::make_pair(result, edge_descriptor(result));
+    return {result, edge_descriptor(result), true};
   }
 
   template <typename VertexOIter, typename EdgeOIter>
-  void clear_children_impl(vertex_descriptor v, VertexOIter& vit_out,
-                           EdgeOIter& eit_out) {
+  void clear_children_impl(vertex_descriptor v, VertexOIter& vit_out, EdgeOIter& eit_out) {
     // this traversal order is intentional (traverse pre-order depth-first, and
     // delay removal of empty tail elements as much as possible, such that it is only required once).
     for (std::size_t i = 0; i < Arity; ++i) {
@@ -271,98 +257,71 @@ class vebl_d_ary_tree {
       *(eit_out++) = std::move(next_v_prop.edge());
       clear_children_impl(next_v, vit_out, eit_out);
     }
-    get_vertex_value_impl(v).out_degree =
-        std::numeric_limits<std::size_t>::max();
-    if (v !=
-        0) {  // if the node is not the root one, then update the out-degree of the parent node:
+    get_vertex_value_impl(v).out_degree = std::numeric_limits<std::size_t>::max();
+    if (v != 0) {
+      // if the node is not the root one, then update the out-degree of the parent node:
       get_vertex_value_impl((v - 1) / Arity).out_degree -= 1;
     }
   }
 
   /**
-     * Removes a branch (sub-tree) starting from but excluding the given vertex, while 
-     * recording the vertex and edge properties of all the removed vertices and edges into output-ranges.
-     * \param v The root of the sub-tree to be removed.
-     * \param vit_out An output iterator (with vertex-properties as value-type) that can store the removed vertices.
-     * \param eit_out An output iterator (with edge-properties as value-type) that can store the removed edges.
-     * \return The output-iterator after the collection of all the removed vertices.
-     */
+   * Removes a branch (sub-tree) starting from but excluding the given vertex, while
+   * recording the vertex and edge properties of all the removed vertices and edges into output-ranges.
+   * \param v The root of the sub-tree to be removed.
+   * \param vit_out An output iterator (with vertex-properties as value-type) that can store the removed vertices.
+   * \param eit_out An output iterator (with edge-properties as value-type) that can store the removed edges.
+   * \return The output-iterator after the collection of all the removed vertices.
+   */
   template <typename VertexOIter, typename EdgeOIter>
-  std::pair<VertexOIter, EdgeOIter> clear_children(vertex_descriptor v,
-                                                   VertexOIter vit_out,
-                                                   EdgeOIter eit_out) {
+  std::pair<VertexOIter, EdgeOIter> clear_children(vertex_descriptor v, VertexOIter vit_out, EdgeOIter eit_out) {
     if (v >= m_vertices.size()) {
-      return std::pair<VertexOIter, EdgeOIter>(
-          vit_out, eit_out);  // vertex is already deleted.
+      return {vit_out, eit_out};  // vertex is already deleted.
     }
     value_type& v_prop = get_vertex_value_impl(v);
     if (!bfl_detail::bfltree_is_vertex_valid(v_prop)) {
-      return std::pair<VertexOIter, EdgeOIter>(
-          vit_out, eit_out);  // vertex is already deleted.
+      return {vit_out, eit_out};  // vertex is already deleted.
     }
     clear_children_impl(v, vit_out, eit_out);
-    return std::pair<VertexOIter, EdgeOIter>(vit_out, eit_out);
+    return {vit_out, eit_out};
   }
 
   /**
-     * Removes a branch (sub-tree) starting from but excluding the given vertex, while 
-     * recording the vertex-properties of all the removed vertices into an output-iterator.
-     * \param v The root of the sub-tree to be removed.
-     * \param vit_out An output iterator (with vertex-properties as value-type) that can store the removed vertices.
-     * \return The output-iterator after the collection of all the removed vertices.
-     */
+   * Removes a branch (sub-tree) starting from but excluding the given vertex, while
+   * recording the vertex-properties of all the removed vertices into an output-iterator.
+   * \param v The root of the sub-tree to be removed.
+   * \param vit_out An output iterator (with vertex-properties as value-type) that can store the removed vertices.
+   * \return The output-iterator after the collection of all the removed vertices.
+   */
   template <typename VertexOIter>
   VertexOIter clear_children(vertex_descriptor v, VertexOIter vit_out) {
-    if (v >= m_vertices.size()) {
-      return vit_out;  // vertex is already deleted.
-    }
-    value_type& v_prop = get_vertex_value_impl(v);
-    if (!bfl_detail::bfltree_is_vertex_valid(v_prop)) {
-      return vit_out;  // vertex is already deleted.
-    }
-    container_detail::ignore_output_iter eit_out;
-    clear_children_impl(v, vit_out, eit_out);
-    return vit_out;
+    return clear_children(v, vit_out, container_detail::ignore_output_iter{}).first;
   }
 
   /**
-     * Removes a branch (sub-tree) starting from but excluding the given vertex.
-     * \param v The root of the sub-tree to be removed.
-     */
+   * Removes a branch (sub-tree) starting from but excluding the given vertex.
+   * \param v The root of the sub-tree to be removed.
+   */
   void clear_children(vertex_descriptor v) {
-    if (v >= m_vertices.size()) {
-      return;  // vertex is already deleted.
-    }
-    value_type& v_prop = get_vertex_value_impl(v);
-    if (!bfl_detail::bfltree_is_vertex_valid(v_prop)) {
-      return;  // vertex is already deleted.
-    }
-    container_detail::ignore_output_iter vit_out;
-    container_detail::ignore_output_iter eit_out;
-    clear_children_impl(v, vit_out, eit_out);
+    clear_children(v, container_detail::ignore_output_iter{}, container_detail::ignore_output_iter{});
   }
 
   /**
-     * Removes a branch (sub-tree) starting from and including the given vertex, while 
-     * recording the vertex and edge properties of all the removed vertices and edges into output-ranges.
-     * \param v The vertex to remove, along with the sub-tree rooted at that vertex.
-     * \param vit_out An output iterator (with vertex-properties as value-type) that can store the removed vertices.
-     * \param eit_out An output iterator (with edge-properties as value-type) that can store the removed edges.
-     * \return The output-iterator after the collection of all the removed vertices.
-     * \note The first vertex-property to figure in the output range is that of the vertex v.
-     */
+   * Removes a branch (sub-tree) starting from and including the given vertex, while
+   * recording the vertex and edge properties of all the removed vertices and edges into output-ranges.
+   * \param v The vertex to remove, along with the sub-tree rooted at that vertex.
+   * \param vit_out An output iterator (with vertex-properties as value-type) that can store the removed vertices.
+   * \param eit_out An output iterator (with edge-properties as value-type) that can store the removed edges.
+   * \return The output-iterator after the collection of all the removed vertices.
+   * \note The first vertex-property to figure in the output range is that of the vertex v.
+   */
   template <typename VertexOIter, typename EdgeOIter>
-  std::pair<VertexOIter, EdgeOIter> remove_branch(vertex_descriptor v,
-                                                  VertexOIter vit_out,
-                                                  EdgeOIter eit_out) {
+  std::pair<VertexOIter, EdgeOIter> remove_branch(vertex_descriptor v, VertexOIter vit_out, EdgeOIter eit_out) {
     if (v >= m_vertices.size()) {
-      return std::pair<VertexOIter, EdgeOIter>(
-          vit_out, eit_out);  // vertex is already deleted.
+      return {vit_out, eit_out};  // vertex is already deleted.
     }
     value_type& v_prop = get_vertex_value_impl(v);
     if (!bfl_detail::bfltree_is_vertex_valid(v_prop)) {
-      return std::pair<VertexOIter, EdgeOIter>(
-          vit_out, eit_out);  // vertex is already deleted.
+      return {vit_out, eit_out};  // vertex is already deleted.
     }
     if (v == 0) {
       *(eit_out++) = edge_property_type();
@@ -375,64 +334,35 @@ class vebl_d_ary_tree {
     --m_vertex_count;
     *(vit_out++) = std::move(v_prop.vertex());
     clear_children_impl(v, vit_out, eit_out);
-    return std::pair<VertexOIter, EdgeOIter>(vit_out, eit_out);
+    return {vit_out, eit_out};
   }
 
   /**
-     * Removes a branch (sub-tree) starting from and including the given vertex, while 
-     * recording the vertex-properties of all the removed vertices into an output-iterator.
-     * \param v The vertex to remove, along with the sub-tree rooted at that vertex.
-     * \param vit_out An output iterator (with vertex-properties as value-type) that can store the removed vertices.
-     * \return The output-iterator after the collection of all the removed vertices.
-     * \note The first vertex-property to figure in the output range is that of the vertex v.
-     */
+   * Removes a branch (sub-tree) starting from and including the given vertex, while
+   * recording the vertex-properties of all the removed vertices into an output-iterator.
+   * \param v The vertex to remove, along with the sub-tree rooted at that vertex.
+   * \param vit_out An output iterator (with vertex-properties as value-type) that can store the removed vertices.
+   * \return The output-iterator after the collection of all the removed vertices.
+   * \note The first vertex-property to figure in the output range is that of the vertex v.
+   */
   template <typename VertexOIter>
   VertexOIter remove_branch(vertex_descriptor v, VertexOIter vit_out) {
-    if (v >= m_vertices.size()) {
-      return vit_out;  // vertex is already deleted.
-    }
-    value_type& v_prop = get_vertex_value_impl(v);
-    if (!bfl_detail::bfltree_is_vertex_valid(v_prop)) {
-      return vit_out;  // vertex is already deleted.
-    }
-    if (v != 0) {
-      // if the node is not the root one, then update the out-degree of the parent node:
-      get_vertex_value_impl((v - 1) / Arity).out_degree -= 1;
-    }
-    --m_vertex_count;
-    *(vit_out++) = std::move(v_prop.vertex());
-    container_detail::ignore_output_iter eit_out;
-    clear_children_impl(v, vit_out, eit_out);
-    return vit_out;
+    return remove_branch(v, vit_out, container_detail::ignore_output_iter{}).first;
   }
 
   /**
-     * Removes a branch (sub-tree) starting from and including the given vertex.
-     * \param v The vertex to remove, along with the sub-tree rooted at that vertex.
-     */
+   * Removes a branch (sub-tree) starting from and including the given vertex.
+   * \param v The vertex to remove, along with the sub-tree rooted at that vertex.
+   */
   void remove_branch(vertex_descriptor v) {
-    if (v >= m_vertices.size()) {
-      return;  // vertex is already deleted.
-    }
-    value_type& v_prop = get_vertex_value_impl(v);
-    if (!bfl_detail::bfltree_is_vertex_valid(v_prop)) {
-      return;  // vertex is already deleted.
-    }
-    if (v != 0) {
-      // if the node is not the root one, then update the out-degree of the parent node:
-      get_vertex_value_impl((v - 1) / Arity).out_degree -= 1;
-    }
-    --m_vertex_count;
-    container_detail::ignore_output_iter vit_out;
-    container_detail::ignore_output_iter eit_out;
-    clear_children_impl(v, vit_out, eit_out);
+    remove_branch(v, container_detail::ignore_output_iter{}, container_detail::ignore_output_iter{});
   }
 
   /**
-     * Creates a root for the tree (clears it if not empty), and moves the given vertex-property into it.
-     * \param vp The vertex-property to move into the newly created root vertex.
-     * \return The vertex-descriptor of the root of the tree.
-     */
+   * Creates a root for the tree (clears it if not empty), and moves the given vertex-property into it.
+   * \param vp The vertex-property to move into the newly created root vertex.
+   * \return The vertex-descriptor of the root of the tree.
+   */
   template <typename VProp>
   vertex_descriptor create_root_vertex(VProp&& vp) {
     if (bfl_detail::bfltree_is_vertex_valid(m_vertices[0])) {
@@ -452,23 +382,20 @@ template <std::size_t Arity = 2>
 struct vebl_d_ary_tree_storage {};
 
 template <typename VertexDescriptor, typename EdgeDescriptor, std::size_t Arity>
-struct tree_storage<VertexDescriptor, EdgeDescriptor,
-                    vebl_d_ary_tree_storage<Arity>> {
+struct tree_storage<VertexDescriptor, EdgeDescriptor, vebl_d_ary_tree_storage<Arity>> {
   using type = vebl_d_ary_tree<Arity, VertexDescriptor, EdgeDescriptor>;
 };
 
 template <std::size_t Arity>
 struct tree_storage_traits<vebl_d_ary_tree_storage<Arity>> {
-  using is_rand_access = boost::mpl::true_;
-  using is_bidir = boost::mpl::true_;
-  using is_directed = boost::mpl::true_;
+  static constexpr bool is_rand_access_v = true;
+  static constexpr bool is_bidir_v = true;
+  static constexpr bool is_directed_v = true;
 
-  using directed_category = typename boost::mpl::if_<
-      is_bidir, boost::bidirectional_tag,
-      typename boost::mpl::if_<is_directed, boost::directed_tag,
-                               boost::undirected_tag>::type>::type;
+  using directed_category = std::conditional_t<is_bidir_v, bidirectional_tag,
+                                               std::conditional_t<is_directed_v, directed_tag, undirected_tag>>;
 
-  using edge_parallel_category = boost::disallow_parallel_edge_tag;
+  using edge_parallel_category = disallow_parallel_edge_tag;
 
   using vertices_size_type = std::size_t;
   using vertex_descriptor = std::size_t;
@@ -476,10 +403,8 @@ struct tree_storage_traits<vebl_d_ary_tree_storage<Arity>> {
   using edge_descriptor = bfl_detail::bfltree_edge_desc;
 };
 
-#define BAGL_VEBL_D_ARY_TREE_ARGS \
-  std::size_t Arity, typename VertexProperties, typename EdgeProperties
-#define BAGL_VEBL_D_ARY_TREE \
-  vebl_d_ary_tree<Arity, VertexProperties, EdgeProperties>
+#define BAGL_VEBL_D_ARY_TREE_ARGS std::size_t Arity, typename VertexProperties, typename EdgeProperties
+#define BAGL_VEBL_D_ARY_TREE vebl_d_ary_tree<Arity, VertexProperties, EdgeProperties>
 
 /**
  * Standard swap function. Swaps the contents of two objects.
@@ -502,9 +427,8 @@ void swap(BAGL_VEBL_D_ARY_TREE& lhs, BAGL_VEBL_D_ARY_TREE& rhs) {
  * \return The source vertex of the given edge descriptor.
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor source(
-    typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e,
-    const BAGL_VEBL_D_ARY_TREE& /*unused*/) {
+typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor source(typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e,
+                                                        const BAGL_VEBL_D_ARY_TREE& /*unused*/) {
   return (e.target_vertex - 1) / Arity;
 }
 
@@ -515,9 +439,8 @@ typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor source(
  * \return The target vertex of the given edge descriptor.
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor target(
-    typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e,
-    const BAGL_VEBL_D_ARY_TREE& /*unused*/) {
+typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor target(typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e,
+                                                        const BAGL_VEBL_D_ARY_TREE& /*unused*/) {
   return e.target_vertex;
 }
 
@@ -528,26 +451,10 @@ typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor target(
  * \return The edge iterator range for the out-edges of a given vertex descriptor.
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-std::pair<typename BAGL_VEBL_D_ARY_TREE::out_edge_iterator,
-          typename BAGL_VEBL_D_ARY_TREE::out_edge_iterator>
-out_edges(const typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor& v,
-          const BAGL_VEBL_D_ARY_TREE& g) {
-  using OutIter = typename vebl_d_ary_tree<Arity, VertexProperties,
-                                           EdgeProperties>::out_edge_iterator;
-  using RawContainer = typename vebl_d_ary_tree<Arity, VertexProperties,
-                                                EdgeProperties>::container_type;
+auto out_edges(const typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor& v, const BAGL_VEBL_D_ARY_TREE& g) {
   // Arity * v + 1 + edge_index;
-  bfl_detail::bfltree_eiter v_beg(
-      bfl_detail::bfltree_edge_desc(Arity * v + 1));
-  bfl_detail::bfltree_eiter v_end(
-      bfl_detail::bfltree_edge_desc(Arity * (v + 1) + 1));
-  return std::pair<OutIter, OutIter>(
-      OutIter(bfl_detail::vebltree_edge_validity<RawContainer, Arity>(
-                  &g.m_vertices, &g.m_depth_recs),
-              v_beg, v_end),
-      OutIter(bfl_detail::vebltree_edge_validity<RawContainer, Arity>(
-                  &g.m_vertices, &g.m_depth_recs),
-              v_end, v_end));
+  return BAGL_VEBL_D_ARY_TREE::view_vertex_range_as_edges(
+      g.make_valid_vertex_range(Arity * v + 1, Arity * (v + 1) + 1));
 }
 
 /**
@@ -557,8 +464,7 @@ out_edges(const typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor& v,
  * \return The out-degree of the given vertex descriptor.
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-std::size_t out_degree(const typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor& v,
-                       const BAGL_VEBL_D_ARY_TREE& g) {
+std::size_t out_degree(const typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor& v, const BAGL_VEBL_D_ARY_TREE& g) {
   return g.get_vertex_value_impl(v).out_degree;
 }
 
@@ -573,18 +479,9 @@ std::size_t out_degree(const typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor& v
  * \return The edge iterator range for the in-edges of a given vertex descriptor.
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-std::pair<typename BAGL_VEBL_D_ARY_TREE::in_edge_iterator,
-          typename BAGL_VEBL_D_ARY_TREE::in_edge_iterator>
-in_edges(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
-         const BAGL_VEBL_D_ARY_TREE& g) {
-  using InIter = typename vebl_d_ary_tree<Arity, VertexProperties,
-                                          EdgeProperties>::in_edge_iterator;
-  if (v == 0) {
-    return std::make_pair(InIter(bfl_detail::bfltree_edge_desc(0)),
-                          InIter(bfl_detail::bfltree_edge_desc(0)));
-  }
-  return std::make_pair(InIter(bfl_detail::bfltree_edge_desc(v)),
-                        InIter(bfl_detail::bfltree_edge_desc(v + 1)));
+auto in_edges(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, const BAGL_VEBL_D_ARY_TREE& /*g*/) {
+  return BAGL_VEBL_D_ARY_TREE::view_vertex_range_as_edges(
+      BAGL_VEBL_D_ARY_TREE::make_unsafe_vertex_range(v, (v == 0 ? v : v + 1)));
 }
 
 /**
@@ -594,8 +491,7 @@ in_edges(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
  * \return The in-degree of the given vertex descriptor (will be 1 or 0 (root or invalid vertex)).
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-std::size_t in_degree(const typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor& v,
-                      const BAGL_VEBL_D_ARY_TREE& g) {
+std::size_t in_degree(const typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor& v, const BAGL_VEBL_D_ARY_TREE& /*g*/) {
   if (v == 0) {
     return 0;
   }
@@ -609,8 +505,7 @@ std::size_t in_degree(const typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor& v,
  * \return The in-degree plus out-degree of the given vertex descriptor (will be 1 or 0 (root or invalid vertex)).
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-std::size_t degree(const typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor& v,
-                   const BAGL_VEBL_D_ARY_TREE& g) {
+std::size_t degree(const typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor& v, const BAGL_VEBL_D_ARY_TREE& g) {
   return in_degree(v, g) + out_degree(v, g);
 }
 
@@ -624,22 +519,8 @@ std::size_t degree(const typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor& v,
  * \return The vertex iterator range for all the vertices of the tree.
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-std::pair<typename BAGL_VEBL_D_ARY_TREE::vertex_iterator,
-          typename BAGL_VEBL_D_ARY_TREE::vertex_iterator>
-vertices(const BAGL_VEBL_D_ARY_TREE& g) {
-  using VIter = typename vebl_d_ary_tree<Arity, VertexProperties,
-                                         EdgeProperties>::vertex_iterator;
-  using RawContainer = typename vebl_d_ary_tree<Arity, VertexProperties,
-                                                EdgeProperties>::container_type;
-  bfl_detail::bfltree_viter v_beg(0);
-  bfl_detail::bfltree_viter v_end(g.m_vertices.size());
-  return std::pair<VIter, VIter>(
-      VIter(bfl_detail::vebltree_vertex_validity<RawContainer, Arity>(
-                &g.m_vertices, &g.m_depth_recs),
-            v_beg, v_end),
-      VIter(bfl_detail::vebltree_vertex_validity<RawContainer, Arity>(
-                &g.m_vertices, &g.m_depth_recs),
-            v_end, v_end));
+auto vertices(const BAGL_VEBL_D_ARY_TREE& g) {
+  return g.make_valid_vertex_range(0, g.m_vertices.size());
 }
 
 /**
@@ -648,8 +529,7 @@ vertices(const BAGL_VEBL_D_ARY_TREE& g) {
  * \return The size of the tree (the number of vertices it contains).
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-typename BAGL_VEBL_D_ARY_TREE::vertices_size_type num_vertices(
-    const BAGL_VEBL_D_ARY_TREE& g) {
+typename BAGL_VEBL_D_ARY_TREE::vertices_size_type num_vertices(const BAGL_VEBL_D_ARY_TREE& g) {
   return g.m_vertex_count;
 }
 
@@ -663,34 +543,15 @@ typename BAGL_VEBL_D_ARY_TREE::vertices_size_type num_vertices(
  * \return The edge iterator range for all the edges of the tree.
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-std::pair<typename BAGL_VEBL_D_ARY_TREE::edge_iterator,
-          typename BAGL_VEBL_D_ARY_TREE::edge_iterator>
-edges(const BAGL_VEBL_D_ARY_TREE& g) {
-  using EIter = typename vebl_d_ary_tree<Arity, VertexProperties,
-                                         EdgeProperties>::edge_iterator;
-  using RawContainer = typename vebl_d_ary_tree<Arity, VertexProperties,
-                                                EdgeProperties>::container_type;
-
-  bfl_detail::bfltree_eiter v_beg(bfl_detail::bfltree_edge_desc(1));
-  bfl_detail::bfltree_eiter v_end(
-      bfl_detail::bfltree_edge_desc(g.m_vertices.size()));
-  return std::pair<EIter, EIter>(
-      EIter(bfl_detail::vebltree_edge_validity<RawContainer, Arity>(
-                &g.m_vertices, &g.m_depth_recs),
-            v_beg, v_end),
-      EIter(bfl_detail::vebltree_edge_validity<RawContainer, Arity>(
-                &g.m_vertices, &g.m_depth_recs),
-            v_end, v_end));
+auto edges(const BAGL_VEBL_D_ARY_TREE& g) {
+  return BAGL_VEBL_D_ARY_TREE::view_vertex_range_as_edges(g.make_valid_vertex_range(1, g.m_vertices.size()));
 }
 
 /**
  * Returns the number of edges in the tree.
- * \param g The graph.
- * \return The number of edges in the tree.
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-typename BAGL_VEBL_D_ARY_TREE::vertices_size_type num_edges(
-    const BAGL_VEBL_D_ARY_TREE& g) {
+typename BAGL_VEBL_D_ARY_TREE::vertices_size_type num_edges(const BAGL_VEBL_D_ARY_TREE& g) {
   return num_vertices(g) - 1;
 }
 
@@ -706,16 +567,14 @@ typename BAGL_VEBL_D_ARY_TREE::vertices_size_type num_edges(
  * \return The edge descriptor for the given vertex descriptor pair.
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-std::pair<typename BAGL_VEBL_D_ARY_TREE::edge_descriptor, bool> edge(
-    typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor u,
-    typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
-    const BAGL_VEBL_D_ARY_TREE& /*unused*/) {
-  using Edge = typename vebl_d_ary_tree<Arity, VertexProperties,
-                                        EdgeProperties>::edge_descriptor;
-  if (u == (v - 1) / Arity) {
-    return std::make_pair(Edge(v), true);
+std::pair<typename BAGL_VEBL_D_ARY_TREE::edge_descriptor, bool> edge(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor u,
+                                                                     typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
+                                                                     const BAGL_VEBL_D_ARY_TREE& /*unused*/) {
+  using Edge = typename BAGL_VEBL_D_ARY_TREE::edge_descriptor;
+  if (v == 0 || u != (v - 1) / Arity) {
+    return {BAGL_VEBL_D_ARY_TREE::null_edge(), false};
   }
-  return std::make_pair(Edge(0), false);
+  return {Edge(v), true};
 }
 
 /***********************************************************************************************
@@ -728,8 +587,7 @@ std::pair<typename BAGL_VEBL_D_ARY_TREE::edge_descriptor, bool> edge(
  * \return The vertex-descriptor of the root of the tree.
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor tree_root(
-    const BAGL_VEBL_D_ARY_TREE& g) {
+typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor tree_root(const BAGL_VEBL_D_ARY_TREE& /*g*/) {
   return 0;
 }
 
@@ -740,23 +598,8 @@ typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor tree_root(
  * \return The vertex iterator range for all the child-vertices of a given vertex of the tree.
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-std::pair<typename BAGL_VEBL_D_ARY_TREE::vertex_iterator,
-          typename BAGL_VEBL_D_ARY_TREE::vertex_iterator>
-children(const typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor& v,
-               const BAGL_VEBL_D_ARY_TREE& g) {
-  using VIter = typename vebl_d_ary_tree<Arity, VertexProperties,
-                                         EdgeProperties>::vertex_iterator;
-  using RawContainer = typename vebl_d_ary_tree<Arity, VertexProperties,
-                                                EdgeProperties>::container_type;
-  bfl_detail::bfltree_viter v_beg(Arity * v + 1);
-  bfl_detail::bfltree_viter v_end(Arity * (v + 1) + 1);
-  return std::pair<VIter, VIter>(
-      VIter(bfl_detail::vebltree_vertex_validity<RawContainer, Arity>(
-                &g.m_vertices, &g.m_depth_recs),
-            v_beg, v_end),
-      VIter(bfl_detail::vebltree_vertex_validity<RawContainer, Arity>(
-                &g.m_vertices, &g.m_depth_recs),
-            v_end, v_end));
+auto children(const typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor& v, const BAGL_VEBL_D_ARY_TREE& g) {
+  return g.make_valid_vertex_range(Arity * v + 1, Arity * (v + 1) + 1);
 }
 
 /***********************************************************************************************
@@ -770,10 +613,7 @@ children(const typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor& v,
  * \return The vertex iterator range for all the child-vertices of a given vertex of the tree.
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-std::pair<typename BAGL_VEBL_D_ARY_TREE::adjacency_iterator,
-          typename BAGL_VEBL_D_ARY_TREE::adjacency_iterator>
-adjacent_vertices(const typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor& v,
-                  const BAGL_VEBL_D_ARY_TREE& g) {
+auto adjacent_vertices(const typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor& v, const BAGL_VEBL_D_ARY_TREE& g) {
   return children(v, g);
 }
 
@@ -788,9 +628,8 @@ adjacent_vertices(const typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor& v,
  * \return The parent vertex of the given vertex descriptor (will be null_vertex() if it is the root (no parent)).
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor parent(
-    typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
-    const BAGL_VEBL_D_ARY_TREE& /*unused*/) {
+typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor parent(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
+                                                        const BAGL_VEBL_D_ARY_TREE& /*unused*/) {
   if (v == 0) {
     return BAGL_VEBL_D_ARY_TREE::null_vertex();
   }
@@ -808,20 +647,11 @@ typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor parent(
  * \return The vertex iterator range for the parent-vertex of a given vertex of the tree.
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-std::pair<typename BAGL_VEBL_D_ARY_TREE::inv_adjacency_iterator,
-          typename BAGL_VEBL_D_ARY_TREE::inv_adjacency_iterator>
-inv_adjacent_vertices(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
-                      const BAGL_VEBL_D_ARY_TREE& g) {
-  using InvAdjIter =
-      typename vebl_d_ary_tree<Arity, VertexProperties,
-                               EdgeProperties>::inv_adjacency_iterator;
+auto inv_adjacent_vertices(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, const BAGL_VEBL_D_ARY_TREE& /*g*/) {
   if (v == 0) {
-    return std::pair<InvAdjIter, InvAdjIter>(bfl_detail::bfltree_viter(0),
-                                             bfl_detail::bfltree_viter(0));
+    return BAGL_VEBL_D_ARY_TREE::make_unsafe_vertex_range(0, 0);
   }
-  return std::pair<InvAdjIter, InvAdjIter>(
-      bfl_detail::bfltree_viter((v - 1) / Arity),
-      bfl_detail::bfltree_viter((v - 1) / Arity + 1));
+  return BAGL_VEBL_D_ARY_TREE::make_unsafe_vertex_range((v - 1) / Arity, (v - 1) / Arity + 1);
 }
 
 /***********************************************************************************************
@@ -834,8 +664,7 @@ inv_adjacent_vertices(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
  * \param g The graph.
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-void remove_branch(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
-                   BAGL_VEBL_D_ARY_TREE& g) {
+void remove_branch(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, BAGL_VEBL_D_ARY_TREE& g) {
   return g.remove_branch(v);
 }
 
@@ -845,8 +674,7 @@ void remove_branch(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
  * \param g The graph.
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-void clear_children(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
-                    BAGL_VEBL_D_ARY_TREE& g) {
+void clear_children(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, BAGL_VEBL_D_ARY_TREE& g) {
   return g.clear_children(v);
 }
 
@@ -856,8 +684,7 @@ void clear_children(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
  * \return The vertex-descriptor of the root of the tree.
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor create_root(
-    BAGL_VEBL_D_ARY_TREE& g) {
+typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor create_root(BAGL_VEBL_D_ARY_TREE& g) {
   if (bfl_detail::bfltree_is_vertex_valid(g.m_vertices[0])) {
     remove_branch(0, g);
   }
@@ -867,21 +694,16 @@ typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor create_root(
 }
 
 /**
- * Adds a child vertex to the given parent vertex, and default-initializes the properties of 
+ * Adds a child vertex to the given parent vertex, and default-initializes the properties of
  * the newly created vertex and edge.
  * \param v The parent vertex to which a child will be added.
  * \param g The graph.
  * \return A pair consisting of the newly created vertex and edge (descriptors).
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-std::pair<typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor,
-          typename BAGL_VEBL_D_ARY_TREE::edge_descriptor>
-add_child_vertex(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
-                 BAGL_VEBL_D_ARY_TREE& g) {
-  using VProp = typename vebl_d_ary_tree<Arity, VertexProperties,
-                                         EdgeProperties>::vertex_property_type;
-  using EProp = typename vebl_d_ary_tree<Arity, VertexProperties,
-                                         EdgeProperties>::edge_property_type;
+auto add_child(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, BAGL_VEBL_D_ARY_TREE& g) {
+  using VProp = typename BAGL_VEBL_D_ARY_TREE::vertex_property_type;
+  using EProp = typename BAGL_VEBL_D_ARY_TREE::edge_property_type;
   return g.add_child(v, VProp(), EProp());
 }
 
@@ -896,8 +718,7 @@ add_child_vertex(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
  * \return The vertex-descriptor of the root of the tree.
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename VProp>
-typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor create_root(
-    VProp&& vp, BAGL_VEBL_D_ARY_TREE& g) {
+typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor create_root(VProp&& vp, BAGL_VEBL_D_ARY_TREE& g) {
   if (bfl_detail::bfltree_is_vertex_valid(g.m_vertices[0])) {
     remove_branch(0, g);
   }
@@ -908,7 +729,7 @@ typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor create_root(
 }
 
 /**
- * Adds a child vertex to the given parent vertex, and initializes the properties of the newly created 
+ * Adds a child vertex to the given parent vertex, and initializes the properties of the newly created
  * vertex to the given property value.
  * \param v The parent vertex to which a child will be added.
  * \param vp The property value to be moved into the newly created vertex.
@@ -916,17 +737,13 @@ typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor create_root(
  * \return A pair consisting of the newly created vertex and edge (descriptors).
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename VProp>
-std::pair<typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor,
-          typename BAGL_VEBL_D_ARY_TREE::edge_descriptor>
-add_child_vertex(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, VProp&& vp,
-                 BAGL_VEBL_D_ARY_TREE& g) {
-  using EProp = typename vebl_d_ary_tree<Arity, VertexProperties,
-                                         EdgeProperties>::edge_property_type;
+auto add_child(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, VProp&& vp, BAGL_VEBL_D_ARY_TREE& g) {
+  using EProp = typename BAGL_VEBL_D_ARY_TREE::edge_property_type;
   return g.add_child(v, std::forward<VProp>(vp), EProp());
 }
 
 /**
- * Adds a child vertex to the given parent vertex, and initializes the properties of the newly created 
+ * Adds a child vertex to the given parent vertex, and initializes the properties of the newly created
  * vertex and edge to the given property values.
  * \param v The parent vertex to which a child will be added.
  * \param vp The property value to be moved into the newly created vertex.
@@ -935,15 +752,12 @@ add_child_vertex(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, VProp&& vp,
  * \return A pair consisting of the newly created vertex and edge (descriptors).
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename VProp, typename EProp>
-std::pair<typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor,
-          typename BAGL_VEBL_D_ARY_TREE::edge_descriptor>
-add_child_vertex(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, VProp&& vp,
-                 EProp&& ep, BAGL_VEBL_D_ARY_TREE& g) {
+auto add_child(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, VProp&& vp, EProp&& ep, BAGL_VEBL_D_ARY_TREE& g) {
   return g.add_child(v, std::forward<VProp>(vp), std::forward<EProp>(ep));
 }
 
 /**
- * Removes a branch (sub-tree) starting from and including the given vertex, while 
+ * Removes a branch (sub-tree) starting from and including the given vertex, while
  * recording the vertex-properties of all the removed vertices into an output-iterator.
  * \param v The vertex to remove, along with the sub-tree rooted at that vertex.
  * \param it_out An output iterator (with vertex-properties as value-type) that can store the removed vertices.
@@ -952,13 +766,13 @@ add_child_vertex(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, VProp&& vp,
  * \note The first vertex-property to figure in the output range is that of the vertex v.
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename OutputIter>
-OutputIter remove_branch(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
-                         OutputIter it_out, BAGL_VEBL_D_ARY_TREE& g) {
+OutputIter remove_branch(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, OutputIter it_out,
+                         BAGL_VEBL_D_ARY_TREE& g) {
   return g.remove_branch(v, it_out);
 }
 
 /**
- * Removes a branch (sub-tree) starting from and including the given vertex, while 
+ * Removes a branch (sub-tree) starting from and including the given vertex, while
  * recording the vertex and edge properties of all the removed vertices and edges into output-ranges.
  * \param v The vertex to remove, along with the sub-tree rooted at that vertex.
  * \param vit_out An output iterator (with vertex-properties as value-type) that can store the removed vertices.
@@ -968,14 +782,13 @@ OutputIter remove_branch(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
  * \note The first vertex-property to figure in the output range is that of the vertex v.
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename VertexOIter, typename EdgeOIter>
-std::pair<VertexOIter, EdgeOIter> remove_branch(
-    typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, VertexOIter vit_out,
-    EdgeOIter eit_out, BAGL_VEBL_D_ARY_TREE& g) {
+std::pair<VertexOIter, EdgeOIter> remove_branch(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, VertexOIter vit_out,
+                                                EdgeOIter eit_out, BAGL_VEBL_D_ARY_TREE& g) {
   return g.remove_branch(v, vit_out, eit_out);
 }
 
 /**
- * Removes a branch (sub-tree) starting from but excluding the given vertex, while 
+ * Removes a branch (sub-tree) starting from but excluding the given vertex, while
  * recording the vertex-properties of all the removed vertices into an output-iterator.
  * \param v The root of the sub-tree to be removed.
  * \param it_out An output iterator (with vertex-properties as value-type) that can store the removed vertices.
@@ -983,13 +796,13 @@ std::pair<VertexOIter, EdgeOIter> remove_branch(
  * \return The output-iterator after the collection of all the removed vertices.
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename OutputIter>
-OutputIter clear_children(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
-                          OutputIter it_out, BAGL_VEBL_D_ARY_TREE& g) {
+OutputIter clear_children(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, OutputIter it_out,
+                          BAGL_VEBL_D_ARY_TREE& g) {
   return g.clear_children(v, it_out);
 }
 
 /**
- * Removes a branch (sub-tree) starting from but excluding the given vertex, while 
+ * Removes a branch (sub-tree) starting from but excluding the given vertex, while
  * recording the vertex-properties of all the removed vertices into an output-iterator.
  * \param v The root of the sub-tree to be removed.
  * \param vit_out An output iterator (with vertex-properties as value-type) that can store the removed vertices.
@@ -998,9 +811,8 @@ OutputIter clear_children(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
  * \return The output-iterator after the collection of all the removed vertices.
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename VertexOIter, typename EdgeOIter>
-std::pair<VertexOIter, EdgeOIter> clear_children(
-    typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, VertexOIter vit_out,
-    EdgeOIter eit_out, BAGL_VEBL_D_ARY_TREE& g) {
+std::pair<VertexOIter, EdgeOIter> clear_children(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
+                                                 VertexOIter vit_out, EdgeOIter eit_out, BAGL_VEBL_D_ARY_TREE& g) {
   return g.clear_children(v, vit_out, eit_out);
 }
 
@@ -1009,171 +821,149 @@ std::pair<VertexOIter, EdgeOIter> clear_children(
  * ********************************************************************************************/
 
 /**
-  * Returns a const-reference to the vertex-property associated to the given vertex descriptor.
-  * \param g The tree from which to draw the vertex.
-  * \param v The vertex descriptor of the sought-after vertex-property.
-  * \return The vertex-property, by const-reference, associated to the given vertex descriptor.
-  */
+ * Returns a const-reference to the vertex-property associated to the given vertex descriptor.
+ * \param g The tree from which to draw the vertex.
+ * \param v The vertex descriptor of the sought-after vertex-property.
+ * \return The vertex-property, by const-reference, associated to the given vertex descriptor.
+ */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-const typename BAGL_VEBL_D_ARY_TREE::vertex_property_type& get(
-    const BAGL_VEBL_D_ARY_TREE& g,
-    typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v) {
+const typename BAGL_VEBL_D_ARY_TREE::vertex_property_type& get(const BAGL_VEBL_D_ARY_TREE& g,
+                                                               typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v) {
   return g[v];
 }
 
 /**
-  * Returns a const-reference to the edge-property associated to the given edge descriptor.
-  * \param g The tree from which to draw the edge.
-  * \param e The edge descriptor of the sought-after edge-property.
-  * \return The edge-property, by const-reference, associated to the given edge descriptor.
-  */
+ * Returns a const-reference to the edge-property associated to the given edge descriptor.
+ * \param g The tree from which to draw the edge.
+ * \param e The edge descriptor of the sought-after edge-property.
+ * \return The edge-property, by const-reference, associated to the given edge descriptor.
+ */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-const typename BAGL_VEBL_D_ARY_TREE::edge_property_type& get(
-    const BAGL_VEBL_D_ARY_TREE& g,
-    typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e) {
+const typename BAGL_VEBL_D_ARY_TREE::edge_property_type& get(const BAGL_VEBL_D_ARY_TREE& g,
+                                                             typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e) {
   return g[e];
 }
 
 /**
-  * Sets the vertex-property associated to the given vertex descriptor.
-  * \param g The tree from which the vertex is drawn.
-  * \param v The vertex descriptor of the vertex-property to be set.
-  * \param value The vertex-property, by const-reference, to be associated to the given vertex.
-  */
+ * Sets the vertex-property associated to the given vertex descriptor.
+ * \param g The tree from which the vertex is drawn.
+ * \param v The vertex descriptor of the vertex-property to be set.
+ * \param value The vertex-property, by const-reference, to be associated to the given vertex.
+ */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-void put(BAGL_VEBL_D_ARY_TREE& g,
-         typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
+void put(BAGL_VEBL_D_ARY_TREE& g, typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
          const typename BAGL_VEBL_D_ARY_TREE::vertex_property_type& value) {
   g[v] = value;
 }
 
 /**
-  * Sets the edge-property associated to the given edge descriptor.
-  * \param g The tree from which the edge is drawn.
-  * \param e The edge descriptor of the edge-property to be set.
-  * \param value The edge-property, by const-reference, to be associated to the given edge.
-  */
+ * Sets the edge-property associated to the given edge descriptor.
+ * \param g The tree from which the edge is drawn.
+ * \param e The edge descriptor of the edge-property to be set.
+ * \param value The edge-property, by const-reference, to be associated to the given edge.
+ */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-void put(BAGL_VEBL_D_ARY_TREE& g,
-         typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e,
+void put(BAGL_VEBL_D_ARY_TREE& g, typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e,
          const typename BAGL_VEBL_D_ARY_TREE::edge_property_type& value) {
   g[e] = value;
 }
 
 /**
-  * Sets the vertex-property associated to the given vertex descriptor.
-  * \param g The tree from which the vertex is drawn.
-  * \param v The vertex descriptor of the vertex-property to be set.
-  * \param value The vertex-property, by rvalue-reference, to be associated to the given vertex.
-  */
+ * Sets the vertex-property associated to the given vertex descriptor.
+ * \param g The tree from which the vertex is drawn.
+ * \param v The vertex descriptor of the vertex-property to be set.
+ * \param value The vertex-property, by rvalue-reference, to be associated to the given vertex.
+ */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-void put(BAGL_VEBL_D_ARY_TREE& g,
-         typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
+void put(BAGL_VEBL_D_ARY_TREE& g, typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
          typename BAGL_VEBL_D_ARY_TREE::vertex_property_type&& value) {
   g[v] = std::move(value);
 }
 
 /**
-  * Sets the edge-property associated to the given edge descriptor.
-  * \param g The tree from which the edge is drawn.
-  * \param e The edge descriptor of the edge-property to be set.
-  * \param value The edge-property, by rvalue-reference, to be associated to the given edge.
-  */
+ * Sets the edge-property associated to the given edge descriptor.
+ * \param g The tree from which the edge is drawn.
+ * \param e The edge descriptor of the edge-property to be set.
+ * \param value The edge-property, by rvalue-reference, to be associated to the given edge.
+ */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-void put(BAGL_VEBL_D_ARY_TREE& g,
-         typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e,
+void put(BAGL_VEBL_D_ARY_TREE& g, typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e,
          typename BAGL_VEBL_D_ARY_TREE::edge_property_type&& value) {
   g[e] = std::move(value);
 }
 
 /**
-  * Returns a reference to the vertex-property associated to the given vertex descriptor.
-  * \param v The vertex descriptor of the sought-after vertex-property.
-  * \param g The tree from which to draw the vertex.
-  * \return The vertex-property, by reference, associated to the given vertex descriptor.
-  */
+ * Returns a reference to the vertex-property associated to the given vertex descriptor.
+ * \param v The vertex descriptor of the sought-after vertex-property.
+ * \param g The tree from which to draw the vertex.
+ * \return The vertex-property, by reference, associated to the given vertex descriptor.
+ */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-typename BAGL_VEBL_D_ARY_TREE::vertex_property_type& get_property(
-    typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, BAGL_VEBL_D_ARY_TREE& g) {
+typename BAGL_VEBL_D_ARY_TREE::vertex_property_type& get_property(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
+                                                                  BAGL_VEBL_D_ARY_TREE& g) {
   return g[v];
 }
 
 /**
-  * Returns a const-reference to the vertex-property associated to the given vertex descriptor.
-  * \param v The vertex descriptor of the sought-after vertex-property.
-  * \param g The tree from which to draw the vertex.
-  * \return The vertex-property, by const-reference, associated to the given vertex descriptor.
-  */
+ * Returns a const-reference to the vertex-property associated to the given vertex descriptor.
+ * \param v The vertex descriptor of the sought-after vertex-property.
+ * \param g The tree from which to draw the vertex.
+ * \return The vertex-property, by const-reference, associated to the given vertex descriptor.
+ */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
 const typename BAGL_VEBL_D_ARY_TREE::vertex_property_type& get_property(
-    typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
-    const BAGL_VEBL_D_ARY_TREE& g) {
+    typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, const BAGL_VEBL_D_ARY_TREE& g) {
   return g[v];
 }
 
 /**
-  * Returns a reference to the edge-property associated to the given edge descriptor.
-  * \param e The edge descriptor of the sought-after edge-property.
-  * \param g The tree from which to draw the edge.
-  * \return The edge-property, by reference, associated to the given edge descriptor.
-  */
+ * Returns a reference to the edge-property associated to the given edge descriptor.
+ * \param e The edge descriptor of the sought-after edge-property.
+ * \param g The tree from which to draw the edge.
+ * \return The edge-property, by reference, associated to the given edge descriptor.
+ */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-typename BAGL_VEBL_D_ARY_TREE::edge_property_type& get_property(
-    typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e, BAGL_VEBL_D_ARY_TREE& g) {
+typename BAGL_VEBL_D_ARY_TREE::edge_property_type& get_property(typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e,
+                                                                BAGL_VEBL_D_ARY_TREE& g) {
   return g[e];
 }
 
 /**
-  * Returns a const-reference to the edge-property associated to the given edge descriptor.
-  * \param e The edge descriptor of the sought-after edge-property.
-  * \param g The tree from which to draw the edge.
-  * \return The edge-property, by const-reference, associated to the given edge descriptor.
-  */
+ * Returns a const-reference to the edge-property associated to the given edge descriptor.
+ * \param e The edge descriptor of the sought-after edge-property.
+ * \param g The tree from which to draw the edge.
+ * \return The edge-property, by const-reference, associated to the given edge descriptor.
+ */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-const typename BAGL_VEBL_D_ARY_TREE::edge_property_type& get_property(
-    typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e,
-    const BAGL_VEBL_D_ARY_TREE& g) {
+const typename BAGL_VEBL_D_ARY_TREE::edge_property_type& get_property(typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e,
+                                                                      const BAGL_VEBL_D_ARY_TREE& g) {
   return g[e];
 }
-
-#ifndef BOOST_GRAPH_NO_BUNDLED_PROPERTIES
 
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename T, typename Bundle>
 struct property_map<BAGL_VEBL_D_ARY_TREE, T Bundle::*> {
-  using non_const_Bundle = typename remove_const<Bundle>::type;
-  using non_const_T = typename remove_const<T>::type;
-  using is_vertex_bundle =
-      is_convertible<typename vebl_d_ary_tree<Arity, VertexProperties,
-                                              EdgeProperties>::vertex_bundled*,
-                     non_const_Bundle*>;
-  using type = bundle_member_property_map<
-      non_const_T, vebl_d_ary_tree<Arity, VertexProperties, EdgeProperties>,
-      typename mpl::if_<is_vertex_bundle, vertex_bundle_t,
-                        edge_bundle_t>::type>;
-  using const_type = bundle_member_property_map<
-      const non_const_T,
-      const vebl_d_ary_tree<Arity, VertexProperties, EdgeProperties>,
-      typename mpl::if_<is_vertex_bundle, vertex_bundle_t,
-                        edge_bundle_t>::type>;
+  using non_const_bundle = std::remove_cv_t<Bundle>;
+  using non_const_t = std::remove_cv_t<T>;
+  static constexpr bool is_vertex_bundle_v =
+      std::is_convertible_v<typename BAGL_VEBL_D_ARY_TREE::vertex_bundled*, non_const_bundle*>;
+  using type = bundle_member_property_map<non_const_t, BAGL_VEBL_D_ARY_TREE,
+                                          std::conditional_t<is_vertex_bundle_v, vertex_bundle_t, edge_bundle_t>>;
+  using const_type = bundle_member_property_map<const non_const_t, const BAGL_VEBL_D_ARY_TREE,
+                                                std::conditional_t<is_vertex_bundle_v, vertex_bundle_t, edge_bundle_t>>;
 };
 
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename T, typename Bundle>
-typename property_map<BAGL_VEBL_D_ARY_TREE, T Bundle::*>::type get(
-    T Bundle::*p, BAGL_VEBL_D_ARY_TREE& g) {
+auto get(T Bundle::*p, BAGL_VEBL_D_ARY_TREE& g) {
   return typename property_map<BAGL_VEBL_D_ARY_TREE, T Bundle::*>::type(&g, p);
 }
 
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename T, typename Bundle>
-typename property_map<BAGL_VEBL_D_ARY_TREE, T Bundle::*>::const_type get(
-    T Bundle::*p, const BAGL_VEBL_D_ARY_TREE& g) {
-  return typename property_map<BAGL_VEBL_D_ARY_TREE, T Bundle::*>::const_type(&g,
-                                                                             p);
+auto get(T Bundle::*p, const BAGL_VEBL_D_ARY_TREE& g) {
+  return typename property_map<BAGL_VEBL_D_ARY_TREE, T Bundle::*>::const_type(&g, p);
 }
 
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename T, typename Bundle, typename Key>
-const typename remove_const<T>::type& get(T Bundle::*p,
-                                          const BAGL_VEBL_D_ARY_TREE& g,
-                                          const Key& k) {
+const auto& get(T Bundle::*p, const BAGL_VEBL_D_ARY_TREE& g, const Key& k) {
   return (g[k]).*p;
 }
 
@@ -1184,10 +974,8 @@ void put(T Bundle::*p, BAGL_VEBL_D_ARY_TREE& g, const Key& k, const T& val) {
 
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename T, typename Bundle, typename Key>
 void put(T Bundle::*p, BAGL_VEBL_D_ARY_TREE& g, const Key& k, T&& val) {
-  (g[k]).*p = std::move(val);
+  (g[k]).*p = std::forward<T>(val);
 }
-
-#endif
 
 /***********************************************************************************************
  *                             Property Maps (from tags)
@@ -1199,8 +987,7 @@ struct vebl_d_ary_tree_property_selector {
     using value_type = typename property_value<Property, Tag>::type;
 
     using type = tagged_from_bundle_property_map<value_type, Graph, Tag>;
-    using const_type =
-        tagged_from_bundle_property_map<const value_type, const Graph, Tag>;
+    using const_type = tagged_from_bundle_property_map<const value_type, const Graph, Tag>;
   };
 };
 
@@ -1216,38 +1003,30 @@ struct edge_property_selector<vebl_d_ary_tree_tag> {
 };
 
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename Property>
-typename property_map<BAGL_VEBL_D_ARY_TREE, Property>::type get(
-    Property p, BAGL_VEBL_D_ARY_TREE& g) {
-  using Map = typename property_map<
-      vebl_d_ary_tree<Arity, VertexProperties, EdgeProperties>, Property>::type;
+auto get(Property p, BAGL_VEBL_D_ARY_TREE& g) {
+  using Map = typename property_map<BAGL_VEBL_D_ARY_TREE, Property>::type;
   return Map(&g, p);
 }
 
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename Property>
-typename property_map<BAGL_VEBL_D_ARY_TREE, Property>::const_type get(
-    Property p, const BAGL_VEBL_D_ARY_TREE& g) {
-  using Map = typename property_map<
-      vebl_d_ary_tree<Arity, VertexProperties, EdgeProperties>,
-      Property>::const_type;
+auto get(Property p, const BAGL_VEBL_D_ARY_TREE& g) {
+  using Map = typename property_map<BAGL_VEBL_D_ARY_TREE, Property>::const_type;
   return Map(&g, p);
 }
 
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename Property, typename Key>
-typename property_map_value<BAGL_VEBL_D_ARY_TREE, Property>::type get(
-    Property p, const BAGL_VEBL_D_ARY_TREE& g, const Key& k) {
+auto get(Property p, const BAGL_VEBL_D_ARY_TREE& g, const Key& k) {
   return get_property_value(g[k], p);
 }
 
-template <BAGL_VEBL_D_ARY_TREE_ARGS, typename Property, typename Key,
-          typename Value>
+template <BAGL_VEBL_D_ARY_TREE_ARGS, typename Property, typename Key, typename Value>
 void put(Property p, BAGL_VEBL_D_ARY_TREE& g, const Key& k, const Value& val) {
   get_property_value(g[k], p) = val;
 }
 
-template <BAGL_VEBL_D_ARY_TREE_ARGS, typename Property, typename Key,
-          typename Value>
+template <BAGL_VEBL_D_ARY_TREE_ARGS, typename Property, typename Key, typename Value>
 void put(Property p, BAGL_VEBL_D_ARY_TREE& g, const Key& k, Value&& val) {
-  get_property_value(g[k], p) = std::move(val);
+  get_property_value(g[k], p) = std::forward<Value>(val);
 }
 
 #undef BAGL_VEBL_D_ARY_TREE_ARGS
@@ -1255,4 +1034,4 @@ void put(Property p, BAGL_VEBL_D_ARY_TREE& g, const Key& k, Value&& val) {
 
 }  // namespace bagl
 
-#endif // BAGL_BAGL_VEBL_D_ARY_TREE_H_
+#endif  // BAGL_BAGL_VEBL_D_ARY_TREE_H_

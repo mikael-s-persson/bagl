@@ -62,33 +62,7 @@ struct bfltree_edge_desc {
   explicit bfltree_edge_desc(
       std::size_t aTarget = (std::numeric_limits<std::size_t>::max)())
       : target_vertex(aTarget) {}
-};
-inline bool operator==(const bfltree_edge_desc& lhs,
-                       const bfltree_edge_desc& rhs) {
-  return (lhs.target_vertex == rhs.target_vertex);
-}
-inline bool operator!=(const bfltree_edge_desc& lhs,
-                       const bfltree_edge_desc& rhs) {
-  return (lhs.target_vertex != rhs.target_vertex);
-}
-inline bool operator<(const bfltree_edge_desc& lhs,
-                      const bfltree_edge_desc& rhs) {
-  return (lhs.target_vertex < rhs.target_vertex);
-}
-inline bool operator<=(const bfltree_edge_desc& lhs,
-                       const bfltree_edge_desc& rhs) {
-  return (lhs.target_vertex <= rhs.target_vertex);
-}
-inline bool operator>(const bfltree_edge_desc& lhs,
-                      const bfltree_edge_desc& rhs) {
-  return (lhs.target_vertex > rhs.target_vertex);
-}
-inline bool operator>=(const bfltree_edge_desc& lhs,
-                       const bfltree_edge_desc& rhs) {
-  return (lhs.target_vertex >= rhs.target_vertex);
-}
-struct bfltree_edge_desc_from_target {
-  bfltree_edge_desc operator()(std::size_t v) const { return bfltree_edge_desc{v}; }
+  [[nodiscard]] constexpr auto operator<=>(const bfltree_edge_desc& rhs) const { return target_vertex <=> rhs.target_vertex; }
 };
 
 template <typename VProp>
@@ -106,64 +80,6 @@ struct bfltree_vertex_validity {
   }
 };
 
-template <typename Container>
-struct bfltree_edge_validity {
-  const Container* p_cont;
-  explicit bfltree_edge_validity(const Container* aPCont = nullptr)
-      : p_cont(aPCont) {}
-  bool operator()(bfltree_edge_desc d) {
-    return ((d.target_vertex < p_cont->size()) &&
-            (bfltree_is_vertex_valid((*p_cont)[d.target_vertex])));
-  }
-};
-#if 0
-struct bfltree_eiter
-    : public iterator_facade<bfltree_eiter, const bfltree_edge_desc,
-                             std::random_access_iterator_tag> {
- public:
-  using self = bfltree_eiter;
-
-  explicit bfltree_eiter(bfltree_edge_desc aE = bfltree_edge_desc()) : e(aE) {}
-
-  // private:
-  friend class iterator_core_access;
-
-  void increment() { ++e.target_vertex; }
-  void decrement() { --e.target_vertex; }
-  bool equal(const self& rhs) const { return (this->e == rhs.e); }
-  const bfltree_edge_desc& dereference() const { return e; }
-
-  void advance(std::ptrdiff_t i) { e.target_vertex += i; }
-  std::ptrdiff_t distance_to(const self& rhs) const {
-    return rhs.e.target_vertex - this->e.target_vertex;
-  }
-
-  bfltree_edge_desc e;
-};
-
-struct bfltree_viter : public iterator_facade<bfltree_viter, const std::size_t,
-                                              std::random_access_iterator_tag> {
- public:
-  using self = bfltree_viter;
-
-  explicit bfltree_viter(std::size_t aVIt = 0) : v_it(aVIt) {}
-
-  // private:
-  friend class iterator_core_access;
-
-  void increment() { ++v_it; }
-  void decrement() { --v_it; }
-  bool equal(const self& rhs) const { return (this->v_it == rhs.v_it); }
-  const std::size_t& dereference() const { return v_it; }
-
-  void advance(std::ptrdiff_t i) { v_it += i; }
-  std::ptrdiff_t distance_to(const self& rhs) const {
-    return rhs.v_it - this->v_it;
-  }
-
-  std::size_t v_it;
-};
-#endif
 }  // namespace bagl::bfl_detail
 
 #endif // BAGL_BAGL_DETAIL_BFL_TREE_RANGES_H_
