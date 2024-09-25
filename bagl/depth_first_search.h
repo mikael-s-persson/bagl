@@ -48,8 +48,6 @@ struct nontruth2 {
   }
 };
 
-BAGL_GRAPH_HAS_MEMBER_FUNCTION(finish_edge)
-
 // If the vertex u and the iterators ei and ei_end are thought of as the
 // context of the algorithm, each push and pop from the stack could
 // be thought of as a context shift.
@@ -97,7 +95,7 @@ void depth_first_visit_impl(const G& g, graph_vertex_descriptor_t<G> start, V& v
     // finish_edge has to be called here, not after the
     // loop. Think of the pop as the return from a recursive call.
     if (u_src_e.has_value()) {
-      invoke_finish_edge(vis, u_src_e.value(), g);
+      visitors_detail::invoke_finish_edge(vis, u_src_e.value(), g);
     }
     while (!u_er.empty()) {
       auto u_ei = u_er.begin();
@@ -123,7 +121,7 @@ void depth_first_visit_impl(const G& g, graph_vertex_descriptor_t<G> start, V& v
         } else {
           vis.forward_or_cross_edge(*u_ei, g);
         }
-        invoke_finish_edge(vis, *u_ei, g);
+        visitors_detail::invoke_finish_edge(vis, *u_ei, g);
         u_er.move_begin_to(std::next(u_ei));
       }
     }
@@ -212,7 +210,7 @@ class dfs_visitor {
   }
   template <typename Vertex, typename Graph>
   void finish_vertex(Vertex u, const Graph& g) {
-    visitors_detail::invoke_finish_edge_on_all(vis_, u, g);
+    visitors_detail::invoke_finish_vertex_on_all(vis_, u, g);
   }
 
  protected:

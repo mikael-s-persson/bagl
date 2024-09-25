@@ -59,6 +59,11 @@ template <typename T, typename IndexMap>
 auto make_vector_property_map(IndexMap index) {
   return vector_property_map<T, IndexMap>(std::move(index));
 }
+
+template <typename T, typename IndexMap>
+auto make_vector_property_map(std::size_t initial_size, IndexMap index) {
+  return vector_property_map<T, IndexMap>(initial_size, std::move(index));
+}
 }  // namespace bagl
 
 #endif  // BAGL_BAGL_VECTOR_PROPERTY_MAP_H_
