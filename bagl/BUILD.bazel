@@ -13,6 +13,7 @@ cc_library(
         "buffer_concepts.h",
         "container_traits.h",
         "constant_property_map.h",
+        "d_ary_heap.h",
         "depth_first_search.h",
         "detail/adjlist_containers.h",
         "detail/adjlist_ranges.h",

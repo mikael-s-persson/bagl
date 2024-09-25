@@ -7,6 +7,7 @@
 #include "bagl/buffer_concepts.h"
 #include "bagl/container_traits.h"
 #include "bagl/constant_property_map.h"
+#include "bagl/d_ary_heap.h"
 #include "bagl/depth_first_search.h"
 #include "bagl/detail/adjlist_containers.h"
 #include "bagl/detail/adjlist_ranges.h"
