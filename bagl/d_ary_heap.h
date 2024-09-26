@@ -54,8 +54,9 @@ void property_map_swap(PropMap prop_map, const property_traits_key_t<PropMap>& k
 // - Compare must be a BinaryPredicate used as a less-than operator on
 //   distance_type.
 //
-template <typename Value, std::size_t Arity, typename IndexInHeapPropertyMap, typename DistanceMap,
-          typename Compare = std::less<Value> >
+template <std::semiregular Value, std::size_t Arity, concepts::ReadWritePropertyMap<Value> IndexInHeapPropertyMap,
+          concepts::ReadablePropertyMap<Value> DistanceMap,
+          typename Compare = std::less<> >
 class d_ary_heap_indirect {
   static_assert(Arity >= 2);
 
@@ -266,12 +267,15 @@ class d_ary_heap_indirect {
   }
 };
 
-template <typename Value, std::size_t Arity, typename IndexInHeapPropertyMap, typename DistanceMap, typename Compare>
+template <std::semiregular Value, std::size_t Arity, concepts::ReadWritePropertyMap<Value> IndexInHeapPropertyMap,
+          concepts::ReadablePropertyMap<Value> DistanceMap,
+          typename Compare>
 auto make_d_ary_heap_indirect(DistanceMap distance, IndexInHeapPropertyMap index_in_heap, Compare compare) {
     return d_ary_heap_indirect<Value, Arity, IndexInHeapPropertyMap, DistanceMap, Compare>(std::move(distance), std::move(index_in_heap), std::move(compare));
 }
 
-template <typename Value, std::size_t Arity, typename IndexInHeapPropertyMap, typename DistanceMap>
+template <std::semiregular Value, std::size_t Arity, concepts::ReadWritePropertyMap<Value> IndexInHeapPropertyMap,
+          concepts::ReadablePropertyMap<Value> DistanceMap>
 auto make_d_ary_heap_indirect(DistanceMap distance, IndexInHeapPropertyMap index_in_heap) {
     return d_ary_heap_indirect<Value, Arity, IndexInHeapPropertyMap, DistanceMap>(std::move(distance), std::move(index_in_heap));
 }
