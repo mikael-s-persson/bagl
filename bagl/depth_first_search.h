@@ -61,12 +61,12 @@ struct nontruth2 {
 
 template <concepts::IncidenceGraph G, concepts::DFSVisitor<G> V,
           concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> ColorMap, typename TerminatorFunc>
+    requires concepts::ColorValue<property_traits_value_t<ColorMap>>
 void depth_first_visit_impl(const G& g, graph_vertex_descriptor_t<G> start, V& vis, ColorMap color,
                             TerminatorFunc func = TerminatorFunc()) {
   using Vertex = graph_vertex_descriptor_t<G>;
   using Edge = graph_edge_descriptor_t<G>;
   using ColorValue = property_traits_value_t<ColorMap>;
-  static_assert(concepts::ColorValue<ColorValue>);
   using Color = color_traits<ColorValue>;
   using OutEdgeRange = graph_out_edge_range_t<G>;
   using VertexInfo = std::tuple<Vertex, std::optional<Edge>, partial_view<OutEdgeRange>>;
