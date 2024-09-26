@@ -17,7 +17,6 @@
 #include "bagl/d_ary_heap.h"
 #include "bagl/exception.h"
 #include "bagl/graph_traits.h"
-#include "bagl/indirect_cmp.h"
 #include "bagl/mutable_queue.h"
 #include "bagl/property_map.h"
 #include "bagl/relax.h"
@@ -95,52 +94,52 @@ struct dijkstra_bfs_visitor {
   using D = property_traits_value_t<DistanceMap>;
   using W = property_traits_value_t<WeightMap>;
 
-  dijkstra_bfs_visitor(UniformCostVisitor vis, UpdatableQueue& Q, WeightMap w, PredecessorMap p, DistanceMap d,
+  dijkstra_bfs_visitor(UniformCostVisitor vis, UpdatableQueue& q, WeightMap w, PredecessorMap p, DistanceMap d,
                        BinaryFunction combine, BinaryPredicate compare, D zero)
-      : m_vis(vis),
-        m_Q(Q),
-        m_weight(w),
-        m_predecessor(p),
-        m_distance(d),
-        m_combine(combine),
-        m_compare(compare),
-        m_zero(zero) {}
+      : vis_(vis),
+        q_(q),
+        weight_(w),
+        predecessor_(p),
+        distance_(d),
+        combine_(combine),
+        compare_(compare),
+        zero_(zero) {}
 
   template <class Edge, class Graph>
   void tree_edge(Edge e, Graph& g) {
-    bool decreased = relax_target(e, g, m_weight, m_predecessor, m_distance, m_combine, m_compare);
+    bool decreased = relax_target(e, g, weight_, predecessor_, distance_, combine_, compare_);
     if (decreased) {
-      m_vis.edge_relaxed(e, g);
+      vis_.edge_relaxed(e, g);
     } else {
-      m_vis.edge_not_relaxed(e, g);
+      vis_.edge_not_relaxed(e, g);
     }
   }
   template <class Edge, class Graph>
   void gray_target(Edge e, Graph& g) {
-    D old_distance = get(m_distance, target(e, g));
+    D old_distance = get(distance_, target(e, g));
 
-    bool decreased = relax_target(e, g, m_weight, m_predecessor, m_distance, m_combine, m_compare);
+    bool decreased = relax_target(e, g, weight_, predecessor_, distance_, combine_, compare_);
     if (decreased) {
-      dijkstra_queue_update(m_Q, target(e, g), old_distance);
-      m_vis.edge_relaxed(e, g);
+      dijkstra_queue_update(q_, target(e, g), old_distance);
+      vis_.edge_relaxed(e, g);
     } else {
-      m_vis.edge_not_relaxed(e, g);
+      vis_.edge_not_relaxed(e, g);
     }
   }
 
   template <class Vertex, class Graph>
   void initialize_vertex(Vertex u, Graph& g) {
-    m_vis.initialize_vertex(u, g);
+    vis_.initialize_vertex(u, g);
   }
   template <class Edge, class Graph>
   void non_tree_edge(Edge, Graph&) {}
   template <class Vertex, class Graph>
   void discover_vertex(Vertex u, Graph& g) {
-    m_vis.discover_vertex(u, g);
+    vis_.discover_vertex(u, g);
   }
   template <class Vertex, class Graph>
   void examine_vertex(Vertex u, Graph& g) {
-    m_vis.examine_vertex(u, g);
+    vis_.examine_vertex(u, g);
   }
   template <class Edge, class Graph>
   void examine_edge(Edge e, Graph& g) {
@@ -148,56 +147,52 @@ struct dijkstra_bfs_visitor {
     //
     // Reasons that other comparisons do not work:
     //
-    // m_compare(e_weight, D(0)):
-    //    m_compare only needs to work on distances, not weights, and
+    // compare_(e_weight, D(0)):
+    //    compare_ only needs to work on distances, not weights, and
     //    those types do not need to be the same (bug 8398,
     //    https://svn.boost.org/trac/boost/ticket/8398).
-    // m_compare(m_combine(source_dist, e_weight), source_dist):
-    //    if m_combine is project2nd (as in prim_minimum_spanning_tree),
+    // compare_(combine_(source_dist, e_weight), source_dist):
+    //    if combine_ is project2nd (as in prim_minimum_spanning_tree),
     //    this test will claim that the edge weight is negative whenever
     //    the edge weight is less than source_dist, even if both of
     //    those are positive (bug 9012,
     //    https://svn.boost.org/trac/boost/ticket/9012).
-    // m_compare(m_combine(e_weight, source_dist), source_dist):
+    // compare_(combine_(e_weight, source_dist), source_dist):
     //    would fix project2nd issue, but documentation only requires
-    //    that m_combine be able to take a distance and a weight (in
+    //    that combine_ be able to take a distance and a weight (in
     //    that order) and return a distance.
 
     // W e_weight = get(m_weight, e);
     // sd_plus_ew = source_dist + e_weight.
-    // D sd_plus_ew = m_combine(source_dist, e_weight);
+    // D sd_plus_ew = combine_(source_dist, e_weight);
     // sd_plus_2ew = source_dist + 2 * e_weight.
-    // D sd_plus_2ew = m_combine(sd_plus_ew, e_weight);
-    // The test here is equivalent to e_weight < 0 if m_combine has a
-    // cancellation law, but always returns false when m_combine is a
+    // D sd_plus_2ew = combine_(sd_plus_ew, e_weight);
+    // The test here is equivalent to e_weight < 0 if combine_ has a
+    // cancellation law, but always returns false when combine_ is a
     // projection operator.
-    if (m_compare(m_combine(m_zero, get(m_weight, e)), m_zero)) {
+    if (compare_(combine_(zero_, get(weight_, e)), zero_)) {
       throw negative_edge();
     }
     // End of test for negative-weight edges.
 
-    m_vis.examine_edge(e, g);
+    vis_.examine_edge(e, g);
   }
   template <class Edge, class Graph>
   void black_target(Edge, Graph&) {}
   template <class Vertex, class Graph>
   void finish_vertex(Vertex u, Graph& g) {
-    m_vis.finish_vertex(u, g);
+    vis_.finish_vertex(u, g);
   }
 
-  UniformCostVisitor m_vis;
-  UpdatableQueue& m_Q;
-  WeightMap m_weight;
-  PredecessorMap m_predecessor;
-  DistanceMap m_distance;
-  BinaryFunction m_combine;
-  BinaryPredicate m_compare;
-  D m_zero;
+  UniformCostVisitor vis_;
+  UpdatableQueue& q_;
+  WeightMap weight_;
+  PredecessorMap predecessor_;
+  DistanceMap distance_;
+  BinaryFunction combine_;
+  BinaryPredicate compare_;
+  D zero_;
 };
-
-}  // namespace dijkstra_detail
-
-namespace dijkstra_detail {
 
 template <concepts::IncidenceGraph G, class IndexMap, class Value>
 auto make_default_index_map(const G& g, const IndexMap& index) {
@@ -219,85 +214,103 @@ auto make_default_color_map(const G& g, const IndexMap& index) {
 }  // namespace dijkstra_detail
 
 // Call breadth first search with default color map.
-template <concepts::IncidenceGraph G, class SourceInputIter, concepts::DijkstraVisitor<G> V, class PredecessorMap,
-          class DistanceMap, class WeightMap, class IndexMap, class Compare, class Combine, class DistZero>
-void dijkstra_shortest_paths_no_init(const G& g, SourceInputIter s_begin, SourceInputIter s_end,
-                                     PredecessorMap predecessor, DistanceMap distance, WeightMap weight,
-                                     IndexMap index_map, Compare compare, Combine combine, DistZero zero, V vis) {
-  dijkstra_shortest_paths_no_init(g, s_begin, s_end, predecessor, distance, weight, index_map, compare, combine, zero,
-                                  vis, dijkstra_detail::make_default_color_map(g, index_map));
+template <concepts::IncidenceGraph G, std::ranges::input_range Seeds, concepts::DijkstraVisitor<G> V,
+          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> PredecessorMap,
+          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> DistanceMap,
+          concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap, class IndexMap, class Compare,
+          class Combine>
+void dijkstra_shortest_paths_no_init(const G& g, Seeds seeds, PredecessorMap predecessor, DistanceMap distance,
+                                     WeightMap weight, IndexMap index_map, Compare compare, Combine combine,
+                                     property_traits_value_t<DistanceMap> zero, V vis) {
+  dijkstra_shortest_paths_no_init(g, seeds, predecessor, distance, weight, index_map, compare, combine, zero, vis,
+                                  dijkstra_detail::make_default_color_map(g, index_map));
 }
 
 // Call breadth first search with default color map.
-template <concepts::IncidenceGraph G, concepts::DijkstraVisitor<G> V, class PredecessorMap, class DistanceMap,
-          class WeightMap, class IndexMap, class Compare, class Combine, class DistZero>
+template <concepts::IncidenceGraph G, concepts::DijkstraVisitor<G> V,
+          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> PredecessorMap,
+          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> DistanceMap,
+          concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap, class IndexMap, class Compare,
+          class Combine>
 void dijkstra_shortest_paths_no_init(const G& g, graph_vertex_descriptor_t<G> s, PredecessorMap predecessor,
                                      DistanceMap distance, WeightMap weight, IndexMap index_map, Compare compare,
-                                     Combine combine, DistZero zero, V vis) {
-  dijkstra_shortest_paths_no_init(g, &s, &s + 1, predecessor, distance, weight, index_map, compare, combine, zero, vis);
+                                     Combine combine, property_traits_value_t<DistanceMap> zero, V vis) {
+  dijkstra_shortest_paths_no_init(g, std::ranges::single_view(s), predecessor, distance, weight, index_map, compare,
+                                  combine, zero, vis);
 }
 
 // Call breadth first search
 template <concepts::IncidenceGraph G, std::ranges::input_range Seeds, concepts::DijkstraVisitor<G> V,
-          class PredecessorMap, class DistanceMap, class WeightMap, class IndexMap, class Compare, class Combine,
-          class DistZero, class ColorMap>
+          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> PredecessorMap,
+          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> DistanceMap,
+          concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap, class IndexMap, class Compare,
+          class Combine, concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> ColorMap>
 void dijkstra_shortest_paths_no_init(const G& g, Seeds seeds, PredecessorMap predecessor, DistanceMap distance,
                                      WeightMap weight, IndexMap index_map, Compare compare, Combine combine,
-                                     DistZero zero, V vis, ColorMap color) {
-  using IndirectCmp = indirect_cmp<DistanceMap, Compare>;
-  IndirectCmp icmp(distance, compare);
-
+                                     property_traits_value_t<DistanceMap> zero, V vis, ColorMap color) {
   using Vertex = graph_vertex_descriptor_t<G>;
 
   // Now the default: use a d-ary heap
   auto index_in_heap = dijkstra_detail::make_default_index_map(g, index_map);
-  using MutableQueue = d_ary_heap_indirect<Vertex, 4, decltype(index_in_heap), DistanceMap, Compare>;
-  MutableQueue q(distance, index_in_heap, compare);
+  auto q = make_d_ary_heap_indirect<Vertex, 4>(distance, index_in_heap, compare);
 
-  dijkstra_detail::dijkstra_bfs_visitor<V, MutableQueue, WeightMap, PredecessorMap, DistanceMap, Combine, Compare>
-      bfs_vis(vis, q, weight, predecessor, distance, combine, compare, zero);
+  dijkstra_detail::dijkstra_bfs_visitor bfs_vis{vis, q, weight, predecessor, distance, combine, compare, zero};
 
   breadth_first_visit(g, seeds, q, bfs_vis, color);
 }
 
 // Call breadth first search
-template <concepts::IncidenceGraph G, concepts::DijkstraVisitor<G> V, class PredecessorMap, class DistanceMap,
-          class WeightMap, class IndexMap, class Compare, class Combine, class DistZero, class ColorMap>
+template <concepts::IncidenceGraph G, concepts::DijkstraVisitor<G> V,
+          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> PredecessorMap,
+          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> DistanceMap,
+          concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap, class IndexMap, class Compare,
+          class Combine, concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> ColorMap>
 void dijkstra_shortest_paths_no_init(const G& g, graph_vertex_descriptor_t<G> s, PredecessorMap predecessor,
                                      DistanceMap distance, WeightMap weight, IndexMap index_map, Compare compare,
-                                     Combine combine, DistZero zero, V vis, ColorMap color) {
+                                     Combine combine, property_traits_value_t<DistanceMap> zero, V vis,
+                                     ColorMap color) {
   dijkstra_shortest_paths_no_init(g, std::ranges::single_view(s), predecessor, distance, weight, index_map, compare,
                                   combine, zero, vis, color);
 }
 
 // Initialize distances and call breadth first search with default color map
 template <concepts::VertexListGraph G, std::ranges::input_range Seeds, concepts::DijkstraVisitor<G> V,
-          class PredecessorMap, class DistanceMap, class WeightMap, class IndexMap, class Compare, class Combine,
-          class DistInf, class DistZero>
+          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> PredecessorMap,
+          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> DistanceMap,
+          concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap, class IndexMap, class Compare,
+          class Combine>
 void dijkstra_shortest_paths(const G& g, Seeds seeds, PredecessorMap predecessor, DistanceMap distance,
-                             WeightMap weight, IndexMap index_map, Compare compare, Combine combine, DistInf inf,
-                             DistZero zero, V vis) {
+                             WeightMap weight, IndexMap index_map, Compare compare, Combine combine,
+                             property_traits_value_t<DistanceMap> inf, property_traits_value_t<DistanceMap> zero,
+                             V vis) {
   two_bit_color_map<IndexMap> color(num_vertices(g), index_map);
   dijkstra_shortest_paths(g, seeds, predecessor, distance, weight, index_map, compare, combine, inf, zero, vis, color);
 }
 
 // Initialize distances and call breadth first search with default color map
-template <concepts::VertexListGraph G, concepts::DijkstraVisitor<G> V, class PredecessorMap, class DistanceMap,
-          class WeightMap, class IndexMap, class Compare, class Combine, class DistInf, class DistZero>
+template <concepts::VertexListGraph G, concepts::DijkstraVisitor<G> V,
+          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> PredecessorMap,
+          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> DistanceMap,
+          concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap, class IndexMap, class Compare,
+          class Combine>
 void dijkstra_shortest_paths(const G& g, graph_vertex_descriptor_t<G> s, PredecessorMap predecessor,
                              DistanceMap distance, WeightMap weight, IndexMap index_map, Compare compare,
-                             Combine combine, DistInf inf, DistZero zero, V vis) {
+                             Combine combine, property_traits_value_t<DistanceMap> inf,
+                             property_traits_value_t<DistanceMap> zero, V vis) {
   dijkstra_shortest_paths(g, std::ranges::single_view(s), predecessor, distance, weight, index_map, compare, combine,
                           inf, zero, vis);
 }
 
 // Initialize distances and call breadth first search
 template <concepts::VertexListGraph G, std::ranges::input_range Seeds, concepts::DijkstraVisitor<G> V,
-          class PredecessorMap, class DistanceMap, class WeightMap, class IndexMap, class Compare, class Combine,
-          class DistInf, class DistZero, class ColorMap>
+          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> PredecessorMap,
+          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> DistanceMap,
+          concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap, class IndexMap, class Compare,
+          class Combine, concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> ColorMap>
 void dijkstra_shortest_paths(const G& g, Seeds seeds, PredecessorMap predecessor, DistanceMap distance,
-                             WeightMap weight, IndexMap index_map, Compare compare, Combine combine, DistInf inf,
-                             DistZero zero, V vis, ColorMap color) {
+                             WeightMap weight, IndexMap index_map, Compare compare, Combine combine,
+                             property_traits_value_t<DistanceMap> inf, property_traits_value_t<DistanceMap> zero, V vis,
+                             ColorMap color) {
   using ColorValue = property_traits_value_t<ColorMap>;
   using Color = color_traits<ColorValue>;
   for (auto u : vertices(g)) {
@@ -315,11 +328,15 @@ void dijkstra_shortest_paths(const G& g, Seeds seeds, PredecessorMap predecessor
 }
 
 // Initialize distances and call breadth first search
-template <concepts::VertexListGraph G, concepts::DijkstraVisitor<G> V, class PredecessorMap, class DistanceMap,
-          class WeightMap, class IndexMap, class Compare, class Combine, class DistInf, class DistZero, class ColorMap>
+template <concepts::VertexListGraph G, concepts::DijkstraVisitor<G> V,
+          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> PredecessorMap,
+          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> DistanceMap,
+          concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap, class IndexMap, class Compare,
+          class Combine, concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> ColorMap>
 void dijkstra_shortest_paths(const G& g, graph_vertex_descriptor_t<G> s, PredecessorMap predecessor,
                              DistanceMap distance, WeightMap weight, IndexMap index_map, Compare compare,
-                             Combine combine, DistInf inf, DistZero zero, V vis, ColorMap color) {
+                             Combine combine, property_traits_value_t<DistanceMap> inf,
+                             property_traits_value_t<DistanceMap> zero, V vis, ColorMap color) {
   dijkstra_shortest_paths(g, std::ranges::single_view(s), predecessor, distance, weight, index_map, compare, combine,
                           inf, zero, vis, color);
 }

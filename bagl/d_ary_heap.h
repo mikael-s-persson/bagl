@@ -68,8 +68,8 @@ class d_ary_heap_indirect {
 
   static size_type invalid_index() { return std::numeric_limits<size_type>::max(); }
 
-  d_ary_heap_indirect(DistanceMap distance, IndexInHeapPropertyMap index_in_heap, const Compare& compare = Compare())
-      : compare_(compare), distance_(distance), index_in_heap_(index_in_heap) {}
+  d_ary_heap_indirect(DistanceMap distance, IndexInHeapPropertyMap index_in_heap, Compare compare = Compare())
+      : compare_(std::move(compare)), distance_(std::move(distance)), index_in_heap_(std::move(index_in_heap)) {}
 
   d_ary_heap_indirect(const d_ary_heap_indirect&) = delete;
   d_ary_heap_indirect& operator=(const d_ary_heap_indirect&) = delete;
@@ -81,11 +81,16 @@ class d_ary_heap_indirect {
 
   [[nodiscard]] bool empty() const { return data_.empty(); }
 
-  void push(const Value& v) {
+  template <typename... Args>
+  void emplace(Args&&... args) {
     size_type index = data_.size();
-    data_.push_back(v);
-    put(index_in_heap_, v, index);
+    data_.emplace_back(std::forward<Args>(args)...);
+    put(index_in_heap_, data_.back(), index);
     preserve_heap_property_up(index);
+  }
+
+  void push(const Value& v) {
+    emplace(v);
   }
 
   [[nodiscard]] Value& top() {
@@ -125,14 +130,20 @@ class d_ary_heap_indirect {
     return (index != invalid_index());
   }
 
-  void push_or_update(const Value& v) { /* insert if not present, else update */
+  template <typename... Args>
+  void emplace_or_update(Args&&... args) { /* insert if not present, else update */
+    Value v{std::forward<Args>(args)...};
     size_type index = get(index_in_heap_, v);
     if (index == invalid_index()) {
       index = data_.size();
-      data_.push_back(v);
-      put(index_in_heap_, v, index);
+      data_.emplace_back(std::move(v));
+      put(index_in_heap_, data_.back(), index);
     }
     preserve_heap_property_up(index);
+  }
+
+  void push_or_update(const Value& v) {
+    emplace_or_update(v);
   }
 
   [[nodiscard]] DistanceMap keys() const { return distance_; }
@@ -254,6 +265,16 @@ class d_ary_heap_indirect {
     }
   }
 };
+
+template <typename Value, std::size_t Arity, typename IndexInHeapPropertyMap, typename DistanceMap, typename Compare>
+auto make_d_ary_heap_indirect(DistanceMap distance, IndexInHeapPropertyMap index_in_heap, Compare compare) {
+    return d_ary_heap_indirect<Value, Arity, IndexInHeapPropertyMap, DistanceMap, Compare>(std::move(distance), std::move(index_in_heap), std::move(compare));
+}
+
+template <typename Value, std::size_t Arity, typename IndexInHeapPropertyMap, typename DistanceMap>
+auto make_d_ary_heap_indirect(DistanceMap distance, IndexInHeapPropertyMap index_in_heap) {
+    return d_ary_heap_indirect<Value, Arity, IndexInHeapPropertyMap, DistanceMap>(std::move(distance), std::move(index_in_heap));
+}
 
 }  // namespace bagl
 
