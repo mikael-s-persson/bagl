@@ -1,5 +1,6 @@
 // Copyright 2012 Fernando Vilas
 //           2010 Daniel Trebbien
+// Copyright 2024 Mikael Persson - Modernized to C++20
 
 #ifndef BAGL_BAGL_MAXIMUM_ADJACENCY_SEARCH_H_
 #define BAGL_BAGL_MAXIMUM_ADJACENCY_SEARCH_H_
