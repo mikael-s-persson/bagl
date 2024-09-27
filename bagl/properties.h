@@ -15,6 +15,35 @@
 
 namespace bagl {
 
+namespace concepts {
+
+template <typename PMap, typename G>
+concept ReadableVertexPropertyMap = ReadablePropertyMap<PMap, graph_vertex_descriptor_t<G>>;
+template <typename PMap, typename G>
+concept ReadableEdgePropertyMap = ReadablePropertyMap<PMap, graph_edge_descriptor_t<G>>;
+
+template <typename PMap, typename G>
+concept WritableVertexPropertyMap = WritablePropertyMap<PMap, graph_vertex_descriptor_t<G>>;
+template <typename PMap, typename G>
+concept WritableEdgePropertyMap = WritablePropertyMap<PMap, graph_edge_descriptor_t<G>>;
+
+template <typename PMap, typename G>
+concept ReadWriteVertexPropertyMap = ReadWritePropertyMap<PMap, graph_vertex_descriptor_t<G>>;
+template <typename PMap, typename G>
+concept ReadWriteEdgePropertyMap = ReadWritePropertyMap<PMap, graph_edge_descriptor_t<G>>;
+
+template <typename PMap, typename G>
+concept LvalueVertexPropertyMap = LvaluePropertyMap<PMap, graph_vertex_descriptor_t<G>>;
+template <typename PMap, typename G>
+concept LvalueEdgePropertyMap = LvaluePropertyMap<PMap, graph_edge_descriptor_t<G>>;
+
+template <typename PMap, typename G>
+concept MutableLvalueVertexPropertyMap = MutableLvaluePropertyMap<PMap, graph_vertex_descriptor_t<G>>;
+template <typename PMap, typename G>
+concept MutableLvalueEdgePropertyMap = MutableLvaluePropertyMap<PMap, graph_edge_descriptor_t<G>>;
+
+} // namespace concepts
+
 enum class default_color_type { white_color, gray_color, green_color, red_color, black_color };
 
 template <class ColorValue>

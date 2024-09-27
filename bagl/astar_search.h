@@ -181,11 +181,11 @@ struct astar_bfs_visitor {
 }  // namespace astar_detail
 
 template <concepts::IncidenceGraph G, concepts::AStarHeuristic<G> H, concepts::AStarVisitor<G> V,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> PredecessorMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> CostMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> DistanceMap,
-          concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> ColorMap, typename VertexIndexMap,
+          concepts::ReadWriteVertexPropertyMap<G> PredecessorMap,
+          concepts::ReadWriteVertexPropertyMap<G> CostMap,
+          concepts::ReadWriteVertexPropertyMap<G> DistanceMap,
+          concepts::ReadableEdgePropertyMap<G> WeightMap,
+          concepts::ReadWriteVertexPropertyMap<G> ColorMap, typename VertexIndexMap,
           typename CompareFunction, typename CombineFunction>
 void astar_search_no_init(const G& g, graph_vertex_descriptor_t<G> s, H h, V vis, PredecessorMap predecessor,
                           CostMap cost, DistanceMap distance, WeightMap weight, ColorMap color,
@@ -209,10 +209,10 @@ struct select1st {
 }  // namespace astar_detail
 
 template <concepts::IncidenceGraph G, concepts::AStarHeuristic<G> H, concepts::AStarVisitor<G> V,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> PredecessorMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> CostMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> DistanceMap,
-          concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap, typename CompareFunction,
+          concepts::ReadWriteVertexPropertyMap<G> PredecessorMap,
+          concepts::ReadWriteVertexPropertyMap<G> CostMap,
+          concepts::ReadWriteVertexPropertyMap<G> DistanceMap,
+          concepts::ReadableEdgePropertyMap<G> WeightMap, typename CompareFunction,
           typename CombineFunction>
 void astar_search_no_init_tree(const G& g, graph_vertex_descriptor_t<G> s, H h, V vis, PredecessorMap predecessor,
                                CostMap cost, DistanceMap distance, WeightMap weight, CompareFunction compare,
@@ -256,11 +256,11 @@ void astar_search_no_init_tree(const G& g, graph_vertex_descriptor_t<G> s, H h, 
 
 // Non-named parameter interface
 template <concepts::VertexListGraph G, concepts::AStarHeuristic<G> H, concepts::AStarVisitor<G> V,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> PredecessorMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> CostMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> DistanceMap,
-          concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> ColorMap, typename VertexIndexMap,
+          concepts::ReadWriteVertexPropertyMap<G> PredecessorMap,
+          concepts::ReadWriteVertexPropertyMap<G> CostMap,
+          concepts::ReadWriteVertexPropertyMap<G> DistanceMap,
+          concepts::ReadableEdgePropertyMap<G> WeightMap,
+          concepts::ReadWriteVertexPropertyMap<G> ColorMap, typename VertexIndexMap,
           typename CompareFunction, typename CombineFunction>
 void astar_search(const G& g, graph_vertex_descriptor_t<G> s, H h, V vis, PredecessorMap predecessor, CostMap cost,
                   DistanceMap distance, WeightMap weight, VertexIndexMap index_map, ColorMap color,
@@ -284,10 +284,10 @@ void astar_search(const G& g, graph_vertex_descriptor_t<G> s, H h, V vis, Predec
 
 // Non-named parameter interface
 template <concepts::VertexListGraph G, concepts::AStarHeuristic<G> H, concepts::AStarVisitor<G> V,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> PredecessorMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> CostMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> DistanceMap,
-          concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap, typename CompareFunction,
+          concepts::ReadWriteVertexPropertyMap<G> PredecessorMap,
+          concepts::ReadWriteVertexPropertyMap<G> CostMap,
+          concepts::ReadWriteVertexPropertyMap<G> DistanceMap,
+          concepts::ReadableEdgePropertyMap<G> WeightMap, typename CompareFunction,
           typename CombineFunction>
 void astar_search_tree(const G& g, graph_vertex_descriptor_t<G> s, H h, V vis, PredecessorMap predecessor, CostMap cost,
                        DistanceMap distance, WeightMap weight, CompareFunction compare, CombineFunction combine,

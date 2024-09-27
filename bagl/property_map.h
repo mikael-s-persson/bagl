@@ -125,7 +125,7 @@ concept LvaluePropertyMap = std::convertible_to<property_traits_category_t<PMap>
 };
 
 template <typename PMap, typename Key>
-concept Mutable_LvaluePropertyMap = std::convertible_to<property_traits_category_t<PMap>, lvalue_property_map_tag> &&
+concept MutableLvaluePropertyMap = std::convertible_to<property_traits_category_t<PMap>, lvalue_property_map_tag> &&
     ReadWritePropertyMap<PMap, Key> && requires(PMap& pmap, const Key& k) {
   { pmap[k] } -> std::same_as<property_traits_value_t<PMap>&>;
 };

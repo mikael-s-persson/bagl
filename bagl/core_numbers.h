@@ -81,8 +81,8 @@ namespace core_numbers_detail {
 
 // the core numbers start as the indegree or inweight.  This function
 // will initialize these values
-template <concepts::IncidenceGraph G, concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> CoreMap,
-          concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> EdgeWeightMap>
+template <concepts::IncidenceGraph G, concepts::ReadWriteVertexPropertyMap<G> CoreMap,
+          concepts::ReadableEdgePropertyMap<G> EdgeWeightMap>
 requires concepts::VertexListGraph<G>
 void compute_in_degree_map(const G& g, CoreMap d, EdgeWeightMap wm) {
   for (auto v : vertices(g)) {
@@ -96,8 +96,8 @@ void compute_in_degree_map(const G& g, CoreMap d, EdgeWeightMap wm) {
 }
 
 // the version for weighted graphs is a little different
-template <concepts::IncidenceGraph G, concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> CoreMap,
-          concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> EdgeWeightMap, typename MutableQueue,
+template <concepts::IncidenceGraph G, concepts::ReadWriteVertexPropertyMap<G> CoreMap,
+          concepts::ReadableEdgePropertyMap<G> EdgeWeightMap, typename MutableQueue,
           concepts::CoreNumbersVisitor<G> V>
 property_traits_value_t<CoreMap> core_numbers_impl(const G& g, CoreMap c, EdgeWeightMap wm, MutableQueue& q, V vis) {
   property_traits_value_t<CoreMap> v_cn = {};
@@ -125,9 +125,9 @@ property_traits_value_t<CoreMap> core_numbers_impl(const G& g, CoreMap c, EdgeWe
   return v_cn;
 }
 
-template <concepts::VertexListGraph G, concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> CoreMap,
-          concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> EdgeWeightMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> IndexMap, concepts::CoreNumbersVisitor<G> V>
+template <concepts::VertexListGraph G, concepts::ReadWriteVertexPropertyMap<G> CoreMap,
+          concepts::ReadableEdgePropertyMap<G> EdgeWeightMap,
+          concepts::ReadWriteVertexPropertyMap<G> IndexMap, concepts::CoreNumbersVisitor<G> V>
 property_traits_value_t<CoreMap> core_numbers_dispatch(const G& g, CoreMap c, EdgeWeightMap wm, IndexMap im, V vis) {
   // build the mutable queue
   using Vertex = graph_vertex_descriptor_t<G>;
@@ -143,8 +143,8 @@ property_traits_value_t<CoreMap> core_numbers_dispatch(const G& g, CoreMap c, Ed
 // the version for the unweighted case
 // for this functions CoreMap must be initialized
 // with the in degree of each vertex
-template <concepts::VertexListGraph G, concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> CoreMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> PositionMap, concepts::CoreNumbersVisitor<G> V>
+template <concepts::VertexListGraph G, concepts::ReadWriteVertexPropertyMap<G> CoreMap,
+          concepts::ReadWriteVertexPropertyMap<G> PositionMap, concepts::CoreNumbersVisitor<G> V>
 property_traits_value_t<CoreMap> core_numbers_impl(const G& g, CoreMap c, PositionMap pos, V vis) {
   using Vertex = graph_vertex_descriptor_t<G>;
 
@@ -227,7 +227,7 @@ property_traits_value_t<CoreMap> core_numbers_impl(const G& g, CoreMap c, Positi
 }  // namespace core_numbers_detail
 
 // non-named parameter version for the unweighted case
-template <concepts::IncidenceGraph G, concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> CoreMap,
+template <concepts::IncidenceGraph G, concepts::ReadWriteVertexPropertyMap<G> CoreMap,
           concepts::CoreNumbersVisitor<G> V>
 property_traits_value_t<CoreMap> core_numbers(const G& g, CoreMap c, V vis) {
   core_numbers_detail::compute_in_degree_map(g, c, constant_property_map<void, property_traits_value_t<CoreMap>>(1));
@@ -236,15 +236,15 @@ property_traits_value_t<CoreMap> core_numbers(const G& g, CoreMap c, V vis) {
 }
 
 // non-named paramter version for the unweighted case
-template <concepts::IncidenceGraph G, concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> CoreMap>
+template <concepts::IncidenceGraph G, concepts::ReadWriteVertexPropertyMap<G> CoreMap>
 property_traits_value_t<CoreMap> core_numbers(const G& g, CoreMap c) {
   return core_numbers(g, c, make_core_numbers_visitor(null_visitor()));
 }
 
 // non-named parameter version for the weighted case
-template <concepts::IncidenceGraph G, concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> CoreMap,
-          concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> EdgeWeightMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> VertexIndexMap,
+template <concepts::IncidenceGraph G, concepts::ReadWriteVertexPropertyMap<G> CoreMap,
+          concepts::ReadableEdgePropertyMap<G> EdgeWeightMap,
+          concepts::ReadWriteVertexPropertyMap<G> VertexIndexMap,
           concepts::CoreNumbersVisitor<G> V>
 requires concepts::VertexListGraph<G> property_traits_value_t<CoreMap> core_numbers(const G& g, CoreMap c,
                                                                                     EdgeWeightMap wm,
@@ -263,13 +263,13 @@ requires concepts::VertexListGraph<G> property_traits_value_t<CoreMap> core_numb
 //            make_core_numbers_visitor(null_visitor()));
 //    }
 
-template <concepts::IncidenceGraph G, concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> CoreMap,
+template <concepts::IncidenceGraph G, concepts::ReadWriteVertexPropertyMap<G> CoreMap,
           concepts::CoreNumbersVisitor<G> V>
 property_traits_value_t<CoreMap> weighted_core_numbers(const G& g, CoreMap c, V vis) {
   return core_numbers(g, c, get(edge_weight, g), get(vertex_index, g), vis);
 }
 
-template <concepts::IncidenceGraph G, concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> CoreMap>
+template <concepts::IncidenceGraph G, concepts::ReadWriteVertexPropertyMap<G> CoreMap>
 property_traits_value_t<CoreMap> weighted_core_numbers(const G& g, CoreMap c) {
   return weighted_core_numbers(g, c, make_core_numbers_visitor(null_visitor()));
 }

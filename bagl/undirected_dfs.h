@@ -16,8 +16,8 @@ namespace bagl {
 namespace udfs_detail {
 
 template <concepts::IncidenceGraph G, concepts::DFSVisitor<G> V,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> VertexColorMap,
-          concepts::ReadWritePropertyMap<graph_edge_descriptor_t<G>> EdgeColorMap>
+          concepts::ReadWriteVertexPropertyMap<G> VertexColorMap,
+          concepts::ReadWriteEdgePropertyMap<G> EdgeColorMap>
 requires concepts::ColorValue<property_traits_value_t<VertexColorMap>> &&
     concepts::ColorValue<property_traits_value_t<EdgeColorMap>>
 void undir_dfv_impl(const G& g, graph_vertex_descriptor_t<G> start, V& vis, VertexColorMap vertex_color,
@@ -79,16 +79,16 @@ void undir_dfv_impl(const G& g, graph_vertex_descriptor_t<G> start, V& vis, Vert
 }  // namespace udfs_detail
 
 template <concepts::IncidenceGraph G, concepts::DFSVisitor<G> V,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> VertexColorMap,
-          concepts::ReadWritePropertyMap<graph_edge_descriptor_t<G>> EdgeColorMap>
+          concepts::ReadWriteVertexPropertyMap<G> VertexColorMap,
+          concepts::ReadWriteEdgePropertyMap<G> EdgeColorMap>
 void undirected_depth_first_visit(const G& g, graph_vertex_descriptor_t<G> u, V vis, VertexColorMap vcolor,
                                   EdgeColorMap ecolor) {
   udfs_detail::undir_dfv_impl(g, u, vis, vcolor, ecolor);
 }
 
 template <concepts::VertexAndEdgeListGraph G, concepts::DFSVisitor<G> V,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> VertexColorMap,
-          concepts::ReadWritePropertyMap<graph_edge_descriptor_t<G>> EdgeColorMap>
+          concepts::ReadWriteVertexPropertyMap<G> VertexColorMap,
+          concepts::ReadWriteEdgePropertyMap<G> EdgeColorMap>
 void undirected_dfs(const G& g, V vis, VertexColorMap vcolor, EdgeColorMap ecolor, graph_vertex_descriptor_t<G> start) {
   using ColorValue = property_traits_value_t<VertexColorMap>;
   using Color = color_traits<ColorValue>;

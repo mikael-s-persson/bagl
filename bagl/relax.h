@@ -21,7 +21,7 @@ template <class T>
 struct closed_plus {
   const T inf;
 
-  constexpr closed_plus() : inf((std::numeric_limits<T>::max)()) {}
+  constexpr closed_plus() : inf(std::numeric_limits<T>::max()) {}
   constexpr explicit closed_plus(T a_inf) : inf(a_inf) {}
 
   constexpr T operator()(const T& a, const T& b) const {
@@ -32,9 +32,9 @@ struct closed_plus {
   }
 };
 
-template <concepts::IncidenceGraph G, concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> PredecessorMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> DistanceMap, class BinaryFunction,
+template <concepts::IncidenceGraph G, concepts::ReadableEdgePropertyMap<G> WeightMap,
+          concepts::ReadWriteVertexPropertyMap<G> PredecessorMap,
+          concepts::ReadWriteVertexPropertyMap<G> DistanceMap, class BinaryFunction,
           class BinaryPredicate>
 bool relax(graph_edge_descriptor_t<G> e, const G& g, const WeightMap& w, PredecessorMap& p, DistanceMap& d,
            const BinaryFunction& combine, const BinaryPredicate& compare) {
@@ -69,9 +69,9 @@ bool relax(graph_edge_descriptor_t<G> e, const G& g, const WeightMap& w, Predece
   return false;
 }
 
-template <concepts::IncidenceGraph G, concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> PredecessorMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> DistanceMap, class BinaryFunction,
+template <concepts::IncidenceGraph G, concepts::ReadableEdgePropertyMap<G> WeightMap,
+          concepts::ReadWriteVertexPropertyMap<G> PredecessorMap,
+          concepts::ReadWriteVertexPropertyMap<G> DistanceMap, class BinaryFunction,
           class BinaryPredicate>
 bool relax_target(graph_edge_descriptor_t<G> e, const G& g, const WeightMap& w, PredecessorMap& p, DistanceMap& d,
                   const BinaryFunction& combine, const BinaryPredicate& compare) {
@@ -95,9 +95,9 @@ bool relax_target(graph_edge_descriptor_t<G> e, const G& g, const WeightMap& w, 
   return false;
 }
 
-template <concepts::IncidenceGraph G, concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> PredecessorMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> DistanceMap>
+template <concepts::IncidenceGraph G, concepts::ReadableEdgePropertyMap<G> WeightMap,
+          concepts::ReadWriteVertexPropertyMap<G> PredecessorMap,
+          concepts::ReadWriteVertexPropertyMap<G> DistanceMap>
 bool relax(graph_edge_descriptor_t<G> e, const G& g, WeightMap w, PredecessorMap p, DistanceMap d) {
   using D = property_traits_value_t<DistanceMap>;
   using Combine = closed_plus<D>;

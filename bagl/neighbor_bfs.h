@@ -120,7 +120,7 @@ auto make_neighbor_bfs_visitor(Visitors vis) {
 namespace neighbor_bfs_detail {
 
 template <concepts::BidirectionalGraph G, class Buffer, concepts::NeighborBFSVisitor<G> V,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> ColorMap>
+          concepts::ReadWriteVertexPropertyMap<G> ColorMap>
 void neighbor_bfs_impl(const G& g, graph_vertex_descriptor_t<G> start, Buffer& q, V vis, ColorMap color) {
   using Vertex = graph_vertex_descriptor_t<G>;
   using Edge = graph_edge_descriptor_t<G>;
@@ -180,7 +180,7 @@ void neighbor_bfs_impl(const G& g, graph_vertex_descriptor_t<G> start, Buffer& q
 
 }  // namespace neighbor_bfs_detail
 template <concepts::BidirectionalGraph G, concepts::NeighborBFSVisitor<G> V,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> ColorMap>
+          concepts::ReadWriteVertexPropertyMap<G> ColorMap>
 requires concepts::VertexListGraph<G>
 void neighbor_breadth_first_search(G& g, graph_vertex_descriptor_t<G> start, V vis, ColorMap color) {
   // Buffer default
@@ -196,7 +196,7 @@ void neighbor_breadth_first_search(G& g, graph_vertex_descriptor_t<G> start, V v
   neighbor_bfs_detail::neighbor_bfs_impl(g, start, std::ref(q), vis, color);
 }
 
-template <concepts::BidirectionalGraph G, concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> ColorMap>
+template <concepts::BidirectionalGraph G, concepts::ReadWriteVertexPropertyMap<G> ColorMap>
 requires concepts::VertexListGraph<G>
 void neighbor_breadth_first_search(G& g, graph_vertex_descriptor_t<G> start, ColorMap color) {
   neighbor_breadth_first_search(g, start, make_neighbor_bfs_visitor(null_visitor()), color);

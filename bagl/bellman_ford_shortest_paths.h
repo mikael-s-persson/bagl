@@ -71,9 +71,9 @@ auto make_bellman_visitor(Visitors vis) {
 using default_bellman_visitor = bellman_visitor<>;
 
 template <concepts::EdgeListGraph G, concepts::BellmanFordVisitor<G> V, typename Size,
-          concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> PredecessorMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> DistanceMap, class BinaryFunction,
+          concepts::ReadableEdgePropertyMap<G> WeightMap,
+          concepts::ReadWriteVertexPropertyMap<G> PredecessorMap,
+          concepts::ReadWriteVertexPropertyMap<G> DistanceMap, class BinaryFunction,
           class BinaryPredicate>
 bool bellman_ford_shortest_paths(G& g, V vis, Size N, WeightMap weight, PredecessorMap pred, DistanceMap distance,
                                  BinaryFunction combine, BinaryPredicate compare) {
@@ -105,9 +105,9 @@ bool bellman_ford_shortest_paths(G& g, V vis, Size N, WeightMap weight, Predeces
 }
 
 template <concepts::VertexAndEdgeListGraph G, concepts::BellmanFordVisitor<G> V, typename Size,
-          concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> PredecessorMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> DistanceMap, class BinaryFunction,
+          concepts::ReadableEdgePropertyMap<G> WeightMap,
+          concepts::ReadWriteVertexPropertyMap<G> PredecessorMap,
+          concepts::ReadWriteVertexPropertyMap<G> DistanceMap, class BinaryFunction,
           class BinaryPredicate>
 bool bellman_ford_shortest_paths(G& g, V vis, graph_vertex_descriptor_t<G> start, Size N, WeightMap weight,
                                  PredecessorMap pred, DistanceMap distance, BinaryFunction combine,

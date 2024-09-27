@@ -88,8 +88,8 @@ auto make_mas_visitor(Visitors vis) {
 using default_mas_visitor = mas_visitor<>;
 
 namespace mas_detail {
-template <concepts::VertexListGraph G, concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap,
-          concepts::MASVisitor<G> V, concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> VertexAssignmentMap,
+template <concepts::VertexListGraph G, concepts::ReadableEdgePropertyMap<G> WeightMap,
+          concepts::MASVisitor<G> V, concepts::ReadWriteVertexPropertyMap<G> VertexAssignmentMap,
           concepts::KeyedUpdatableQueue PriorityQueue>
 requires concepts::IncidenceGraph<G>
 void maximum_adjacency_search(const G& g, WeightMap weights, V vis, graph_vertex_descriptor_t<G> start,
@@ -171,8 +171,8 @@ void maximum_adjacency_search(const G& g, WeightMap weights, V vis, graph_vertex
 }
 }  // namespace mas_detail
 
-template <concepts::VertexListGraph G, concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap,
-          concepts::MASVisitor<G> V, concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> VertexAssignmentMap,
+template <concepts::VertexListGraph G, concepts::ReadableEdgePropertyMap<G> WeightMap,
+          concepts::MASVisitor<G> V, concepts::ReadWriteVertexPropertyMap<G> VertexAssignmentMap,
           concepts::KeyedUpdatableQueue PriorityQueue>
 requires concepts::IncidenceGraph<G>
 void maximum_adjacency_search(const G& g, WeightMap weights, V vis, graph_vertex_descriptor_t<G> start,

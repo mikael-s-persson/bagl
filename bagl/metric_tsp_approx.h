@@ -63,7 +63,7 @@ class preorder_traverser {
 // Forward declarations
 template <typename OutItr>
 class tsp_tour_visitor;
-template <concepts::Graph G, concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap,
+template <concepts::Graph G, concepts::ReadableEdgePropertyMap<G> WeightMap,
           std::output_iterator<graph_vertex_descriptor_t<G>> OutIter, typename Length>
 class tsp_tour_len_visitor;
 
@@ -72,7 +72,7 @@ void metric_tsp_approx_tour(const G& g, OutIter o) {
   metric_tsp_approx_from_vertex(g, *vertices(g).first, get(edge_weight, g), get(vertex_index, g), tsp_tour_visitor{o});
 }
 
-template <concepts::VertexListGraph G, concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap,
+template <concepts::VertexListGraph G, concepts::ReadableEdgePropertyMap<G> WeightMap,
           std::output_iterator<graph_vertex_descriptor_t<G>> OutIter>
 void metric_tsp_approx_tour(const G& g, WeightMap w, OutIter o) {
   metric_tsp_approx_from_vertex(g, *vertices(g).first, w, tsp_tour_visitor{o});
@@ -83,7 +83,7 @@ void metric_tsp_approx_tour_from_vertex(const G& g, graph_vertex_descriptor_t<G>
   metric_tsp_approx_from_vertex(g, start, get(edge_weight, g), get(vertex_index, g), tsp_tour_visitor{o});
 }
 
-template <concepts::VertexListGraph G, concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap,
+template <concepts::VertexListGraph G, concepts::ReadableEdgePropertyMap<G> WeightMap,
           std::output_iterator<graph_vertex_descriptor_t<G>> OutIter>
 void metric_tsp_approx_tour_from_vertex(const G& g, graph_vertex_descriptor_t<G> start, WeightMap w, OutIter o) {
   metric_tsp_approx_from_vertex(g, start, w, get(vertex_index, g), tsp_tour_visitor<OutIter>(o));
@@ -94,26 +94,26 @@ void metric_tsp_approx(const G& g, V vis) {
   metric_tsp_approx_from_vertex(g, *vertices(g).first, get(edge_weight, g), get(vertex_index, g), vis);
 }
 
-template <concepts::VertexListGraph G, concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> Weightmap,
+template <concepts::VertexListGraph G, concepts::ReadableEdgePropertyMap<G> Weightmap,
           concepts::TSPVertexVisitor<G> V>
 void metric_tsp_approx(const G& g, Weightmap w, V vis) {
   metric_tsp_approx_from_vertex(g, *vertices(g).first, w, get(vertex_index, g), vis);
 }
 
-template <concepts::VertexListGraph G, concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> VertexIndexMap, concepts::TSPVertexVisitor<G> V>
+template <concepts::VertexListGraph G, concepts::ReadableEdgePropertyMap<G> WeightMap,
+          concepts::ReadWriteVertexPropertyMap<G> VertexIndexMap, concepts::TSPVertexVisitor<G> V>
 void metric_tsp_approx(const G& g, WeightMap w, VertexIndexMap id, V vis) {
   metric_tsp_approx_from_vertex(g, *vertices(g).first, w, id, vis);
 }
 
-template <concepts::VertexListGraph G, concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap,
+template <concepts::VertexListGraph G, concepts::ReadableEdgePropertyMap<G> WeightMap,
           concepts::TSPVertexVisitor<G> V>
 void metric_tsp_approx_from_vertex(const G& g, graph_vertex_descriptor_t<G> start, WeightMap w, V vis) {
   metric_tsp_approx_from_vertex(g, start, w, get(vertex_index, g), vis);
 }
 
-template <concepts::VertexListGraph G, concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> VertexIndexMap, concepts::TSPVertexVisitor<G> V>
+template <concepts::VertexListGraph G, concepts::ReadableEdgePropertyMap<G> WeightMap,
+          concepts::ReadWriteVertexPropertyMap<G> VertexIndexMap, concepts::TSPVertexVisitor<G> V>
 void metric_tsp_approx_from_vertex(const G& g, graph_vertex_descriptor_t<G> start, WeightMap weightmap,
                                    VertexIndexMap indexmap, V vis) {
   // Types related to the input graph (GVertex is a template parameter).
@@ -179,7 +179,7 @@ class tsp_tour_visitor {
 };
 
 // Tsp tour visitor that adds the total tour length.
-template <concepts::Graph G, concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap,
+template <concepts::Graph G, concepts::ReadableEdgePropertyMap<G> WeightMap,
           std::output_iterator<graph_vertex_descriptor_t<G>> OutIter, typename Length>
 class tsp_tour_len_visitor {
  public:
@@ -223,7 +223,7 @@ auto make_tsp_tour_visitor(OutIter iter) {
   return tsp_tour_visitor<OutIter>(iter);
 }
 
-template <concepts::Graph G, concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap,
+template <concepts::Graph G, concepts::ReadableEdgePropertyMap<G> WeightMap,
           std::output_iterator<graph_vertex_descriptor_t<G>> OutIter, typename Length>
 auto make_tsp_tour_len_visitor(const G& g, OutIter iter, Length& l, WeightMap map) {
   return tsp_tour_len_visitor<G, WeightMap, OutIter, Length>(g, iter, l, map);

@@ -60,7 +60,7 @@ struct nontruth2 {
 // See https://lists.boost.org/Archives/boost/2003/06/49265.php for FAQ.
 
 template <concepts::IncidenceGraph G, concepts::DFSVisitor<G> V,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> ColorMap, typename TerminatorFunc>
+          concepts::ReadWriteVertexPropertyMap<G> ColorMap, typename TerminatorFunc>
     requires concepts::ColorValue<property_traits_value_t<ColorMap>>
 void depth_first_visit_impl(const G& g, graph_vertex_descriptor_t<G> start, V& vis, ColorMap color,
                             TerminatorFunc func = TerminatorFunc()) {
@@ -133,7 +133,7 @@ void depth_first_visit_impl(const G& g, graph_vertex_descriptor_t<G> start, V& v
 }  // namespace depth_first_search_detail
 
 template <concepts::VertexListGraph G, concepts::DFSVisitor<G> V,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> ColorMap>
+          concepts::ReadWriteVertexPropertyMap<G> ColorMap>
 void depth_first_search(const G& g, V vis, ColorMap color, graph_vertex_descriptor_t<G> start_vertex) {
   using Vertex = graph_vertex_descriptor_t<G>;
   using ColorValue = property_traits_value_t<ColorMap>;
@@ -160,7 +160,7 @@ void depth_first_search(const G& g, V vis, ColorMap color, graph_vertex_descript
 }
 
 template <concepts::VertexListGraph G, concepts::DFSVisitor<G> V,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> ColorMap>
+          concepts::ReadWriteVertexPropertyMap<G> ColorMap>
 void depth_first_search(const G& g, V vis, ColorMap color) {
   auto [u, v] = vertices(g);
   if (u == v) {
@@ -224,14 +224,14 @@ dfs_visitor<Visitors> make_dfs_visitor(Visitors vis) {
 using default_dfs_visitor = dfs_visitor<>;
 
 template <concepts::IncidenceGraph G, concepts::DFSVisitor<G> V,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> ColorMap>
+          concepts::ReadWriteVertexPropertyMap<G> ColorMap>
 void depth_first_visit(const G& g, graph_vertex_descriptor_t<G> u, V vis, ColorMap color) {
   vis.start_vertex(u, g);
   depth_first_search_detail::depth_first_visit_impl(g, u, vis, color, depth_first_search_detail::nontruth2());
 }
 
 template <concepts::IncidenceGraph G, concepts::DFSVisitor<G> V,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> ColorMap, typename TerminatorFunc>
+          concepts::ReadWriteVertexPropertyMap<G> ColorMap, typename TerminatorFunc>
 void depth_first_visit(const G& g, graph_vertex_descriptor_t<G> u, V vis, ColorMap color,
                        TerminatorFunc func = TerminatorFunc()) {
   vis.start_vertex(u, g);

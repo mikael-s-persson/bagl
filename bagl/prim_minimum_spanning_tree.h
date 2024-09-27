@@ -13,10 +13,10 @@
 namespace bagl {
 
 template <concepts::VertexListGraph G, concepts::DijkstraVisitor<G> V,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> PredecessorMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> DistanceMap,
-          concepts::ReadablePropertyMap<graph_edge_descriptor_t<G>> WeightMap,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> IndexMap>
+          concepts::ReadWriteVertexPropertyMap<G> PredecessorMap,
+          concepts::ReadWriteVertexPropertyMap<G> DistanceMap,
+          concepts::ReadableEdgePropertyMap<G> WeightMap,
+          concepts::ReadWriteVertexPropertyMap<G> IndexMap>
 void prim_minimum_spanning_tree(const G& g, graph_vertex_descriptor_t<G> start, PredecessorMap predecessor,
                                 DistanceMap distance, WeightMap weight, IndexMap index_map, V vis) {
   using W = property_traits_value_t<WeightMap>;

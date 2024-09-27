@@ -34,9 +34,9 @@ concept BFSVisitor = std::copy_constructible<Visitor> &&
 
 }  // namespace concepts
 
-// Multiple-seed version
+// Multiple-see version
 template <concepts::IncidenceGraph G, class Buffer, concepts::BFSVisitor<G> V,
-          concepts::ReadWritePropertyMap<graph_vertex_descriptor_t<G>> ColorMap, std::ranges::input_range Seeds>
+          concepts::ReadWriteVertexPropertyMap<G> ColorMap, std::ranges::input_range Seeds>
 void breadth_first_visit(const G& g, Seeds seeds, Buffer& Q, V vis,
                          ColorMap color) {
   using Vertex = graph_vertex_descriptor_t<G>;
