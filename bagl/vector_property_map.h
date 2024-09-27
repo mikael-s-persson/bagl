@@ -4,8 +4,11 @@
 #ifndef BAGL_BAGL_VECTOR_PROPERTY_MAP_H_
 #define BAGL_BAGL_VECTOR_PROPERTY_MAP_H_
 
+#include <bits/ranges_algo.h>
 #include <iterator>
 #include <memory>
+#include <ranges>
+#include <utility>
 #include <vector>
 
 #include "bagl/property_map.h"
@@ -26,12 +29,12 @@ class vector_property_map : public put_get_helper<vector_property_map<T, IndexMa
       : store_(std::make_shared<std::vector<T>>(initial_size)), index_(std::move(index)) {}
 
   auto storage_begin() { return store_->begin(); }
-
   auto storage_end() { return store_->end(); }
+  auto storage_range() { return std::ranges::ref_view(*store_); }
 
   auto storage_begin() const { return store_->cbegin(); }
-
   auto storage_end() const { return store_->cend(); }
+  auto storage_range() const { return std::ranges::ref_view(std::as_const(*store_)); }
 
   IndexMap& get_index_map() { return index_; }
   const IndexMap& get_index_map() const { return index_; }

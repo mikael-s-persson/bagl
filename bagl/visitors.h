@@ -21,6 +21,7 @@ namespace visitors_detail {
 
 BAGL_GRAPH_HAS_MEMBER_FUNCTION(initialize_vertex)
 BAGL_GRAPH_HAS_MEMBER_FUNCTION(start_vertex)
+BAGL_GRAPH_HAS_MEMBER_FUNCTION(visit_vertex)
 BAGL_GRAPH_HAS_MEMBER_FUNCTION(discover_vertex)
 BAGL_GRAPH_HAS_MEMBER_FUNCTION(examine_edge)
 BAGL_GRAPH_HAS_MEMBER_FUNCTION(examine_in_edge)

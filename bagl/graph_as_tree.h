@@ -60,6 +60,11 @@ class graph_as_tree : public graph_as_tree_base<Graph, Node, ChRg, graph_as_tree
   ParentMap p_;
 };
 
+template <typename Graph, typename Node, typename ParentMap>
+auto make_graph_as_tree(Graph& g, Node root, ParentMap p) {
+  return graph_as_tree<Graph, ParentMap, Node>(g, root, p);
+}
+
 namespace detail {
 
 struct graph_as_tree_vertex_property_selector {
