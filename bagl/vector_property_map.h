@@ -22,11 +22,11 @@ class vector_property_map : public put_get_helper<vector_property_map<T, IndexMa
   using reference = decltype(std::declval<std::vector<T>>()[std::declval<property_traits_value_t<IndexMap>>()]);
   using category = lvalue_property_map_tag;
 
-  explicit vector_property_map(IndexMap index = IndexMap())
-      : store_(std::make_shared<std::vector<T>>()), index_(std::move(index)) {}
+  explicit vector_property_map(IndexMap index = IndexMap(), T default_value = T{})
+      : store_(std::make_shared<std::vector<T>>()), index_(std::move(index)), default_value_(std::move(default_value)) {}
 
-  explicit vector_property_map(std::size_t initial_size, IndexMap index = IndexMap())
-      : store_(std::make_shared<std::vector<T>>(initial_size)), index_(std::move(index)) {}
+  explicit vector_property_map(std::size_t initial_size, IndexMap index = IndexMap(), T default_value = T{})
+      : store_(std::make_shared<std::vector<T>>(initial_size, default_value)), index_(std::move(index)), default_value_(std::move(default_value)) {}
 
   auto storage_begin() { return store_->begin(); }
   auto storage_end() { return store_->end(); }
@@ -42,7 +42,7 @@ class vector_property_map : public put_get_helper<vector_property_map<T, IndexMa
   reference operator[](const key_type& v) const {
     auto i = get(index_, v);
     if (static_cast<std::size_t>(i) >= store_->size()) {
-      store_->resize(i + 1, T{});
+      store_->resize(i + 1, default_value_);
     }
     return (*store_)[i];
   }
@@ -56,6 +56,7 @@ class vector_property_map : public put_get_helper<vector_property_map<T, IndexMa
   // I wonder if class 'pmap_ref' is simply needed.
   std::shared_ptr<std::vector<T>> store_;
   IndexMap index_;
+  T default_value_;
 };
 
 template <typename T, typename IndexMap>
@@ -67,6 +68,12 @@ template <typename T, typename IndexMap>
 auto make_vector_property_map(std::size_t initial_size, IndexMap index) {
   return vector_property_map<T, IndexMap>(initial_size, std::move(index));
 }
+
+template <typename T, typename IndexMap>
+auto make_vector_property_map(std::size_t initial_size, IndexMap index, T default_value) {
+  return vector_property_map<T, IndexMap>(initial_size, std::move(index), std::move(default_value));
+}
+
 }  // namespace bagl
 
 #endif  // BAGL_BAGL_VECTOR_PROPERTY_MAP_H_

@@ -524,7 +524,7 @@ struct select_descriptor<pooled_vector<ValueType>> {
   using type = std::size_t;
 };
 
-/* Dummy "ignore" output iterator that is used in remove-branch functions. */
+// Dummy "ignore" output iterator that is used in remove-branch functions.
 struct ignore_output_iter {
   struct value_type {
     template <typename T>
