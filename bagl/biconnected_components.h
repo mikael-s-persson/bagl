@@ -27,7 +27,7 @@ template <typename ComponentMap, typename DiscoverTimeMap, typename LowPointMap,
 struct biconnected_components_visitor : public dfs_visitor<> {
   biconnected_components_visitor(ComponentMap comp, std::size_t& c, std::size_t& children_of_root, DiscoverTimeMap dtm,
                                  std::size_t& dfs_time, LowPointMap lowpt, PredecessorMap pred, OutputIterator out,
-                                 Stack& S, ArticulationVector& is_articulation_point, IndexMap index_map,
+                                 Stack& stack, ArticulationVector& is_articulation_point, IndexMap index_map,
                                  DFSVisitor vis)
       : comp_(comp),
         c_(c),
@@ -37,7 +37,7 @@ struct biconnected_components_visitor : public dfs_visitor<> {
         lowpt_(lowpt),
         pred_(pred),
         out_(out),
-        stack_(S),
+        stack_(stack),
         is_articulation_point_(is_articulation_point),
         index_map_(index_map),
         dfs_vis_(vis) {}
@@ -108,8 +108,8 @@ struct biconnected_components_visitor : public dfs_visitor<> {
           put(comp_, stack_.top(), c_);
           stack_.pop();
         }
-        assert(source(S.top(), g) == parent);
-        assert(target(S.top(), g) == u);
+        assert(source(stack_.top(), g) == parent);
+        assert(target(stack_.top(), g) == u);
         put(comp_, stack_.top(), c_);
         stack_.pop();
         ++c_;

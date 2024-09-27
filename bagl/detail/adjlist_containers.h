@@ -4,6 +4,7 @@
 #define BAGL_BAGL_DETAIL_ADJLIST_CONTAINERS_H_
 
 #include <iterator>
+#include <ranges>
 #include <type_traits>
 #include <utility>
 
@@ -978,7 +979,7 @@ struct adjlist_vertex_container {
 
   // NOTE: This WORKS for ALL vertex container types.
   auto edges() const {
-    return vertices() | std::views::transform([this](vertex_descriptor u) { return out_edges(u); }) | std::views::join;
+    return adjlist_edges_from_out_edges(*this);
   }
   using edge_range = decltype(std::declval<const self&>().edges());
 };

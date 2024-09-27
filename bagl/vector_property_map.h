@@ -4,7 +4,6 @@
 #ifndef BAGL_BAGL_VECTOR_PROPERTY_MAP_H_
 #define BAGL_BAGL_VECTOR_PROPERTY_MAP_H_
 
-#include <bits/ranges_algo.h>
 #include <iterator>
 #include <memory>
 #include <ranges>

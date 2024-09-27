@@ -63,7 +63,7 @@ void put(const two_bit_color_map<IndexMap>& pm, property_traits_key_t<IndexMap> 
   const std::size_t byte_num = i / elements_per_char;
   const std::size_t bit_position = ((i % elements_per_char) * 2);
   pm.data.get()[byte_num] = static_cast<std::uint8_t>((pm.data.get()[byte_num] & ~(3 << bit_position)) |
-                                                       (std::to_underlying(value) << bit_position));
+                                                       (static_cast<std::uint8_t>(value) << bit_position));
 }
 
 template <typename IndexMap>

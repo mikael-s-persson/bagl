@@ -36,8 +36,8 @@ std::size_t bandwidth(const G& g, VertexIndexMap index) {
   using std::abs;
   std::size_t b = 0;
   for (auto e : edges(g)) {
-    int f_i = get(index, source(*i, g));
-    int f_j = get(index, target(*i, g));
+    int f_i = get(index, source(e, g));
+    int f_j = get(index, target(e, g));
     b = std::max(b, static_cast<std::size_t>(abs(f_i - f_j)));
   }
   return b;

@@ -5,7 +5,7 @@
 #define BAGL_BAGL_ONE_BIT_COLOR_MAP_H_
 
 #include <algorithm>
-#include <assert>
+#include <cassert>
 #include <limits>
 #include <memory>
 

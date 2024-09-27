@@ -123,7 +123,6 @@ template <concepts::BidirectionalGraph G, class Buffer, concepts::NeighborBFSVis
           concepts::ReadWriteVertexPropertyMap<G> ColorMap>
 void neighbor_bfs_impl(const G& g, graph_vertex_descriptor_t<G> start, Buffer& q, V vis, ColorMap color) {
   using Vertex = graph_vertex_descriptor_t<G>;
-  using Edge = graph_edge_descriptor_t<G>;
   using ColorValue = property_traits_value_t<ColorMap>;
   using Color = color_traits<ColorValue>;
 

@@ -459,7 +459,7 @@ struct ltree_vertex_container {
 
   // NOTE: This WORKS for ALL vertex container types.
   auto edges() const {
-    return vertices() | std::views::transform([this](vertex_descriptor u) { return out_edges(u); }) | std::views::join;
+    return adjlist_edges_from_out_edges(*this);
   }
   using edge_range = decltype(std::declval<const self&>().edges());
 
