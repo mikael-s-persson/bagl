@@ -15,6 +15,7 @@ cc_library(
         "bfl_d_ary_tree.h",
         "biconnected_components.h",
         "bipartite.h",
+        "boykov_kolmogorov_max_flow.h",
         "breadth_first_search.h",
         "bron_kerbosch_all_cliques.h",
         "bst_inorder_iterator.h",

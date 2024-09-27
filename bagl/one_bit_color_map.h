@@ -1,5 +1,6 @@
 // Copyright (C) 2005-2010 The Trustees of Indiana University.
 //  Authors: Jeremiah Willcock, Douglas Gregor, Andrew Lumsdaine
+// Copyright 2024 Mikael Persson - Modernized to C++20
 
 #ifndef BAGL_BAGL_ONE_BIT_COLOR_MAP_H_
 #define BAGL_BAGL_ONE_BIT_COLOR_MAP_H_
