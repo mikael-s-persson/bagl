@@ -20,6 +20,7 @@ cc_library(
         "bron_kerbosch_all_cliques.h",
         "bst_inorder_iterator.h",
         "buffer_concepts.h",
+        "chrobak_payne_drawing.h",
         "constant_property_map.h",
         "container_traits.h",
         "core_numbers.h",

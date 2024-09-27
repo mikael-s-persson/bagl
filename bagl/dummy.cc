@@ -14,6 +14,7 @@
 #include "bagl/bron_kerbosch_all_cliques.h"
 #include "bagl/bst_inorder_iterator.h"
 #include "bagl/buffer_concepts.h"
+#include "bagl/chrobak_payne_drawing.h"
 #include "bagl/constant_property_map.h"
 #include "bagl/container_traits.h"
 #include "bagl/core_numbers.h"
