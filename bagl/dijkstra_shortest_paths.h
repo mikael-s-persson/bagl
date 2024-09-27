@@ -40,9 +40,9 @@ namespace bagl {
  * @param old_distance  the previous distance to @p vertex
  */
 template <typename Buffer, typename Vertex, typename DistanceType>
-void dijkstra_queue_update(Buffer& Q, Vertex vertex, DistanceType old_distance) {
+void dijkstra_queue_update(Buffer& q, Vertex vertex, DistanceType old_distance) {
   (void)old_distance;
-  Q.update(vertex);
+  q.update(vertex);
 }
 
 namespace concepts {
