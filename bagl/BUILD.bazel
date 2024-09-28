@@ -23,6 +23,7 @@ cc_library(
         "chrobak_payne_drawing.h",
         "circle_layout.h",
         "closeness_centrality.h",
+        "clustering_coefficient.h",
         "constant_property_map.h",
         "container_property_map.h",
         "container_traits.h",

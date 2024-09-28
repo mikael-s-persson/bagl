@@ -124,8 +124,8 @@ void print_vertices(const VertexListGraph& G, Name name, std::ostream& os = std:
   os << '\n';
 }
 
-template <typename Graph, typename Vertex>
-bool is_adjacent(Graph& g, Vertex a, Vertex b) {
+template <concepts::AdjacencyGraph G, typename Vertex>
+bool is_adjacent(G& g, Vertex a, Vertex b) {
   const auto adj_rg = adjacent_vertices(a, g);
   const auto adj_it = std::find(adj_rg.begin(), adj_rg.end(), b);
   if (adj_it == adj_rg.end()) {
@@ -138,7 +138,7 @@ bool is_adjacent(Graph& g, Vertex a, Vertex b) {
     return false;
   }
 
-  if constexpr (std::is_convertible_v<graph_directed_category_t<Graph>, bidirectional_tag>) {
+  if constexpr (std::is_convertible_v<graph_directed_category_t<G>, bidirectional_tag>) {
     const auto ie_rg = in_edges(b, g);
     const auto ie_it = std::find_if(ie_rg.begin(), ie_rg.end(), incident_from(a, g));
     if (ie_it == ie_rg.end()) {
@@ -148,6 +148,13 @@ bool is_adjacent(Graph& g, Vertex a, Vertex b) {
 
   return true;
 }
+
+template <concepts::AdjacencyGraph G, typename Vertex>
+auto num_adjacent_vertices(G& g, Vertex a) {
+  const auto adj_rg = adjacent_vertices(a, g);
+  return std::distance(adj_rg.begin(), adj_rg.end());
+}
+
 
 template <typename Graph, typename Edge>
 bool in_edge_set(Graph& g, Edge e) {
@@ -186,7 +193,7 @@ bool is_descendant(property_traits_value_t<ParentMap> x, property_traits_value_t
 
 // is y reachable from x?
 template <typename IncidenceGraph, typename VertexColorMap>
-inline bool is_reachable(graph_vertex_descriptor_t<IncidenceGraph> x, graph_vertex_descriptor_t<IncidenceGraph> y,
+bool is_reachable(graph_vertex_descriptor_t<IncidenceGraph> x, graph_vertex_descriptor_t<IncidenceGraph> y,
                          const IncidenceGraph& g,
                          VertexColorMap color)  // should start out white for every vertex
 {
@@ -199,7 +206,7 @@ inline bool is_reachable(graph_vertex_descriptor_t<IncidenceGraph> x, graph_vert
 // Is the undirected graph connected?
 // Is the directed graph strongly connected?
 template <typename VertexListGraph, typename VertexColorMap>
-inline bool is_connected(const VertexListGraph& g, VertexColorMap color) {
+bool is_connected(const VertexListGraph& g, VertexColorMap color) {
   using ColorValue = property_traits_value_t<VertexColorMap>;
   using Color = color_traits<ColorValue>;
   for (auto u : vertices(g)) {

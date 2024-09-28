@@ -17,6 +17,7 @@
 #include "bagl/chrobak_payne_drawing.h"
 #include "bagl/circle_layout.h"
 #include "bagl/closeness_centrality.h"
+#include "bagl/clustering_coefficient.h"
 #include "bagl/constant_property_map.h"
 #include "bagl/container_property_map.h"
 #include "bagl/container_traits.h"
