@@ -17,6 +17,7 @@
 #include "bagl/has_trait_member.h"
 #include "bagl/partial_range.h"
 #include "bagl/properties.h"
+#include "bagl/two_bit_color_map.h"
 #include "bagl/visitors.h"
 
 namespace bagl {
@@ -162,12 +163,21 @@ void depth_first_search(const G& g, V vis, ColorMap color, graph_vertex_descript
 template <concepts::VertexListGraph G, concepts::DFSVisitor<G> V,
           concepts::ReadWriteVertexPropertyMap<G> ColorMap>
 void depth_first_search(const G& g, V vis, ColorMap color) {
-  auto [u, v] = vertices(g);
-  if (u == v) {
+  if (vertices(g).empty()) {
     return;
   }
 
   depth_first_search(g, vis, color, get_default_starting_vertex(g));
+}
+
+template <concepts::VertexListGraph G, concepts::DFSVisitor<G> V,
+          concepts::ReadWriteVertexPropertyMap<G> ColorMap>
+void depth_first_search(const G& g, V vis) {
+  if (vertices(g).empty()) {
+    return;
+  }
+
+  depth_first_search(g, vis, two_bit_color_map(num_vertices(g), get(vertex_index, g)), get_default_starting_vertex(g));
 }
 
 template <typename Visitors = null_visitors>

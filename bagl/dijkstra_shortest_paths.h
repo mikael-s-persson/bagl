@@ -206,7 +206,7 @@ auto make_default_index_map(const G& g, const IndexMap& index) {
 template <concepts::IncidenceGraph G, class IndexMap>
 auto make_default_color_map(const G& g, const IndexMap& index) {
   if constexpr (is_vertex_list_graph_v<G>) {
-    return two_bit_color_map<IndexMap>(num_vertices(g), index);
+    return two_bit_color_map(num_vertices(g), index);
   } else {
     return make_vector_property_map<two_bit_color_type>(index);
   }

@@ -218,23 +218,47 @@ using vertex_property = vertex_property_type<Graph>;
 template <typename Graph>
 using edge_property = edge_property_type<Graph>;
 
-template <typename Graph>
-class degree_property_map : public put_get_helper<degree_property_map<Graph> > {
+template <typename G>
+class degree_property_map : public put_get_helper<degree_property_map<G>> {
  public:
-  using key_type = typename graph_traits<Graph>::vertex_descriptor;
-  using value_type = typename graph_traits<Graph>::degree_size_type;
+  using key_type = graph_vertex_descriptor_t<G>;
+  using value_type = std::size_t;
   using reference = value_type;
   using category = readable_property_map_tag;
-  explicit degree_property_map(const Graph& g) : g_(g) {}
-  value_type operator[](const key_type& v) const { return degree(v, g_); }
+  explicit degree_property_map(const G& g) : g_(&g) {}
+  value_type operator[](const key_type& v) const { return degree(v, *g_); }
 
  private:
-  const Graph& g_;
+  const G* g_;
 };
-template <typename Graph>
-auto make_degree_map(const Graph& g) {
-  return degree_property_map<Graph>(g);
-}
+
+template <typename G>
+class out_degree_property_map : public put_get_helper<out_degree_property_map<G>> {
+ public:
+  using key_type = graph_vertex_descriptor_t<G>;
+  using value_type = std::size_t;
+  using reference = value_type;
+  using category = readable_property_map_tag;
+  explicit out_degree_property_map(const G& g) : g_(&g) {}
+  value_type operator[](const key_type& v) const { return out_degree(v, *g_); }
+
+ private:
+  const G* g_;
+};
+
+template <typename G>
+class in_degree_property_map : public put_get_helper<in_degree_property_map<G>> {
+ public:
+  using key_type = graph_vertex_descriptor_t<G>;
+  using value_type = std::size_t;
+  using reference = value_type;
+  using category = readable_property_map_tag;
+  explicit in_degree_property_map(const G& g) : g_(&g) {}
+  value_type operator[](const key_type& v) const { return in_degree(v, *g_); }
+
+ private:
+  const G* g_;
+};
 
 //========================================================================
 // Iterator Property Map Generating Functions contributed by
