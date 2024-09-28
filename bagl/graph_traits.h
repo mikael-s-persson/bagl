@@ -52,6 +52,12 @@ struct graph_traits {
   static vertex_descriptor null_vertex() { return G::null_vertex(); }
 };
 
+template <typename G>
+struct graph_traits<const G> : graph_traits<G> {};
+
+template <typename G>
+struct graph_traits<G&> : graph_traits<G> {};
+
 // Shorthands to avoid the "typename graph_traits<...>::foo_bar" syntax everywhere.
 template <typename G>
 using graph_vertex_descriptor_t = typename graph_traits<G>::vertex_descriptor;

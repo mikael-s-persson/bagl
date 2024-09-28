@@ -191,6 +191,9 @@ struct lookup_one_property<const T, Tag> {
   }
 };
 
+template <typename T, typename Tag>
+using lookup_one_property_t = typename lookup_one_property<T, Tag>::type;
+
 // The BGL properties specialize property_kind and
 // property_num, and use enum's for the Property type (see
 // graph/properties.hpp), but the user may want to use a class
@@ -220,37 +223,13 @@ template <typename T>
 constexpr bool is_no_property_v = std::is_same_v<T, no_property>;
 
 template <typename PList, typename Tag>
-class lookup_one_property_f;
-
-template <typename PList, typename Tag, typename F>
-struct lookup_one_property_f_result;
-
-template <typename PList, typename Tag>
-struct lookup_one_property_f_result<PList, Tag, const lookup_one_property_f<PList, Tag>(PList)> {
-  using type = typename lookup_one_property<PList, Tag>::type;
-};
-
-template <typename PList, typename Tag>
-struct lookup_one_property_f_result<PList, Tag, const lookup_one_property_f<PList, Tag>(PList&)> {
-  using type = typename lookup_one_property<PList, Tag>::type&;
-};
-
-template <typename PList, typename Tag>
-struct lookup_one_property_f_result<PList, Tag, const lookup_one_property_f<PList, Tag>(const PList&)> {
-  using type = const typename lookup_one_property<PList, Tag>::type&;
-};
-
-template <typename PList, typename Tag>
 class lookup_one_property_f {
   Tag tag_;
 
  public:
   explicit lookup_one_property_f(Tag tag) : tag_(tag) {}
-  template <typename F>
-  struct result : lookup_one_property_f_result<PList, Tag, F> {};
 
-  typename lookup_one_property_f_result<PList, Tag, const lookup_one_property_f(PList&)>::type operator()(
-      PList& pl) const {
+  decltype(auto) operator()(PList& pl) const {
     return lookup_one_property<PList, Tag>::lookup(pl, tag_);
   }
 };

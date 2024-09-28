@@ -11,6 +11,7 @@
 #include "bagl/detail/adjlist_ranges.h"
 #include "bagl/detail/container_generators.h"
 #include "bagl/graph_selectors.h"  // for directed_s, undirected_s, bidirectional_s
+#include "bagl/edges_from_out_edges.h"
 
 namespace bagl::adjlist_detail {
 
@@ -979,7 +980,7 @@ struct adjlist_vertex_container {
 
   // NOTE: This WORKS for ALL vertex container types.
   auto edges() const {
-    return adjlist_edges_from_out_edges(*this);
+    return edges_from_out_edges(*this);
   }
   using edge_range = decltype(std::declval<const self&>().edges());
 };
