@@ -1,10 +1,5 @@
-//=======================================================================
-// Copyright (c) Aaron Windsor 2007
-//
-// Distributed under the Boost Software License, Version 1.0. (See
-// accompanying file LICENSE_1_0.txt or copy at
-// http://www.boost.org/LICENSE_1_0.txt)
-//=======================================================================
+// Copyright 2007 Aaron Windsor
+// Copyright 2024 Mikael Persson - Modernized to C++20
 
 #ifndef BAGL_BAGL_CHROBAK_PAYNE_DRAWING_H_
 #define BAGL_BAGL_CHROBAK_PAYNE_DRAWING_H_
