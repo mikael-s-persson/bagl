@@ -130,6 +130,16 @@ concept MutableLvaluePropertyMap = std::convertible_to<property_traits_category_
   { pmap[k] } -> std::same_as<property_traits_value_t<PMap>&>;
 };
 
+template <typename Func, typename PMap>
+concept PropertyCombinator = requires(Func f, const property_traits_value_t<PMap>& value) {
+  { f(value, value) } -> std::convertible_to<property_traits_value_t<PMap>>;
+};
+
+template <typename Func, typename PMap>
+concept PropertyComparator = requires(Func f, const property_traits_value_t<PMap>& value) {
+  { f(value, value) } -> std::same_as<bool>;
+};
+
 } // namespace concepts
 
 template <typename KeyArchetype, typename ValueArchetype>

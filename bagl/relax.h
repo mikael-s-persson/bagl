@@ -17,11 +17,31 @@ namespace bagl {
 // The following version of the plus functor prevents
 // problems due to overflow at positive infinity.
 
-template <class T>
+template <typename T>
+constexpr T default_zero_v = T{};
+template <typename T>
+constexpr T default_inf_v = std::numeric_limits<T>::max();
+
+template <typename T = void>
+struct closed_plus;
+
+template <>
+struct closed_plus<void> {
+  template <typename T>
+  constexpr T operator()(const T& a, const T& b) const {
+    constexpr T inf = default_inf_v<T>;
+    if (a == inf || b == inf) {
+      return inf;
+    }
+    return a + b;
+  }
+};
+
+template <typename  T>
 struct closed_plus {
   const T inf;
 
-  constexpr closed_plus() : inf(std::numeric_limits<T>::max()) {}
+  constexpr closed_plus() : inf(default_inf_v<T>) {}
   constexpr explicit closed_plus(T a_inf) : inf(a_inf) {}
 
   constexpr T operator()(const T& a, const T& b) const {
@@ -34,10 +54,11 @@ struct closed_plus {
 
 template <concepts::IncidenceGraph G, concepts::ReadableEdgePropertyMap<G> WeightMap,
           concepts::ReadWriteVertexPropertyMap<G> PredecessorMap,
-          concepts::ReadWriteVertexPropertyMap<G> DistanceMap, class BinaryFunction,
-          class BinaryPredicate>
+          concepts::ReadWriteVertexPropertyMap<G> DistanceMap,
+          concepts::PropertyCombinator<DistanceMap> Combine,
+          concepts::PropertyComparator<DistanceMap> Compare>
 bool relax(graph_edge_descriptor_t<G> e, const G& g, const WeightMap& w, PredecessorMap& p, DistanceMap& d,
-           const BinaryFunction& combine, const BinaryPredicate& compare) {
+           Combine combine, Compare compare) {
   auto u = source(e, g);
   auto v = target(e, g);
   const auto d_u = get(d, u);
@@ -71,10 +92,11 @@ bool relax(graph_edge_descriptor_t<G> e, const G& g, const WeightMap& w, Predece
 
 template <concepts::IncidenceGraph G, concepts::ReadableEdgePropertyMap<G> WeightMap,
           concepts::ReadWriteVertexPropertyMap<G> PredecessorMap,
-          concepts::ReadWriteVertexPropertyMap<G> DistanceMap, class BinaryFunction,
-          class BinaryPredicate>
+          concepts::ReadWriteVertexPropertyMap<G> DistanceMap,
+          concepts::PropertyCombinator<DistanceMap> Combine,
+          concepts::PropertyComparator<DistanceMap> Compare>
 bool relax_target(graph_edge_descriptor_t<G> e, const G& g, const WeightMap& w, PredecessorMap& p, DistanceMap& d,
-                  const BinaryFunction& combine, const BinaryPredicate& compare) {
+                  Combine combine, Compare compare) {
   const auto u = source(e, g);
   const auto v = target(e, g);
   const auto d_u = get(d, u);
