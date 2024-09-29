@@ -58,6 +58,8 @@ cc_library(
         "dijkstra_shortest_paths_no_color_map.h",
         "edges_from_out_edges.h",
         "edmonds_karp_max_flow.h",
+        "eccentricity.h",
+        "edge_coloring.h",
         "exception.h",
         "exterior_property.h",
         "filtered_graph.h",

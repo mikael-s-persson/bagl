@@ -50,6 +50,8 @@
 #include "bagl/dijkstra_shortest_paths_no_color_map.h"
 #include "bagl/edges_from_out_edges.h"
 #include "bagl/edmonds_karp_max_flow.h"
+#include "bagl/eccentricity.h"
+#include "bagl/edge_coloring.h"
 #include "bagl/exception.h"
 #include "bagl/exterior_property.h"
 #include "bagl/filtered_graph.h"

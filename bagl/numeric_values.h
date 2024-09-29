@@ -5,6 +5,7 @@
 #define BAGL_BAGL_NUMERIC_VALUES_H_
 
 #include <concepts>
+#include <cstdint>
 #include <limits>
 
 namespace bagl {
@@ -19,8 +20,8 @@ namespace bagl {
 template <typename T>
 struct numeric_values {
   using value_type = T;
-  static T zero() { return T{}; }
-  static T infinity() { return (std::numeric_limits<T>::max)(); }
+  static constexpr T zero() { return T{0}; }
+  static constexpr T infinity() { return std::numeric_limits<T>::max(); }
 };
 
 // Specializations for floating point types refer to 0.0 and their infinity
@@ -28,8 +29,8 @@ struct numeric_values {
 template <typename T>
 struct numeric_values_floating_point {
   using value_type = T;
-  static T zero() { return T{0.0}; }
-  static T infinity() { return std::numeric_limits<T>::infinity(); }
+  static constexpr T zero() { return T{0.0}; }
+  static constexpr T infinity() { return std::numeric_limits<T>::infinity(); }
 };
 template <>
 struct numeric_values<float> : numeric_values_floating_point<float> {};

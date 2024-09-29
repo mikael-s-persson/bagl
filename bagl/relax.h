@@ -18,9 +18,9 @@ namespace bagl {
 // problems due to overflow at positive infinity.
 
 template <typename T>
-constexpr T default_zero_v = T{};
+constexpr T default_zero_v = numeric_values<T>::zero();
 template <typename T>
-constexpr T default_inf_v = std::numeric_limits<T>::max();
+constexpr T default_inf_v = numeric_values<T>::infinity();
 
 template <typename T = void>
 struct closed_plus;

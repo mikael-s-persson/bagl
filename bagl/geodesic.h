@@ -40,7 +40,7 @@ namespace bagl {
 template <concepts::VertexListGraph G, concepts::ReadableVertexPropertyMap<G> DistanceMap,
           std::relation<property_traits_value_t<DistanceMap>, property_traits_value_t<DistanceMap>> Combinator>
           requires concepts::NumericValue<property_traits_value_t<DistanceMap>>
-auto combine_distances(const G& g, DistanceMap dist, Combinator combine, property_traits_value_t<DistanceMap> init) {
+auto combine_distances(const G& g, DistanceMap dist, Combinator combine, property_traits_value_t<DistanceMap> init = {}) {
   using Distance = property_traits_value_t<DistanceMap>;
   using DistanceNumbers = numeric_values<Distance>;
 

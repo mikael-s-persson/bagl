@@ -5,11 +5,13 @@
 #ifndef BAGL_BAGL_PROPERTIES_H_
 #define BAGL_BAGL_PROPERTIES_H_
 
+#include <limits>
 #include <type_traits>
 
 #include "bagl/constant_property_map.h"
 #include "bagl/graph_traits.h"
 #include "bagl/null_property_map.h"
+#include "bagl/numeric_values.h"
 #include "bagl/property.h"
 #include "bagl/property_map.h"
 
@@ -44,7 +46,7 @@ concept MutableLvalueEdgePropertyMap = MutableLvaluePropertyMap<PMap, graph_edge
 
 } // namespace concepts
 
-enum class default_color_type { white_color, gray_color, green_color, red_color, black_color };
+enum class default_color_type : std::uint8_t { white_color, gray_color, green_color, red_color, black_color, invalid_color = std::numeric_limits<std::uint8_t>::max() };
 
 template <class ColorValue>
 struct color_traits {
@@ -61,6 +63,13 @@ constexpr default_color_type gray(default_color_type) { return default_color_typ
 constexpr default_color_type green(default_color_type) { return default_color_type::green_color; }
 constexpr default_color_type red(default_color_type) { return default_color_type::red_color; }
 constexpr default_color_type black(default_color_type) { return default_color_type::black_color; }
+
+template <>
+struct numeric_values<default_color_type> {
+  using value_type = default_color_type;
+  static constexpr default_color_type zero() { return default_color_type::white_color; }
+  static constexpr default_color_type infinity() { return default_color_type::invalid_color; }
+};
 
 // Define a bunch of pre-defined properties that come up a lot.
 
