@@ -170,7 +170,7 @@ requires concepts::VertexListGraph<G> std::pair<std::size_t, OutputIterator> bic
   auto index_map = get(vertex_index, g);
   return biconnected_components(g, comp, out, index_map, dtm, lowpt,
                                 make_vector_property_map(num_vertices(g), index_map, graph_traits<G>::null_vertex()),
-                                make_dfs_visitor(null_visitor()));
+                                make_dfs_visitor());
 }
 
 template <concepts::IncidenceGraph G, concepts::WritableEdgePropertyMap<G> ComponentMap,

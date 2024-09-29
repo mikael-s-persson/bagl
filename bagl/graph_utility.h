@@ -249,6 +249,15 @@ struct add_removed_edge_capacity : add_removed_edge_property<property_map_t<Grap
   explicit add_removed_edge_capacity(Graph& g) : base(get(edge_capacity, g)) {}
 };
 
+template <typename G>
+auto num_vertices_or_zero(const G& g) {
+  if constexpr (concepts::VertexListGraph<G>) {
+    return num_vertices(g);
+  } else {
+    return 0;
+  }
+}
+
 template <typename Graph>
 bool has_no_vertices(const Graph& g) {
   auto [a, b] = vertices(g);

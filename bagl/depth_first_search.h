@@ -227,9 +227,13 @@ class dfs_visitor {
   Visitors vis_;
 };
 
-template <typename Visitors>
-dfs_visitor<Visitors> make_dfs_visitor(Visitors vis) {
-  return dfs_visitor<Visitors>(vis);
+template <typename... Visitors>
+auto make_dfs_visitor(Visitors&&... vis) {
+  if constexpr (sizeof...(Visitors) == 0) {
+    return dfs_visitor<>();
+  } else {
+    return dfs_visitor<std::tuple<std::decay_t<Visitors>...>>(std::forward<Visitors>(vis)...);
+  }
 }
 using default_dfs_visitor = dfs_visitor<>;
 

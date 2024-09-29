@@ -92,6 +92,16 @@ struct edge_predecessor_recorder_on_edge_relaxed {
   PredEdgeMap predecessor;
 };
 
+template <typename PredEdgeMap>
+struct edge_predecessor_recorder_on_tree_edge {
+  explicit edge_predecessor_recorder_on_tree_edge(PredEdgeMap pa) : predecessor(pa) {}
+  template <class Edge, class Graph>
+  void tree_edge(Edge e, const Graph& g) {
+    put(predecessor, target(e, g), e);
+  }
+  PredEdgeMap predecessor;
+};
+
 //========================================================================
 // distance_recorder
 

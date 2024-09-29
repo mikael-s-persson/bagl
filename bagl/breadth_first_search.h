@@ -152,9 +152,14 @@ class bfs_visitor {
  protected:
   Visitors vis_;
 };
-template <typename Visitors>
-auto make_bfs_visitor(Visitors vis) {
-  return bfs_visitor(std::move(vis));
+
+template <typename... Visitors>
+auto make_bfs_visitor(Visitors&&... vis) {
+  if constexpr (sizeof...(Visitors) == 0) {
+    return bfs_visitor<>();
+  } else {
+    return bfs_visitor<std::tuple<std::decay_t<Visitors>...>>(std::forward<Visitors>(vis)...);
+  }
 }
 using default_bfs_visitor = bfs_visitor<>;
 
