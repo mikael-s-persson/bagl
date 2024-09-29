@@ -122,7 +122,7 @@ struct filtered_graph_base {
   G& g_;
 };
 
-template <typename Graph, typename EdgePredicate, typename VertexPredicate = keep_all>
+template <concepts::Graph Graph, typename EdgePredicate, typename VertexPredicate = keep_all>
 class filtered_graph : public filtered_graph_base<Graph> {
   using Base = filtered_graph_base<Graph>;
   using self = filtered_graph;

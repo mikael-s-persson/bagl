@@ -33,7 +33,7 @@ concept BellmanFordVisitor = std::copy_constructible<V> &&
 
 }  // namespace concepts
 
-template <typename Visitors = null_visitor>
+template <typename Visitors = null_visitors>
 class bellman_visitor {
  public:
   bellman_visitor() = default;
@@ -64,20 +64,24 @@ class bellman_visitor {
   Visitors vis_{};
 };
 
-template <typename Visitors>
-auto make_bellman_visitor(Visitors vis) {
-  return bellman_visitor<Visitors>(vis);
+template <typename... Visitors>
+auto make_bellman_visitor(Visitors&&... vis) {
+  if constexpr (sizeof...(Visitors) == 0) {
+    return bellman_visitor<>();
+  } else {
+    return bellman_visitor<std::tuple<std::decay_t<Visitors>...>>(std::forward<Visitors>(vis)...);
+  }
 }
 using default_bellman_visitor = bellman_visitor<>;
 
-template <concepts::EdgeListGraph G, concepts::BellmanFordVisitor<G> V, typename Size,
+template <concepts::EdgeListGraph G, concepts::BellmanFordVisitor<G> V,
           concepts::ReadableEdgePropertyMap<G> WeightMap,
           concepts::ReadWriteVertexPropertyMap<G> PredecessorMap,
           concepts::ReadWriteVertexPropertyMap<G> DistanceMap, class BinaryFunction,
           class BinaryPredicate>
-bool bellman_ford_shortest_paths(G& g, V vis, Size N, WeightMap weight, PredecessorMap pred, DistanceMap distance,
+bool bellman_ford_shortest_paths(G& g, V vis, std::size_t n, WeightMap weight, PredecessorMap pred, DistanceMap distance,
                                  BinaryFunction combine, BinaryPredicate compare) {
-  for (Size k = 0; k < N; ++k) {
+  for (std::size_t k = 0; k < n; ++k) {
     bool at_least_one_edge_relaxed = false;
     for (auto e : edges(g)) {
       vis.examine_edge(e, g);
@@ -104,12 +108,20 @@ bool bellman_ford_shortest_paths(G& g, V vis, Size N, WeightMap weight, Predeces
   return true;
 }
 
-template <concepts::VertexAndEdgeListGraph G, concepts::BellmanFordVisitor<G> V, typename Size,
+template <concepts::EdgeListGraph G, concepts::BellmanFordVisitor<G> V,
+          concepts::ReadableEdgePropertyMap<G> WeightMap,
+          concepts::ReadWriteVertexPropertyMap<G> PredecessorMap,
+          concepts::ReadWriteVertexPropertyMap<G> DistanceMap>
+bool bellman_ford_shortest_paths(G& g, V vis, std::size_t n, WeightMap weight, PredecessorMap pred, DistanceMap distance) {
+  return bellman_ford_shortest_paths(g, vis, n, weight, pred, distance, std::plus<>(), std::less<>());
+}
+
+template <concepts::VertexAndEdgeListGraph G, concepts::BellmanFordVisitor<G> V,
           concepts::ReadableEdgePropertyMap<G> WeightMap,
           concepts::ReadWriteVertexPropertyMap<G> PredecessorMap,
           concepts::ReadWriteVertexPropertyMap<G> DistanceMap, class BinaryFunction,
           class BinaryPredicate>
-bool bellman_ford_shortest_paths(G& g, V vis, graph_vertex_descriptor_t<G> start, Size N, WeightMap weight,
+bool bellman_ford_shortest_paths(G& g, V vis, graph_vertex_descriptor_t<G> start, std::size_t n, WeightMap weight,
                                  PredecessorMap pred, DistanceMap distance, BinaryFunction combine,
                                  BinaryPredicate compare) {
   using weight_type = property_traits_value_t<WeightMap>;
@@ -118,7 +130,16 @@ bool bellman_ford_shortest_paths(G& g, V vis, graph_vertex_descriptor_t<G> start
     put(pred, v, v);
   }
   put(distance, start, weight_type(0));
-  return bellman_ford_shortest_paths(g, vis, N, weight, pred, distance, combine, compare);
+  return bellman_ford_shortest_paths(g, vis, n, weight, pred, distance, combine, compare);
+}
+
+template <concepts::VertexAndEdgeListGraph G, concepts::BellmanFordVisitor<G> V,
+          concepts::ReadableEdgePropertyMap<G> WeightMap,
+          concepts::ReadWriteVertexPropertyMap<G> PredecessorMap,
+          concepts::ReadWriteVertexPropertyMap<G> DistanceMap>
+bool bellman_ford_shortest_paths(G& g, V vis, graph_vertex_descriptor_t<G> start, std::size_t n, WeightMap weight,
+                                 PredecessorMap pred, DistanceMap distance) {
+  return bellman_ford_shortest_paths(g, vis, start, n, weight, pred, distance, std::plus<>(), std::less<>());
 }
 
 }  // namespace bagl

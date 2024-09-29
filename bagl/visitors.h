@@ -82,19 +82,15 @@ struct predecessor_recorder_on_tree_edge {
 //========================================================================
 // edge_predecessor_recorder
 
-template <class PredEdgeMap, class Tag>
-struct edge_predecessor_recorder : public base_visitor<edge_predecessor_recorder<PredEdgeMap, Tag> > {
-  explicit edge_predecessor_recorder(PredEdgeMap pa) : m_predecessor(pa) {}
+template <typename PredEdgeMap>
+struct edge_predecessor_recorder_on_edge_relaxed {
+  explicit edge_predecessor_recorder_on_edge_relaxed(PredEdgeMap pa) : predecessor(pa) {}
   template <class Edge, class Graph>
-  void operator()(Edge e, const Graph& g) {
-    put(m_predecessor, target(e, g), e);
+  void edge_relaxed(Edge e, const Graph& g) {
+    put(predecessor, target(e, g), e);
   }
-  PredEdgeMap m_predecessor;
+  PredEdgeMap predecessor;
 };
-template <class PredEdgeMap, class Tag>
-edge_predecessor_recorder<PredEdgeMap, Tag> record_edge_predecessors(PredEdgeMap pa, Tag) {
-  return edge_predecessor_recorder<PredEdgeMap, Tag>(pa);
-}
 
 //========================================================================
 // distance_recorder
