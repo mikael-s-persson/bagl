@@ -9,6 +9,7 @@
 #include "bagl/bfl_d_ary_tree.h"
 #include "bagl/biconnected_components.h"
 #include "bagl/bipartite.h"
+#include "bagl/boyer_myrvold_planar_test.h"
 #include "bagl/boykov_kolmogorov_max_flow.h"
 #include "bagl/breadth_first_search.h"
 #include "bagl/bron_kerbosch_all_cliques.h"
