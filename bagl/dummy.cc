@@ -74,6 +74,7 @@
 #include "bagl/has_trait_member.h"
 #include "bagl/indirect_cmp.h"
 #include "bagl/is_heap.h"
+#include "bagl/king_ordering.h"
 #include "bagl/linked_tree.h"
 #include "bagl/lookup_edge.h"
 #include "bagl/matrix_property_map.h"

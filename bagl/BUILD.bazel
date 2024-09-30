@@ -82,6 +82,7 @@ cc_library(
         "has_trait_member.h",
         "indirect_cmp.h",
         "is_heap.h",
+        "king_ordering.h",
         "linked_tree.h",
         "lookup_edge.h",
         "matrix_property_map.h",
