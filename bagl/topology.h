@@ -5,8 +5,6 @@
 #ifndef BAGL_BAGL_TOPOLOGY_H_
 #define BAGL_BAGL_TOPOLOGY_H_
 
-#include <math.h>
-
 #include <array>
 #include <cmath>
 #include <memory>
@@ -24,7 +22,7 @@ namespace bagl {
  ***********************************************************/
 template <std::size_t Dims>
 class convex_topology {
- public:  // For VisualAge C++
+ public:
   struct point {
     static constexpr std::size_t dimensions = Dims;
     constexpr point() = default;
@@ -35,7 +33,6 @@ class convex_topology {
     std::array<double, Dims> values_{};
   };
 
- public:  // For VisualAge C++
   struct point_difference {
     static constexpr std::size_t dimensions = Dims;
     constexpr point_difference() = default;
@@ -124,11 +121,10 @@ class convex_topology {
     std::array<double, Dims> values_{};
   };
 
- public:
   using point_type = point;
   using point_difference_type = point_difference;
 
-  double distance(point a, point b) const {
+  [[nodiscard]] double distance(point a, point b) const {
     double dist = 0.;
     for (std::size_t i = 0; i < Dims; ++i) {
       double diff = b[i] - a[i];
@@ -140,7 +136,7 @@ class convex_topology {
     return dist;
   }
 
-  point move_position_toward(point a, double fraction, point b) const {
+  [[nodiscard]] point move_position_toward(point a, double fraction, point b) const {
     point result;
     for (std::size_t i = 0; i < Dims; ++i) {
       result[i] = a[i] + (b[i] - a[i]) * fraction;
@@ -148,7 +144,7 @@ class convex_topology {
     return result;
   }
 
-  point_difference difference(point a, point b) const {
+  [[nodiscard]] point_difference difference(point a, point b) const {
     point_difference result;
     for (std::size_t i = 0; i < Dims; ++i) {
       result[i] = a[i] - b[i];
@@ -156,7 +152,7 @@ class convex_topology {
     return result;
   }
 
-  point adjust(point a, point_difference delta) const {
+  [[nodiscard]] point adjust(point a, point_difference delta) const {
     point result;
     for (std::size_t i = 0; i < Dims; ++i) {
       result[i] = a[i] + delta[i];
@@ -164,7 +160,7 @@ class convex_topology {
     return result;
   }
 
-  point pointwise_min(point a, point b) const {
+  [[nodiscard]] point pointwise_min(point a, point b) const {
     point result;
     for (std::size_t i = 0; i < Dims; ++i) {
       result[i] = std::min(a[i], b[i]);
@@ -172,7 +168,7 @@ class convex_topology {
     return result;
   }
 
-  point pointwise_max(point a, point b) const {
+  [[nodiscard]] point pointwise_max(point a, point b) const {
     point result;
     for (std::size_t i = 0; i < Dims; ++i) {
       result[i] = std::max(a[i], b[i]);
@@ -180,7 +176,7 @@ class convex_topology {
     return result;
   }
 
-  double norm(point_difference delta) const {
+  [[nodiscard]] double norm(point_difference delta) const {
     double n = 0.;
     for (std::size_t i = 0; i < Dims; ++i) {
       n = std::hypot(n, delta[i]);
@@ -188,7 +184,7 @@ class convex_topology {
     return n;
   }
 
-  double volume(point_difference delta) const {
+  [[nodiscard]] double volume(point_difference delta) const {
     double n = 1.;
     for (std::size_t i = 0; i < Dims; ++i) {
       n *= delta[i];
@@ -211,7 +207,7 @@ class hypercube_topology : public convex_topology<Dims> {
   explicit hypercube_topology(RandomNumberGenerator& gen, double scaling = 1.0)
       : gen_ptr_(std::make_shared<RandomNumberGenerator>(gen)), rand_(std::make_shared<rand_t>()), scaling_(scaling) {}
 
-  point_type random_point() const {
+  [[nodiscard]] point_type random_point() const {
     point_type p;
     for (std::size_t i = 0; i < Dims; ++i) {
       p[i] = (*rand_)(*gen_ptr_) * scaling_;
@@ -219,7 +215,7 @@ class hypercube_topology : public convex_topology<Dims> {
     return p;
   }
 
-  point_type bound(point_type a) const {
+  [[nodiscard]] point_type bound(point_type a) const {
     point_type p;
     for (std::size_t i = 0; i < Dims; ++i) {
       p[i] = std::min(scaling_, std::max(-scaling_, a[i]));
@@ -227,7 +223,7 @@ class hypercube_topology : public convex_topology<Dims> {
     return p;
   }
 
-  double distance_from_boundary(point_type a) const {
+  [[nodiscard]] double distance_from_boundary(point_type a) const {
     using std::abs;
     static_assert(Dims >= 1);
     double dist = abs(scaling_ - a[0]);
@@ -237,7 +233,7 @@ class hypercube_topology : public convex_topology<Dims> {
     return dist;
   }
 
-  point_type center() const {
+  [[nodiscard]] point_type center() const {
     point_type result;
     for (std::size_t i = 0; i < Dims; ++i) {
       result[i] = scaling_ * .5;
@@ -245,7 +241,7 @@ class hypercube_topology : public convex_topology<Dims> {
     return result;
   }
 
-  point_type origin() const {
+  [[nodiscard]] point_type origin() const {
     point_type result;
     for (std::size_t i = 0; i < Dims; ++i) {
       result[i] = 0;
@@ -253,7 +249,7 @@ class hypercube_topology : public convex_topology<Dims> {
     return result;
   }
 
-  point_difference_type extent() const {
+  [[nodiscard]] point_difference_type extent() const {
     point_difference_type result;
     for (std::size_t i = 0; i < Dims; ++i) {
       result[i] = scaling_;
@@ -301,21 +297,21 @@ class rectangle_topology : public convex_topology<2> {
   using point_type = typename convex_topology<2>::point_type;
   using point_difference_type = typename convex_topology<2>::point_difference_type;
 
-  point_type random_point() const {
+  [[nodiscard]] point_type random_point() const {
     point_type p;
     p[0] = (*rand_)(*gen_ptr_) * (right_ - left_) + left_;
     p[1] = (*rand_)(*gen_ptr_) * (bottom_ - top_) + top_;
     return p;
   }
 
-  point_type bound(point_type a) const {
+  [[nodiscard]] point_type bound(point_type a) const {
     point_type p;
     p[0] = std::min(right_, std::max(left_, a[0]));
     p[1] = std::min(bottom_, std::max(top_, a[1]));
     return p;
   }
 
-  double distance_from_boundary(point_type a) const {
+  [[nodiscard]] double distance_from_boundary(point_type a) const {
     using std::abs;
     double dist = abs(left_ - a[0]);
     dist = std::min(dist, abs(right_ - a[0]));
@@ -324,21 +320,21 @@ class rectangle_topology : public convex_topology<2> {
     return dist;
   }
 
-  point_type center() const {
+  [[nodiscard]] point_type center() const {
     point_type result;
     result[0] = (left_ + right_) / 2.;
     result[1] = (top_ + bottom_) / 2.;
     return result;
   }
 
-  point_type origin() const {
+  [[nodiscard]] point_type origin() const {
     point_type result;
     result[0] = left_;
     result[1] = top_;
     return result;
   }
 
-  point_difference_type extent() const {
+  [[nodiscard]] point_difference_type extent() const {
     point_difference_type result;
     result[0] = right_ - left_;
     result[1] = bottom_ - top_;
@@ -378,7 +374,7 @@ class ball_topology : public convex_topology<Dims> {
   explicit ball_topology(RandomNumberGenerator& gen, double radius = 1.0)
       : gen_ptr_(std::make_shared<RandomNumberGenerator>(gen)), rand_(std::make_shared<rand_t>()), radius_(radius) {}
 
-  point_type random_point() const {
+  [[nodiscard]] point_type random_point() const {
     point_type p;
     double dist_sum = 0.0;
     do {
@@ -392,7 +388,7 @@ class ball_topology : public convex_topology<Dims> {
     return p;
   }
 
-  point_type bound(point_type a) const {
+  [[nodiscard]] point_type bound(point_type a) const {
     double r = 0.;
     for (std::size_t i = 0; i < Dims; ++i) {
       r = std::hypot(r, a[i]);
@@ -408,7 +404,7 @@ class ball_topology : public convex_topology<Dims> {
     return p;
   }
 
-  double distance_from_boundary(point_type a) const {
+  [[nodiscard]] double distance_from_boundary(point_type a) const {
     double r = 0.;
     for (std::size_t i = 0; i < Dims; ++i) {
       r = std::hypot(r, a[i]);
@@ -416,7 +412,7 @@ class ball_topology : public convex_topology<Dims> {
     return radius_ - r;
   }
 
-  point_type center() const {
+  [[nodiscard]] point_type center() const {
     point_type result;
     for (std::size_t i = 0; i < Dims; ++i) {
       result[i] = 0;
@@ -424,7 +420,7 @@ class ball_topology : public convex_topology<Dims> {
     return result;
   }
 
-  point_type origin() const {
+  [[nodiscard]] point_type origin() const {
     point_type result;
     for (std::size_t i = 0; i < Dims; ++i) {
       result[i] = -radius_;
@@ -432,7 +428,7 @@ class ball_topology : public convex_topology<Dims> {
     return result;
   }
 
-  point_difference_type extent() const {
+  [[nodiscard]] point_difference_type extent() const {
     point_difference_type result;
     for (std::size_t i = 0; i < Dims; ++i) {
       result[i] = 2. * radius_;
@@ -491,7 +487,7 @@ class heart_topology {
     std::array<double, 2> values_{};
   };
 
-  bool in_heart(point p) const {
+  [[nodiscard]] bool in_heart(point p) const {
     using std::abs;
 
     if (p[1] < abs(p[0]) - 2000) {
@@ -509,7 +505,7 @@ class heart_topology {
     return false;
   }
 
-  bool segment_within_heart(point p1, point p2) const {
+  [[nodiscard]] bool segment_within_heart(point p1, point p2) const {
     // Assumes that p1 and p2 are within the heart
     if ((p1[0] < 0) == (p2[0] < 0)) {
       return true;  // Same side of symmetry line
@@ -519,10 +515,7 @@ class heart_topology {
     }
     double slope = (p2[1] - p1[1]) / (p2[0] - p1[0]);
     double intercept = p1[1] - p1[0] * slope;
-    if (intercept > 0) {
-      return false;  // Crosses between circles
-    }
-    return true;
+    return (intercept <= 0);
   }
 
   using rand_t = std::uniform_real_distribution<double>;
@@ -538,8 +531,8 @@ class heart_topology {
   point random_point() const {
     point result;
     do {
-      result[0] = (*rand)() * (1000 + 1000 * std::numbers::sqrt2_v<double>)-(500 + 500 * std::numbers::sqrt2_v<double>);
-      result[1] = (*rand)() * (2000 + 500 * (std::numbers::sqrt2_v<double> - 1)) - 2000;
+      result[0] = (*rand_)(*gen_ptr_) * (1000 + 1000 * std::numbers::sqrt2_v<double>)-(500 + 500 * std::numbers::sqrt2_v<double>);
+      result[1] = (*rand_)(*gen_ptr_) * (2000 + 500 * (std::numbers::sqrt2_v<double> - 1)) - 2000;
     } while (!in_heart(result));
     return result;
   }

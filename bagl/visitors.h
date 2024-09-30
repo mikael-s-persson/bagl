@@ -105,21 +105,28 @@ struct edge_predecessor_recorder_on_tree_edge {
 //========================================================================
 // distance_recorder
 
-template <class DistanceMap, class Tag>
-struct distance_recorder : public base_visitor<distance_recorder<DistanceMap, Tag> > {
-  explicit distance_recorder(DistanceMap pa) : m_distance(pa) {}
+template <class DistanceMap>
+struct distance_recorder_on_edge_relaxed {
+  explicit distance_recorder_on_edge_relaxed(DistanceMap pa) : distance(pa) {}
   template <class Edge, class Graph>
-  void operator()(Edge e, const Graph& g) {
+  void edge_relaxed(Edge e, const Graph& g) {
     auto u = source(e, g);
     auto v = target(e, g);
-    put(m_distance, v, get(m_distance, u) + 1);
+    put(distance, v, get(distance, u) + 1);
   }
-  DistanceMap m_distance;
+  DistanceMap distance;
 };
-template <class DistanceMap, class Tag>
-distance_recorder<DistanceMap, Tag> record_distances(DistanceMap pa, Tag) {
-  return distance_recorder<DistanceMap, Tag>(pa);
-}
+template <class DistanceMap>
+struct distance_recorder_on_tree_edge {
+  explicit distance_recorder_on_tree_edge(DistanceMap pa) : distance(pa) {}
+  template <class Edge, class Graph>
+  void tree_edge(Edge e, const Graph& g) {
+    auto u = source(e, g);
+    auto v = target(e, g);
+    put(distance, v, get(distance, u) + 1);
+  }
+  DistanceMap distance;
+};
 
 //========================================================================
 // time_stamper

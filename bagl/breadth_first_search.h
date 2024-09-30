@@ -37,7 +37,7 @@ concept BFSVisitor = std::copy_constructible<Visitor> &&
 // Multiple-see version
 template <concepts::IncidenceGraph G, class Buffer, concepts::BFSVisitor<G> V,
           concepts::ReadWriteVertexPropertyMap<G> ColorMap, std::ranges::input_range Seeds>
-void breadth_first_visit(const G& g, Seeds seeds, Buffer& Q, V vis,
+void breadth_first_visit(const G& g, Seeds seeds, Buffer& q, V vis,
                          ColorMap color) {
   using Vertex = graph_vertex_descriptor_t<G>;
   using ColorValue = property_traits_value_t<ColorMap>;
@@ -46,11 +46,11 @@ void breadth_first_visit(const G& g, Seeds seeds, Buffer& Q, V vis,
   for (Vertex s : seeds) {
     put(color, s, Color::gray());
     vis.discover_vertex(s, g);
-    Q.push(s);
+    q.push(s);
   }
-  while (!Q.empty()) {
-    Vertex u = Q.top();
-    Q.pop();
+  while (!q.empty()) {
+    Vertex u = q.top();
+    q.pop();
     vis.examine_vertex(u, g);
     for (auto e : out_edges(u, g)) {
       Vertex v = target(e, g);
@@ -60,7 +60,7 @@ void breadth_first_visit(const G& g, Seeds seeds, Buffer& Q, V vis,
         vis.tree_edge(e, g);
         put(color, v, Color::gray());
         vis.discover_vertex(v, g);
-        Q.push(v);
+        q.push(v);
       } else {
         vis.non_tree_edge(e, g);
         if (v_color == Color::gray()) {
@@ -77,12 +77,12 @@ void breadth_first_visit(const G& g, Seeds seeds, Buffer& Q, V vis,
 
 // Single-seed version
 template <concepts::IncidenceGraph G, class Buffer, concepts::BFSVisitor<G> V, class ColorMap>
-void breadth_first_visit(const G& g, graph_vertex_descriptor_t<G> s, Buffer& Q, V vis, ColorMap color) {
-  breadth_first_visit(g, std::ranges::single_view(s), Q, vis, color);
+void breadth_first_visit(const G& g, graph_vertex_descriptor_t<G> s, Buffer& q, V vis, ColorMap color) {
+  breadth_first_visit(g, std::ranges::single_view(s), q, vis, color);
 }
 
 template <concepts::VertexListGraph G, std::ranges::input_range Seeds, class Buffer, concepts::BFSVisitor<G> V, class ColorMap>
-void breadth_first_search(const G& g, Seeds seeds, Buffer& Q, V vis, ColorMap color) {
+void breadth_first_search(const G& g, Seeds seeds, Buffer& q, V vis, ColorMap color) {
   // Initialization
   using ColorValue = property_traits_value_t<ColorMap>;
   using Color = color_traits<ColorValue>;
@@ -90,12 +90,12 @@ void breadth_first_search(const G& g, Seeds seeds, Buffer& Q, V vis, ColorMap co
     vis.initialize_vertex(v, g);
     put(color, v, Color::white());
   }
-  breadth_first_visit(g, seeds, Q, vis, color);
+  breadth_first_visit(g, seeds, q, vis, color);
 }
 
 template <concepts::VertexListGraph G, class Buffer, concepts::BFSVisitor<G> V, class ColorMap>
-void breadth_first_search(const G& g, graph_vertex_descriptor_t<G> s, Buffer& Q, V vis, ColorMap color) {
-  breadth_first_search(g, std::ranges::single_view(s), Q, vis, color);
+void breadth_first_search(const G& g, graph_vertex_descriptor_t<G> s, Buffer& q, V vis, ColorMap color) {
+  breadth_first_search(g, std::ranges::single_view(s), q, vis, color);
 }
 
 template <class Visitors = null_visitors>

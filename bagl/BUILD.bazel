@@ -79,6 +79,7 @@ cc_library(
         "graph_selectors.h",
         "graph_traits.h",
         "graph_utility.h",
+        "gursoy_atun_layout.h",
         "has_trait_member.h",
         "indirect_cmp.h",
         "is_heap.h",

@@ -71,6 +71,7 @@
 #include "bagl/graph_selectors.h"
 #include "bagl/graph_traits.h"
 #include "bagl/graph_utility.h"
+#include "bagl/gursoy_atun_layout.h"
 #include "bagl/has_trait_member.h"
 #include "bagl/indirect_cmp.h"
 #include "bagl/is_heap.h"
