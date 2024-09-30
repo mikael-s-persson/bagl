@@ -62,6 +62,7 @@
 #include "bagl/floyd_warshall_shortest.h"
 #include "bagl/fruchterman_reingold.h"
 #include "bagl/function_property_map.h"
+#include "bagl/geodesic_distance.h"
 #include "bagl/geodesic.h"
 #include "bagl/graph_archetypes.h"
 #include "bagl/graph_as_tree.h"

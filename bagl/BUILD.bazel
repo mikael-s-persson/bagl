@@ -70,6 +70,7 @@ cc_library(
         "floyd_warshall_shortest.h",
         "fruchterman_reingold.h",
         "function_property_map.h",
+        "geodesic_distance.h",
         "geodesic.h",
         "graph_archetypes.h",
         "graph_as_tree.h",

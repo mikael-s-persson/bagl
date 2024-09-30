@@ -38,9 +38,9 @@ namespace bagl {
 // Note that this assumes T == property_traits<DistanceMap>::value_type
 // and that the args and return of combine are also T.
 template <concepts::VertexListGraph G, concepts::ReadableVertexPropertyMap<G> DistanceMap,
-          std::relation<property_traits_value_t<DistanceMap>, property_traits_value_t<DistanceMap>> Combinator>
+          concepts::PropertyCombinator<DistanceMap> Combine>
           requires concepts::NumericValue<property_traits_value_t<DistanceMap>>
-auto combine_distances(const G& g, DistanceMap dist, Combinator combine, property_traits_value_t<DistanceMap> init = {}) {
+auto combine_distances(const G& g, DistanceMap dist, Combine combine, property_traits_value_t<DistanceMap> init = {}) {
   using Distance = property_traits_value_t<DistanceMap>;
   using DistanceNumbers = numeric_values<Distance>;
 
