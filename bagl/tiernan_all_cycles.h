@@ -12,7 +12,7 @@
 
 namespace bagl {
 namespace concepts {
-template <typename V, typename Path, typename G>
+template <typename V, typename G, typename Path = std::vector<graph_vertex_descriptor_t<G>>>
 concept CycleVisitor = std::copy_constructible<V> && requires(V& vis, const Path& p, const G& g) {
   vis.cycle(p, g);
 };
@@ -80,12 +80,12 @@ inline min_max_cycle_visitor find_min_max_cycle(std::size_t& min_, std::size_t& 
 
 namespace cycles_detail {
 template <typename G, typename Path>
-inline bool is_vertex_in_path(const G& /*unused*/, graph_vertex_descriptor_t<G> v, const Path& p) {
+bool is_vertex_in_path(const G& /*unused*/, graph_vertex_descriptor_t<G> v, const Path& p) {
   return (std::find(p.begin(), p.end(), v) != p.end());
 }
 
 template <concepts::VertexIndexGraph G, typename ClosedMatrix>
-inline bool is_path_closed(const G& g, graph_vertex_descriptor_t<G> u, graph_vertex_descriptor_t<G> v,
+bool is_path_closed(const G& g, graph_vertex_descriptor_t<G> u, graph_vertex_descriptor_t<G> v,
                            const ClosedMatrix& closed) {
   // the path from u to v is closed if v can be found in the list
   // of closed vertices associated with u.
@@ -174,7 +174,7 @@ bool exhaust_paths(const G& g, Path& p, ClosedMatrix& closed) {
 template <typename G>
 using default_path_t = std::vector<graph_vertex_descriptor_t<G>>;
 
-template <concepts::VertexListGraph G, concepts::CycleVisitor<default_path_t<G>, G> V>
+template <concepts::VertexListGraph G, concepts::CycleVisitor<G> V>
 void all_cycles_from_vertex(const G& g, graph_vertex_descriptor_t<G> v, V vis, std::size_t minlen, std::size_t maxlen) {
   using Vertex = graph_vertex_descriptor_t<G>;
   using Path = default_path_t<G>;
@@ -214,19 +214,19 @@ constexpr std::size_t min_cycles = (is_undirected_graph_v<G> ? 3 : 2);
 
 }  // namespace cycles_detail
 
-template <concepts::VertexListGraph G, concepts::CycleVisitor<cycles_detail::default_path_t<G>, G> V>
+template <concepts::VertexListGraph G, concepts::CycleVisitor<G> V>
 void tiernan_all_cycles(const G& g, V vis, std::size_t minlen, std::size_t maxlen) {
   for (auto u : vertices(g)) {
     cycles_detail::all_cycles_from_vertex(g, u, vis, minlen, maxlen);
   }
 }
 
-template <concepts::VertexListGraph G, concepts::CycleVisitor<cycles_detail::default_path_t<G>, G> V>
+template <concepts::VertexListGraph G, concepts::CycleVisitor<G> V>
 void tiernan_all_cycles(const G& g, V vis, std::size_t maxlen) {
   tiernan_all_cycles(g, vis, cycles_detail::min_cycles<G>, maxlen);
 }
 
-template <concepts::VertexListGraph G, concepts::CycleVisitor<cycles_detail::default_path_t<G>, G> V>
+template <concepts::VertexListGraph G, concepts::CycleVisitor<G> V>
 void tiernan_all_cycles(const G& g, V vis) {
   tiernan_all_cycles(g, vis, cycles_detail::min_cycles<G>, std::numeric_limits<std::size_t>::max());
 }

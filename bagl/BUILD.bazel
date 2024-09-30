@@ -81,6 +81,8 @@ cc_library(
         "graph_utility.h",
         "gursoy_atun_layout.h",
         "has_trait_member.h",
+        "hawick_circuits.h",
+        "howard_cycle_ratio.h",
         "indirect_cmp.h",
         "is_heap.h",
         "king_ordering.h",

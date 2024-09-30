@@ -73,6 +73,8 @@
 #include "bagl/graph_utility.h"
 #include "bagl/gursoy_atun_layout.h"
 #include "bagl/has_trait_member.h"
+#include "bagl/hawick_circuits.h"
+#include "bagl/howard_cycle_ratio.h"
 #include "bagl/indirect_cmp.h"
 #include "bagl/is_heap.h"
 #include "bagl/king_ordering.h"
