@@ -166,7 +166,7 @@ std::pair<VertexOIter, EdgeOIter> clear_children_impl(graph_vertex_descriptor_t<
 }
 
 template <concepts::MutableGraph G, typename VertexOIter, typename EdgeOIter>
-requires std::ranges::random_access_range<graph_vertex_range_t<G>> std::pair<VertexOIter, EdgeOIter>
+requires std::ranges::random_access_range<decltype(vertices(std::declval<G>()))> std::pair<VertexOIter, EdgeOIter>
 clear_children_impl(graph_vertex_descriptor_t<G> u, VertexOIter vit_out, EdgeOIter eit_out, G& g) {
   /* TODO: Figure out a way to implement this better! */
 
@@ -256,7 +256,7 @@ std::pair<VertexOIter, EdgeOIter> remove_branch_impl(graph_vertex_descriptor_t<G
 }
 
 template <concepts::MutableGraph G, typename VertexOIter, typename EdgeOIter>
-requires std::ranges::random_access_range<graph_vertex_range_t<G>> std::pair<VertexOIter, EdgeOIter> remove_branch_impl(
+requires std::ranges::random_access_range<decltype(vertices(std::declval<G>()))> std::pair<VertexOIter, EdgeOIter> remove_branch_impl(
     graph_vertex_descriptor_t<G> u, VertexOIter vit_out, EdgeOIter eit_out, G& g) {
   /* TODO: Figure out a way to implement this better! */
 

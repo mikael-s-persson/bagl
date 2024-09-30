@@ -32,6 +32,15 @@ struct adjacency_list_traits {
 
   using vertices_size_type = std::size_t;
   using edges_size_type = std::size_t;
+
+  // Best effort attempt at producing descriptors without knowing properties types.
+  // Do not use this unless you absolutely need to.
+  using vertex_descriptor_or_void =
+      std::conditional_t<(std::is_same_v<VertexListS, vec_s> || std::is_same_v<VertexListS, pool_s>), std::size_t,
+                         void>;
+  using edge_descriptor_or_void =
+      std::conditional_t<!std::is_same_v<vertex_descriptor_or_void, void> && (std::is_same_v<OutEdgeListS, vec_s> || std::is_same_v<OutEdgeListS, pool_s>),
+                         container_detail::edge_desc<vertex_descriptor_or_void, std::size_t>, void>;
 };
 
 struct adj_list_tag {};
@@ -97,15 +106,6 @@ class adjacency_list {
   using edge_descriptor = typename storage_type::edge_descriptor;
   using edges_size_type = typename storage_type::edges_size_type;
   using degree_size_type = edges_size_type;
-
-  using vertex_range = typename storage_type::vertex_range;
-
-  using out_edge_range = typename storage_type::out_edge_range;
-  using in_edge_range = typename storage_type::in_edge_range;
-  using edge_range = typename storage_type::edge_range;
-
-  using adjacency_range = decltype(adjacency_range(std::declval<out_edge_range>(), std::declval<self>()));
-  using inv_adjacency_range = decltype(inv_adjacency_range(std::declval<in_edge_range>(), std::declval<self>()));
 
   using vertex_stored_impl = typename storage_type::vertex_stored_type;
   using vertex_value_impl = typename storage_type::vertex_value_type;
@@ -214,8 +214,8 @@ struct tree_storage_traits<adj_list_as_tree_storage<OutEdgeListS, VertexListS, D
 template <typename VertexProperty, typename EdgeProperty, typename OutEdgeListS, typename VertexListS,
           typename DirectedS>
 struct tree_traits<adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperty, EdgeProperty>> {
-  using child_vertex_range =
-      typename adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperty, EdgeProperty>::adjacency_range;
+  using node_descriptor =
+      typename adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperty, EdgeProperty>::vertex_descriptor;
 };
 
 #define BAGL_ADJACENCY_LIST_ARGS \
@@ -429,7 +429,7 @@ auto add_edge(typename BAGL_ADJACENCY_LIST::vertex_descriptor u, typename BAGL_A
  */
 template <BAGL_ADJACENCY_LIST_ARGS>
 const typename BAGL_ADJACENCY_LIST::vertex_property_type& get(const BAGL_ADJACENCY_LIST& g,
-                                                             typename BAGL_ADJACENCY_LIST::vertex_descriptor v) {
+                                                              typename BAGL_ADJACENCY_LIST::vertex_descriptor v) {
   return g[v];
 }
 
@@ -441,7 +441,7 @@ const typename BAGL_ADJACENCY_LIST::vertex_property_type& get(const BAGL_ADJACEN
  */
 template <BAGL_ADJACENCY_LIST_ARGS>
 const typename BAGL_ADJACENCY_LIST::edge_property_type& get(const BAGL_ADJACENCY_LIST& g,
-                                                           const typename BAGL_ADJACENCY_LIST::edge_descriptor& e) {
+                                                            const typename BAGL_ADJACENCY_LIST::edge_descriptor& e) {
   return g[e];
 }
 
@@ -501,7 +501,7 @@ void put(BAGL_ADJACENCY_LIST& g, const typename BAGL_ADJACENCY_LIST::edge_descri
  */
 template <BAGL_ADJACENCY_LIST_ARGS>
 typename BAGL_ADJACENCY_LIST::vertex_property_type& get_property(typename BAGL_ADJACENCY_LIST::vertex_descriptor v,
-                                                                BAGL_ADJACENCY_LIST& g) {
+                                                                 BAGL_ADJACENCY_LIST& g) {
   return g[v];
 }
 
@@ -512,8 +512,8 @@ typename BAGL_ADJACENCY_LIST::vertex_property_type& get_property(typename BAGL_A
  * \return The vertex-property, by const-reference, associated to the given vertex descriptor.
  */
 template <BAGL_ADJACENCY_LIST_ARGS>
-const typename BAGL_ADJACENCY_LIST::vertex_property_type& get_property(typename BAGL_ADJACENCY_LIST::vertex_descriptor v,
-                                                                      const BAGL_ADJACENCY_LIST& g) {
+const typename BAGL_ADJACENCY_LIST::vertex_property_type& get_property(
+    typename BAGL_ADJACENCY_LIST::vertex_descriptor v, const BAGL_ADJACENCY_LIST& g) {
   return g[v];
 }
 
@@ -525,7 +525,7 @@ const typename BAGL_ADJACENCY_LIST::vertex_property_type& get_property(typename 
  */
 template <BAGL_ADJACENCY_LIST_ARGS>
 typename BAGL_ADJACENCY_LIST::edge_property_type& get_property(const typename BAGL_ADJACENCY_LIST::edge_descriptor& e,
-                                                              BAGL_ADJACENCY_LIST& g) {
+                                                               BAGL_ADJACENCY_LIST& g) {
   return g[e];
 }
 
@@ -690,20 +690,9 @@ class adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, 
   using edges_size_type = typename bidir_storage_type::edges_size_type;
   using degree_size_type = edges_size_type;
 
-  using vertex_range = typename bidir_storage_type::vertex_range;
-
   using bidir_out_edge_range = typename bidir_storage_type::out_edge_range;
   using bidir_in_edge_range = typename bidir_storage_type::in_edge_range;
-  using bidir_edge_range = typename bidir_storage_type::edge_range;
-
-  using out_edge_range =
-      adjlist_detail::adjlist_undir_ioerange<edge_descriptor, bidir_in_edge_range, bidir_out_edge_range>;
-  using in_edge_range = out_edge_range;
-
-  using edge_range = decltype(adjlist_detail::adjlist_undir_eiter_range(std::declval<bidir_edge_range>()));
-
-  using adjacency_range = decltype(adjacency_range(std::declval<out_edge_range>(), std::declval<self>()));
-  using inv_adjacency_range = decltype(inv_adjacency_range(std::declval<in_edge_range>(), std::declval<self>()));
+  using undir_ioedge_range = adjlist_detail::adjlist_undir_ioerange<edge_descriptor, bidir_in_edge_range, bidir_out_edge_range>;
 
   using vertex_stored_impl = typename bidir_storage_type::vertex_stored_type;
   using vertex_value_impl = typename bidir_storage_type::vertex_value_type;
@@ -826,7 +815,7 @@ auto target(const typename BAGL_ADJACENCY_LIST_UNDIR::edge_descriptor& e, const 
 
 template <BAGL_ADJACENCY_LIST_UNDIR_ARGS>
 auto out_edges(typename BAGL_ADJACENCY_LIST_UNDIR::vertex_descriptor v, const BAGL_ADJACENCY_LIST_UNDIR& g) {
-  return out_edge_range(true, g.m_pack.in_edges(v), g.m_pack.out_edges(v));
+  return typename BAGL_ADJACENCY_LIST_UNDIR::undir_ioedge_range{true, g.m_pack.in_edges(v), g.m_pack.out_edges(v)};
 }
 
 template <BAGL_ADJACENCY_LIST_UNDIR_ARGS>
@@ -840,7 +829,7 @@ std::size_t out_degree(typename BAGL_ADJACENCY_LIST_UNDIR::vertex_descriptor v, 
 
 template <BAGL_ADJACENCY_LIST_UNDIR_ARGS>
 auto in_edges(typename BAGL_ADJACENCY_LIST_UNDIR::vertex_descriptor v, const BAGL_ADJACENCY_LIST_UNDIR& g) {
-  return in_edge_range(false, g.m_pack.in_edges(v), g.m_pack.out_edges(v));
+  return typename BAGL_ADJACENCY_LIST_UNDIR::undir_ioedge_range{false, g.m_pack.in_edges(v), g.m_pack.out_edges(v)};
 }
 
 template <BAGL_ADJACENCY_LIST_UNDIR_ARGS>

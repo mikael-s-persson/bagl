@@ -60,6 +60,7 @@ cc_library(
         "edmonds_karp_max_flow.h",
         "eccentricity.h",
         "edge_coloring.h",
+        "edge_connectivity.h",
         "exception.h",
         "exterior_property.h",
         "filtered_graph.h",

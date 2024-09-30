@@ -39,14 +39,20 @@ struct adjlist_select_vertex_range {
 };
 
 template <typename Container>
+auto iota_view_for_container(Container& cont) {
+  auto sz = cont.size();
+  return std::views::iota(decltype(sz){0}, sz);
+}
+
+template <typename Container>
 struct adjlist_select_vertex_range<vec_s, Container> {
-  static auto create_range(Container& cont) { return std::views::iota(0, cont.size()); }
+  static auto create_range(Container& cont) { return iota_view_for_container(cont); }
 };
 
 template <typename Container>
 struct adjlist_select_vertex_range<pool_s, Container> {
   static auto create_range(Container& cont) {
-    return std::views::iota(0, cont.m_data.size()) | std::views::filter(container_detail::is_not_hole(&cont.m_data));
+    return iota_view_for_container(cont.m_data) | std::views::filter(container_detail::is_not_hole(&cont.m_data));
   }
 };
 
@@ -135,7 +141,7 @@ template <typename Container, typename EDesc>
 struct adjlist_select_out_edge_range<vec_s, Container, EDesc> {
   template <typename Vertex>
   static auto create_range(Vertex u, Container& cont) {
-    return std::views::iota(0, cont.size()) | std::views::transform([u](const auto& e_id) { return EDesc(u, e_id); });
+    return iota_view_for_container(cont) | std::views::transform([u](const auto& e_id) { return EDesc(u, e_id); });
   }
   template <typename Vertex>
   static auto create_range(Vertex u, Container* cont) {
@@ -147,7 +153,7 @@ template <typename Container, typename EDesc>
 struct adjlist_select_out_edge_range<pool_s, Container, EDesc> {
   template <typename Vertex>
   static auto create_range(Vertex u, Container& cont) {
-    return std::views::iota(0, cont.m_data.size()) |
+    return iota_view_for_container(cont.m_data) |
            std::views::transform([u](const auto& e_id) { return EDesc(u, e_id); }) |
            std::views::filter(container_detail::edge_is_not_hole(&cont.m_data));
   }

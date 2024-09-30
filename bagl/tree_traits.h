@@ -5,6 +5,7 @@
 #define BAGL_BAGL_TREE_TRAITS_H_
 
 #include <tuple>
+#include <vector>
 
 #include "bagl/graph_traits.h"
 #include "bagl/has_trait_member.h"
@@ -15,23 +16,19 @@ namespace bagl {
 namespace tree_traits_detail {
 
 BAGL_GRAPH_HAS_TRAIT_MEMBER(node_descriptor, void)
-BAGL_GRAPH_HAS_TRAIT_MEMBER(children_range, void)
 
 }  // namespace tree_traits_detail
 
 template <typename T>
 struct tree_traits {
   using node_descriptor = tree_traits_detail::get_node_descriptor_or_not<T>;
-  using children_range = tree_traits_detail::get_children_range_or_not<T>;
 };
 template <typename T>
 using tree_node_descriptor_t = typename tree_traits<T>::node_descriptor;
-template <typename T>
-using tree_children_range_t = typename tree_traits<T>::children_range;
 
 template <typename Tree, typename TreeVisitor>
 void traverse_tree(tree_node_descriptor_t<Tree> v, Tree& t, TreeVisitor visitor) {
-  using StackElem = std::tuple<tree_node_descriptor_t<Tree>, bool, partial_view<tree_children_range_t<Tree>>>;
+  using StackElem = std::tuple<tree_node_descriptor_t<Tree>, bool, partial_view<decltype(children(v, t))>>;
   std::vector<StackElem> stack;
   stack.emplace_back(v, false, partial_view(children(v, t)));
   visitor.preorder(v, t);

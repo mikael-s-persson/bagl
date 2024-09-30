@@ -449,31 +449,28 @@ struct ltree_vertex_container {
   // NOTE: This WORKS for ALL vertex container types.
   using VRangeSelect = adjlist_select_vertex_range<VertexListS, vertex_container>;
   auto vertices() const { return VRangeSelect::create_range(m_vertices); }
-  using vertex_range = decltype(std::declval<const self&>().vertices());
 
   // NOTE: This WORKS for ALL vertex container types.
   // NOTE: This WORKS for ALL edge container types.
   using OERangeSelect = adjlist_select_out_edge_range<OutEdgeListS, edge_container, edge_descriptor>;
   auto out_edges(vertex_descriptor u) const { return OERangeSelect::create_range(u, get_stored_vertex(u).out_edges); }
-  using out_edge_range = decltype(std::declval<const self&>().out_edges(std::declval<vertex_descriptor>()));
 
   // NOTE: This WORKS for ALL vertex container types.
   auto edges() const {
     return adjlist_edges_from_out_edges(*this);
   }
-  using edge_range = decltype(std::declval<const self&>().edges());
 
   /***************************************************************************************
    * NOTE NOTE NOTE - FUNCTIONS THAT ARE THE DIFFERENT FROM ADJ-LIST-BC - NOTE NOTE NOTE *
    * *************************************************************************************/
 
   // NOTE: This WORKS for ALL vertex container types.
-  using in_edge_range = std::ranges::subrange<typename vertex_stored_type::in_edge_iterator>;
-  in_edge_range in_edges(vertex_descriptor v) const {
+  auto in_edges(vertex_descriptor v) const {
+    using in_edge_range = std::ranges::subrange<const edge_descriptor*>;
     if (get_stored_vertex(v).in_edge == EConfig::null_edge()) {
-      return {nullptr, nullptr};
+      return in_edge_range{nullptr, nullptr};
     }
-    return {&(get_stored_vertex(v).in_edge), &(get_stored_vertex(v).in_edge) + 1};
+    return in_edge_range{&(get_stored_vertex(v).in_edge), &(get_stored_vertex(v).in_edge) + 1};
   }
 
   // NOTE: This WORKS for ALL vertex container types.

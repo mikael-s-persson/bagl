@@ -75,7 +75,7 @@ void depth_first_visit_impl(const G& g, graph_vertex_descriptor_t<G> start, V& v
   std::vector<VertexInfo> stack;
 
   // Possible optimization for vertex list graphs
-  // if constexpr (is_vertex_list_graph_v<G> && std::ranges::random_access_range<graph_vertex_range_t<G>>) {
+  // if constexpr (is_vertex_list_graph_v<G> && std::ranges::random_access_range<decltype(vertices(g))>) {
   //   stack.reserve(vertices(g).size());
   // }
 

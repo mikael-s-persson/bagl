@@ -52,6 +52,7 @@
 #include "bagl/edmonds_karp_max_flow.h"
 #include "bagl/eccentricity.h"
 #include "bagl/edge_coloring.h"
+#include "bagl/edge_connectivity.h"
 #include "bagl/exception.h"
 #include "bagl/exterior_property.h"
 #include "bagl/filtered_graph.h"

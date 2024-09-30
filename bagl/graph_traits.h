@@ -16,14 +16,9 @@ namespace bagl {
 
 namespace graph_traits_detail {
 
-BAGL_GRAPH_HAS_TRAIT_MEMBER(adjacency_range, void)
-BAGL_GRAPH_HAS_TRAIT_MEMBER(out_edge_range, void)
-BAGL_GRAPH_HAS_TRAIT_MEMBER(in_edge_range, void)
-BAGL_GRAPH_HAS_TRAIT_MEMBER(vertex_range, void)
-BAGL_GRAPH_HAS_TRAIT_MEMBER(edge_range, void)
-BAGL_GRAPH_HAS_TRAIT_MEMBER(vertices_size_type, void)
-BAGL_GRAPH_HAS_TRAIT_MEMBER(edges_size_type, void)
-BAGL_GRAPH_HAS_TRAIT_MEMBER(degree_size_type, void)
+BAGL_GRAPH_HAS_TRAIT_MEMBER(vertices_size_type, std::size_t)
+BAGL_GRAPH_HAS_TRAIT_MEMBER(edges_size_type, std::size_t)
+BAGL_GRAPH_HAS_TRAIT_MEMBER(degree_size_type, std::size_t)
 
 BAGL_GRAPH_HAS_TRAIT_MEMBER(graph_property_type, no_property)
 BAGL_GRAPH_HAS_TRAIT_MEMBER(edge_property_type, no_property)
@@ -35,11 +30,6 @@ template <typename G>
 struct graph_traits {
   using vertex_descriptor = typename G::vertex_descriptor;
   using edge_descriptor = typename G::edge_descriptor;
-  using adjacency_range = graph_traits_detail::get_adjacency_range_or_not<G>;
-  using out_edge_range = graph_traits_detail::get_out_edge_range_or_not<G>;
-  using in_edge_range = graph_traits_detail::get_in_edge_range_or_not<G>;
-  using vertex_range = graph_traits_detail::get_vertex_range_or_not<G>;
-  using edge_range = graph_traits_detail::get_edge_range_or_not<G>;
 
   using directed_category = typename G::directed_category;
   using edge_parallel_category = typename G::edge_parallel_category;
@@ -64,16 +54,6 @@ using graph_vertex_descriptor_t = typename graph_traits<G>::vertex_descriptor;
 template <typename G>
 using graph_edge_descriptor_t = typename graph_traits<G>::edge_descriptor;
 template <typename G>
-using graph_adjacency_range_t = typename graph_traits<G>::adjacency_range;
-template <typename G>
-using graph_out_edge_range_t = typename graph_traits<G>::out_edge_range;
-template <typename G>
-using graph_in_edge_range_t = typename graph_traits<G>::in_edge_range;
-template <typename G>
-using graph_vertex_range_t = typename graph_traits<G>::vertex_range;
-template <typename G>
-using graph_edge_range_t = typename graph_traits<G>::edge_range;
-template <typename G>
 using graph_directed_category_t = typename graph_traits<G>::directed_category;
 template <typename G>
 using graph_edge_parallel_category_t = typename graph_traits<G>::edge_parallel_category;
@@ -85,6 +65,17 @@ template <typename G>
 using graph_edges_size_type_t = typename graph_traits<G>::edges_size_type;
 template <typename G>
 using graph_degree_size_type_t = typename graph_traits<G>::degree_size_type;
+
+template <typename G>
+using graph_vertex_range_t = decltype(vertices(std::declval<G>()));
+template <typename G>
+using graph_out_edge_range_t = decltype(out_edges(std::declval<graph_vertex_descriptor_t<G>>(), std::declval<G>()));
+template <typename G>
+using graph_in_edge_range_t = decltype(in_edges(std::declval<graph_vertex_descriptor_t<G>>(), std::declval<G>()));
+template <typename G>
+using graph_edge_range_t = decltype(edges(std::declval<G>()));
+template <typename G>
+using graph_adjacency_range_t = decltype(adjacent_vertices(std::declval<graph_vertex_descriptor_t<G>>(), std::declval<G>()));
 
 // directed_category tags
 struct directed_tag {};

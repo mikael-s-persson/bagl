@@ -13,13 +13,12 @@
 
 namespace bagl {
 
-template <typename Graph, typename Node, typename ChRg, typename Derived>
+template <typename Graph, typename Node, typename Derived>
 class graph_as_tree_base {
   using Tree = Derived;
 
  public:
   using node_descriptor = Node;
-  using children_range = ChRg;
 
   graph_as_tree_base(Graph& g, Node root) : g_(g), root_(root) {}
 
@@ -42,11 +41,10 @@ class graph_as_tree_base {
 
 struct graph_as_tree_tag {};
 
-template <typename Graph, typename ParentMap, typename Node = graph_vertex_descriptor_t<Graph>,
-          typename ChRg = graph_adjacency_range_t<Graph> >
-class graph_as_tree : public graph_as_tree_base<Graph, Node, ChRg, graph_as_tree<Graph, ParentMap, Node, ChRg> > {
+template <typename Graph, typename ParentMap, typename Node = graph_vertex_descriptor_t<Graph>>
+class graph_as_tree : public graph_as_tree_base<Graph, Node, graph_as_tree<Graph, ParentMap, Node> > {
   using self = graph_as_tree;
-  using super = graph_as_tree_base<Graph, Node, ChRg, self>;
+  using super = graph_as_tree_base<Graph, Node, self>;
 
  public:
   graph_as_tree(Graph& g, Node root) : super(g, root) {}
@@ -99,23 +97,23 @@ struct edge_property_selector<graph_as_tree_tag> {
   using type = detail::graph_as_tree_edge_property_selector;
 };
 
-template <typename Graph, typename P, typename N, typename C, typename Property>
-auto get(Property p, graph_as_tree<Graph, P, N, C>& g) {
+template <typename Graph, typename P, typename N, typename Property>
+auto get(Property p, graph_as_tree<Graph, P, N>& g) {
   return get(p, g.g_);
 }
 
-template <typename Graph, typename P, typename N, typename C, typename Property>
-auto get(Property p, const graph_as_tree<Graph, P, N, C>& g) {
+template <typename Graph, typename P, typename N, typename Property>
+auto get(Property p, const graph_as_tree<Graph, P, N>& g) {
   return get(p, g.g_);
 }
 
-template <typename Graph, typename P, typename N, typename C, typename Property, typename Key>
-auto get(Property p, const graph_as_tree<Graph, P, N, C>& g, const Key& k) {
+template <typename Graph, typename P, typename N, typename Property, typename Key>
+auto get(Property p, const graph_as_tree<Graph, P, N>& g, const Key& k) {
   return get(p, g.g_, k);
 }
 
-template <typename Graph, typename P, typename N, typename C, typename Property, typename Key, typename Value>
-void put(Property p, const graph_as_tree<Graph, P, N, C>& g, const Key& k, const Value& val) {
+template <typename Graph, typename P, typename N, typename Property, typename Key, typename Value>
+void put(Property p, const graph_as_tree<Graph, P, N>& g, const Key& k, const Value& val) {
   put(p, g.g_, k, val);
 }
 

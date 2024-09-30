@@ -193,10 +193,10 @@ struct graph_tag_or_void<Graph, std::void_t<typename Graph::graph_tag> > {
 
 template <typename Graph, typename PropertyTag>
 struct edge_property_map : edge_property_selector<typename graph_tag_or_void<Graph>::type>::type::template bind_<
-                               Graph, typename edge_property_type<Graph>::type, PropertyTag> {};
+                               Graph, edge_property_type<Graph>, PropertyTag> {};
 template <typename Graph, typename PropertyTag>
 struct vertex_property_map : vertex_property_selector<typename graph_tag_or_void<Graph>::type>::type::template bind_<
-                                 Graph, typename vertex_property_type<Graph>::type, PropertyTag> {};
+                                 Graph, vertex_property_type<Graph>, PropertyTag> {};
 }  // namespace properties_detail
 
 template <typename Graph, typename Property, typename Enable = void>

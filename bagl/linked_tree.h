@@ -112,16 +112,6 @@ class linked_tree {
   using edges_size_type = typename storage_type::edges_size_type;
   using degree_size_type = edges_size_type;
 
-  using vertex_range = typename storage_type::vertex_range;
-
-  using out_edge_range = typename storage_type::out_edge_range;
-  using in_edge_range = typename storage_type::in_edge_range;
-  using edge_range = typename storage_type::edge_range;
-
-  using adjacency_range = decltype(adjacency_range(std::declval<out_edge_range>(), std::declval<self>()));
-  using inv_adjacency_range = decltype(inv_adjacency_range(std::declval<in_edge_range>(), std::declval<self>()));
-  using child_vertex_range = adjacency_range;
-
   using vertex_stored_impl = typename storage_type::vertex_stored_type;
   using vertex_value_impl = typename storage_type::vertex_value_type;
 

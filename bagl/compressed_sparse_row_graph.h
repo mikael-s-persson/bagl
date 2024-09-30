@@ -156,26 +156,13 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
   static vertex_descriptor null_vertex() { return std::numeric_limits<vertex_descriptor>::max(); }
 
   // For VertexListGraph
-  using vertex_range = decltype(vertices(std::declval<compressed_sparse_row_graph>()));
   using vertices_size_type = Vertex;
 
   // For EdgeListGraph
   using edges_size_type = EdgeIndex;
 
   // For IncidenceGraph
-  using out_edge_range =
-      decltype(out_edges(std::declval<vertex_descriptor>(), std::declval<compressed_sparse_row_graph>()));
   using degree_size_type = EdgeIndex;
-
-  // For AdjacencyGraph
-  using adjacency_range =
-      decltype(adjacent_vertices(std::declval<vertex_descriptor>(), std::declval<compressed_sparse_row_graph>()));
-
-  // For EdgeListGraph
-  using edge_range = decltype(edges(std::declval<compressed_sparse_row_graph>()));
-
-  // For BidirectionalGraph (not implemented)
-  using in_edge_range = void;
 
   // For internal use
   using graph_tag = csr_graph_tag;
@@ -553,7 +540,6 @@ class compressed_sparse_row_graph<bidirectional_s, VertexProperty, EdgeProperty,
       indexed_detail::indexed_vertex_properties<compressed_sparse_row_graph, VertexProperty, Vertex,
                                                 typed_identity_property_map<Vertex>>;
 
- public:
   // For Property Graph
   using graph_property_type = GraphProperty;
   using graph_bundled = lookup_one_property_t<GraphProperty, graph_bundle_t>;
@@ -564,7 +550,6 @@ class compressed_sparse_row_graph<bidirectional_s, VertexProperty, EdgeProperty,
       EdgeIndex /* std::conditional_t<std::is_same_v<EdgeProperty, no_property>, no_property, EdgeIndex> */;
   using backward_type = csr_detail::compressed_sparse_row_structure<backward_edge_property, Vertex, EdgeIndex>;
 
- public:
   // Concept requirements:
   // For Graph
   using vertex_descriptor = Vertex;
@@ -580,27 +565,13 @@ class compressed_sparse_row_graph<bidirectional_s, VertexProperty, EdgeProperty,
   static vertex_descriptor null_vertex() { return std::numeric_limits<vertex_descriptor>::max(); }
 
   // For VertexListGraph
-  using vertex_range = decltype(vertices(std::declval<compressed_sparse_row_graph>()));
   using vertices_size_type = Vertex;
 
   // For EdgeListGraph
   using edges_size_type = EdgeIndex;
 
   // For IncidenceGraph
-  using out_edge_range =
-      decltype(out_edges(std::declval<vertex_descriptor>(), std::declval<compressed_sparse_row_graph>()));
   using degree_size_type = EdgeIndex;
-
-  // For AdjacencyGraph
-  using adjacency_range =
-      decltype(adjacent_vertices(std::declval<vertex_descriptor>(), std::declval<compressed_sparse_row_graph>()));
-
-  // For EdgeListGraph
-  using edge_range = decltype(edges(std::declval<compressed_sparse_row_graph>()));
-
-  // For BidirectionalGraph
-  using in_edge_range =
-      decltype(in_edges(std::declval<vertex_descriptor>(), std::declval<compressed_sparse_row_graph>()));
 
   // For internal use
   using graph_tag = csr_graph_tag;

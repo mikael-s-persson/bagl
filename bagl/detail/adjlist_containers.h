@@ -956,13 +956,11 @@ struct adjlist_vertex_container {
   // NOTE: This WORKS for ALL vertex container types.
   using VRangeSelect = adjlist_select_vertex_range<VertexListS, vertex_container>;
   auto vertices() const { return VRangeSelect::create_range(m_vertices); }
-  using vertex_range = decltype(std::declval<const self&>().vertices());
 
   // NOTE: This WORKS for ALL vertex container types.
   // NOTE: This WORKS for ALL edge container types.
   using OERangeSelect = adjlist_select_out_edge_range<OutEdgeListS, edge_container, edge_descriptor>;
   auto out_edges(vertex_descriptor u) const { return OERangeSelect::create_range(u, get_stored_vertex(u).out_edges); }
-  using out_edge_range = decltype(std::declval<const self&>().out_edges(std::declval<vertex_descriptor>()));
 
   // NOTE: This WORKS for ALL vertex container types.
   // NOTE: This WORKS for ALL edge container types.
@@ -975,14 +973,18 @@ struct adjlist_vertex_container {
   }
 
   // NOTE: This WORKS for ALL vertex container types.
-  auto in_edges(vertex_descriptor v) const { return std::views::all(get_stored_vertex(v).in_edges); }
-  using in_edge_range = decltype(std::declval<const self&>().in_edges(std::declval<vertex_descriptor>()));
+  auto in_edges(vertex_descriptor v) const {
+    if constexpr (!std::is_same_v<DirectedS, directed_s>) {
+      return std::ranges::ref_view(get_stored_vertex(v).in_edges);
+    } else {
+      return int{};
+    }
+  }
 
   // NOTE: This WORKS for ALL vertex container types.
   auto edges() const {
     return edges_from_out_edges(*this);
   }
-  using edge_range = decltype(std::declval<const self&>().edges());
 };
 
 template <typename VertexListS, typename OutEdgeListS, typename DirectedS, typename VertexProperties,
@@ -990,6 +992,30 @@ template <typename VertexListS, typename OutEdgeListS, typename DirectedS, typen
 void swap(adjlist_vertex_container<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>& lhs,
           adjlist_vertex_container<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>& rhs) {
   lhs.swap(rhs);
+}
+
+template <typename VertexListS, typename OutEdgeListS, typename DirectedS, typename VertexProperties,
+          typename EdgeProperties>
+auto vertices(const adjlist_vertex_container<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>& g) {
+  return g.vertices();
+}
+
+template <typename VertexListS, typename OutEdgeListS, typename DirectedS, typename VertexProperties,
+          typename EdgeProperties>
+auto out_edges(typename adjlist_vertex_container<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>::vertex_descriptor u, const adjlist_vertex_container<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>& g) {
+  return g.out_edges(u);
+}
+
+template <typename VertexListS, typename OutEdgeListS, typename DirectedS, typename VertexProperties,
+          typename EdgeProperties>
+auto in_edges(typename adjlist_vertex_container<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>::vertex_descriptor u, const adjlist_vertex_container<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>& g) {
+  return g.in_edges(u);
+}
+
+template <typename VertexListS, typename OutEdgeListS, typename DirectedS, typename VertexProperties,
+          typename EdgeProperties>
+auto edges(const adjlist_vertex_container<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>& g) {
+  return g.edges();
 }
 
 }  // namespace bagl::adjlist_detail

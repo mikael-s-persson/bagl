@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "bagl/detail/container_generators.h"
 #include "bagl/detail/vebl_tree_ranges.h"
 #include "bagl/more_property_maps.h"
 #include "bagl/properties.h"
@@ -62,28 +63,19 @@ class vebl_d_ary_tree {
    */
   static vertex_descriptor null_vertex() { return std::numeric_limits<std::size_t>::max(); }
 
-  static edge_descriptor null_edge() { return edge_descriptor(null_vertex()); }
+  static edge_descriptor null_edge() { return edge_descriptor{null_vertex()}; }
 
   static auto make_unsafe_vertex_range(std::size_t first, std::size_t last) { return std::views::iota(first, last); }
-  using unsafe_vertex_range = decltype(make_unsafe_vertex_range(0, 1));
 
   using vertex_validity = bfl_detail::vebltree_vertex_validity<container_type, Arity>;
   auto make_valid_vertex_range(std::size_t first, std::size_t last) const {
     return make_unsafe_vertex_range(first, last) | std::views::filter(vertex_validity{&m_vertices, &m_depth_recs});
   }
-  using vertex_range = decltype(std::declval<const self&>().make_valid_vertex_range(0, 1));
 
   template <typename VertexRange>
   static auto view_vertex_range_as_edges(VertexRange v_rg) {
     return v_rg | std::views::transform([](std::size_t u) { return edge_descriptor{u}; });
   }
-  using in_edge_range = decltype(view_vertex_range_as_edges(std::declval<unsafe_vertex_range>()));
-  using edge_range = decltype(view_vertex_range_as_edges(std::declval<vertex_range>()));
-  using out_edge_range = edge_range;
-
-  using adjacency_range = vertex_range;
-  using child_vertex_range = vertex_range;
-  using inv_adjacency_range = unsafe_vertex_range;
 
   using directed_category = directed_tag;
   using edge_parallel_category = disallow_parallel_edge_tag;

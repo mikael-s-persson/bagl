@@ -21,7 +21,7 @@ namespace bagl {
 
 struct keep_all {
   template <typename T>
-  [[nodiscard]] bool operator()(const T&) const {
+  [[nodiscard]] bool operator()(const T& /*unused*/) const {
     return true;
   }
 };
@@ -149,26 +149,19 @@ class filtered_graph : public filtered_graph_base<Graph> {
   auto out_edges(vertex_descriptor u) const {
     return out_edges(u, this->g_) | std::views::filter(OutEdgePred{edge_pred_, vertex_pred_, *this});
   }
-  using out_edge_range = decltype(std::declval<self>().out_edges(std::declval<vertex_descriptor>()));
   using degree_size_type = graph_degree_size_type_t<Graph>;
-
-  // AdjacencyGraph requirements
-  using adjacency_range = decltype(adjacency_range(std::declval<out_edge_range>(), std::declval<self>()));
 
   // BidirectionalGraph requirements
   auto in_edges(vertex_descriptor u) const {
     return in_edges(u, this->g_) | std::views::filter(InEdgePred{edge_pred_, vertex_pred_, *this});
   }
-  using in_edge_range = decltype(std::declval<self>().in_edges(std::declval<vertex_descriptor>()));
 
   // VertexListGraph requirements
   auto vertices() const { return vertices(this->g_) | std::views::filter(vertex_pred_); }
-  using vertex_range = decltype(std::declval<self>().vertices());
   using vertices_size_type = graph_vertices_size_type_t<Graph>;
 
   // EdgeListGraph requirements
   auto edges() const { return edges(this->g_) | std::views::filter(EdgePred{edge_pred_, vertex_pred_, *this}); }
-  using edge_range = decltype(std::declval<self>().edges());
   using edges_size_type = graph_edges_size_type_t<Graph>;
 
   using graph_tag = filtered_graph_tag;
