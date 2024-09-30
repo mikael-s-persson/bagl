@@ -60,6 +60,7 @@
 #include "bagl/filtered_graph.h"
 #include "bagl/find_flow_cost.h"
 #include "bagl/floyd_warshall_shortest.h"
+#include "bagl/fruchterman_reingold.h"
 #include "bagl/function_property_map.h"
 #include "bagl/geodesic.h"
 #include "bagl/graph_archetypes.h"
