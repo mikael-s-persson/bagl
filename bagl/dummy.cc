@@ -81,6 +81,8 @@
 #include "bagl/incremental_components.h"
 #include "bagl/indirect_cmp.h"
 #include "bagl/is_heap.h"
+#include "bagl/is_kuratowski_subgraph.h"
+#include "bagl/isomorphism.h"
 #include "bagl/king_ordering.h"
 #include "bagl/linked_tree.h"
 #include "bagl/lookup_edge.h"
@@ -115,4 +117,30 @@
 #include "bagl/visitors.h"
 #include "bagl/zip_range.h"
 
-int dummy() { return 0; }
+int dummy() {
+    #if 0
+  auto rg = bagl::partial_view(std::ranges::iota_view(0, 10));
+  auto rg2 = rg | std::views::transform([](int i) { return i * 2; });
+  int u = 5;
+  using small_graph_t = bagl::adjacency_list<bagl::vec_s, bagl::vec_s, bagl::undirected_s>;
+  //auto eo_rg = std::ranges::iota_view(0, 10) | std::views::transform([u](const auto& e_id) { return small_graph_t::bidir_edge_descriptor(u, e_id); });
+  small_graph_t g;
+  auto v_rg = vertices(g);
+  auto eo_rg = g.m_pack.out_edges(0);
+  //auto ueo_rg = bagl::adjlist_detail::adjlist_undir_ioerange<small_graph_t::edge_descriptor, decltype(g.m_pack.in_edges(0)), decltype(g.m_pack.out_edges(0))>(true, g.m_pack.in_edges(0), g.m_pack.out_edges(0));
+  auto ueo_rg = bagl::adjlist_detail::make_adjlist_undir_ioerange<small_graph_t::edge_descriptor>(true, g.m_pack.in_edges(0), g.m_pack.out_edges(0));
+  for (auto e : ueo_rg) {
+    (void)e;
+  }
+  using EdgesFromOutEdges = decltype(g.m_pack.edges());
+//  EdgesFromOutEdges e_rg{g.m_pack};
+//  auto b = e_rg.begin();
+//  auto en = std::ranges::end(e_rg);
+  static_assert(std::ranges::input_range<decltype(g.m_pack.edges())>);
+//  auto e_rg = std::ranges::transform_view(g.m_pack.edges(), [](const auto& e) { return bagl::container_detail::undir_edge_desc(e); });
+//  auto e_rg = bagl::adjlist_detail::adjlist_undir_eiter_range(g.m_pack.edges());
+  auto e_rg = bagl::edges_from_out_edges<small_graph_t>(g);
+  static_assert(std::ranges::input_range<decltype(edges(g))>);
+  #endif
+  return 0;
+}

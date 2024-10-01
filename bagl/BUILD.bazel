@@ -89,6 +89,8 @@ cc_library(
         "incremental_components.h",
         "indirect_cmp.h",
         "is_heap.h",
+        "is_kuratowski_subgraph.h",
+        "isomorphism.h",
         "king_ordering.h",
         "linked_tree.h",
         "lookup_edge.h",

@@ -10,8 +10,8 @@
 
 #include "bagl/detail/adjlist_ranges.h"
 #include "bagl/detail/container_generators.h"
-#include "bagl/graph_selectors.h"  // for directed_s, undirected_s, bidirectional_s
 #include "bagl/edges_from_out_edges.h"
+#include "bagl/graph_selectors.h"  // for directed_s, undirected_s, bidirectional_s
 
 namespace bagl::adjlist_detail {
 
@@ -845,6 +845,8 @@ struct adjlist_vertex_container {
   using edge_stored_type = typename EConfig::stored_type;
   using edge_value_type = typename EConfig::value_type;
 
+  static vertex_descriptor null_vertex() { return VConfig::null_vertex(); }
+
   mutable vertex_container m_vertices;
   std::size_t m_num_edges{0};
 
@@ -960,7 +962,12 @@ struct adjlist_vertex_container {
   // NOTE: This WORKS for ALL vertex container types.
   // NOTE: This WORKS for ALL edge container types.
   using OERangeSelect = adjlist_select_out_edge_range<OutEdgeListS, edge_container, edge_descriptor>;
-  auto out_edges(vertex_descriptor u) const { return OERangeSelect::create_range(u, get_stored_vertex(u).out_edges); }
+  auto out_edges(vertex_descriptor u) const {
+    if (u == VConfig::null_vertex()) {
+      return OERangeSelect::create_empty_range(u);
+    }
+    return OERangeSelect::create_range(u, get_stored_vertex(u).out_edges);
+  }
 
   // NOTE: This WORKS for ALL vertex container types.
   // NOTE: This WORKS for ALL edge container types.
@@ -975,16 +982,14 @@ struct adjlist_vertex_container {
   // NOTE: This WORKS for ALL vertex container types.
   auto in_edges(vertex_descriptor v) const {
     if constexpr (!std::is_same_v<DirectedS, directed_s>) {
-      return std::ranges::ref_view(get_stored_vertex(v).in_edges);
+      return std::ranges::subrange(get_stored_vertex(v).in_edges.begin(), get_stored_vertex(v).in_edges.end());
     } else {
       return int{};
     }
   }
 
   // NOTE: This WORKS for ALL vertex container types.
-  auto edges() const {
-    return edges_from_out_edges(*this);
-  }
+  auto edges() const { return edges_from_out_edges(*this); }
 };
 
 template <typename VertexListS, typename OutEdgeListS, typename DirectedS, typename VertexProperties,
@@ -996,19 +1001,26 @@ void swap(adjlist_vertex_container<VertexListS, OutEdgeListS, DirectedS, VertexP
 
 template <typename VertexListS, typename OutEdgeListS, typename DirectedS, typename VertexProperties,
           typename EdgeProperties>
-auto vertices(const adjlist_vertex_container<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>& g) {
+auto vertices(
+    const adjlist_vertex_container<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>& g) {
   return g.vertices();
 }
 
 template <typename VertexListS, typename OutEdgeListS, typename DirectedS, typename VertexProperties,
           typename EdgeProperties>
-auto out_edges(typename adjlist_vertex_container<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>::vertex_descriptor u, const adjlist_vertex_container<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>& g) {
+auto out_edges(
+    typename adjlist_vertex_container<VertexListS, OutEdgeListS, DirectedS, VertexProperties,
+                                      EdgeProperties>::vertex_descriptor u,
+    const adjlist_vertex_container<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>& g) {
   return g.out_edges(u);
 }
 
 template <typename VertexListS, typename OutEdgeListS, typename DirectedS, typename VertexProperties,
           typename EdgeProperties>
-auto in_edges(typename adjlist_vertex_container<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>::vertex_descriptor u, const adjlist_vertex_container<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>& g) {
+auto in_edges(
+    typename adjlist_vertex_container<VertexListS, OutEdgeListS, DirectedS, VertexProperties,
+                                      EdgeProperties>::vertex_descriptor u,
+    const adjlist_vertex_container<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>& g) {
   return g.in_edges(u);
 }
 

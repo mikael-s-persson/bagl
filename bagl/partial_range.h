@@ -31,8 +31,32 @@ class partial_view : public std::ranges::view_interface<partial_view<BaseRange>>
   explicit partial_view(BaseRange&& base_range) : base_range_(make_base(std::move(base_range))), current_begin_(get_base().begin()) {}
   explicit partial_view(const BaseRange& base_range) : base_range_(make_base(base_range)), current_begin_(get_base().begin()) {}
 
-  iterator begin() const { return current_begin_; }
-  sentinel end() const { return get_base().end(); }
+  partial_view(partial_view&&) noexcept = default;
+  partial_view& operator=(partial_view&&) noexcept = default;
+
+  partial_view(const partial_view& rhs) : base_range_(make_base(rhs.get_base())), current_begin_(get_base().begin()) {
+    if constexpr (std::ranges::random_access_range<BaseRange>) {
+      current_begin_ += (rhs.begin() - rhs.base_begin());
+    } else {
+      for (auto rhs_it = rhs.base_begin(); rhs_it != rhs.begin(); ++rhs_it) {
+        ++current_begin_;
+      }
+    }
+  }
+  partial_view& operator=(const partial_view& rhs) {
+    if (this == &rhs) {
+      return *this;
+    }
+    partial_view tmp{rhs};
+    *this = std::move(tmp);
+    return *this;
+  }
+
+  auto begin() const { return current_begin_; }
+  auto end() const { return get_base().end(); }
+  auto begin() { return current_begin_; }
+  auto end() { return get_base().end(); }
+
 
   // Move the current begin iterator for this partial view.
   void move_begin_to(iterator new_begin) { current_begin_ = new_begin; }
@@ -64,6 +88,13 @@ class partial_view : public std::ranges::view_interface<partial_view<BaseRange>>
   iterator current_begin_;
 
   const BaseRange& get_base() const {
+    if constexpr (is_base_borrowable) {
+      return base_range_;
+    } else {
+      return *base_range_;
+    }
+  }
+  BaseRange& get_base() {
     if constexpr (is_base_borrowable) {
       return base_range_;
     } else {

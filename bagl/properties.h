@@ -44,6 +44,13 @@ concept MutableLvalueVertexPropertyMap = MutableLvaluePropertyMap<PMap, graph_ve
 template <typename PMap, typename G>
 concept MutableLvalueEdgePropertyMap = MutableLvaluePropertyMap<PMap, graph_edge_descriptor_t<G>>;
 
+// Special graph property maps that are very common.
+
+template <typename PMap, typename G>
+concept ReadableVertexIndexMap = ReadablePropertyMap<PMap, graph_vertex_descriptor_t<G>> && std::integral<property_traits_value_t<PMap>>;
+template <typename PMap, typename G>
+concept ReadableEdgeIndexMap = ReadablePropertyMap<PMap, graph_edge_descriptor_t<G>> && std::integral<property_traits_value_t<PMap>>;
+
 } // namespace concepts
 
 enum class default_color_type : std::uint8_t { white_color, gray_color, green_color, red_color, black_color, invalid_color = std::numeric_limits<std::uint8_t>::max() };

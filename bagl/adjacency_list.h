@@ -39,7 +39,8 @@ struct adjacency_list_traits {
       std::conditional_t<(std::is_same_v<VertexListS, vec_s> || std::is_same_v<VertexListS, pool_s>), std::size_t,
                          void>;
   using edge_descriptor_or_void =
-      std::conditional_t<!std::is_same_v<vertex_descriptor_or_void, void> && (std::is_same_v<OutEdgeListS, vec_s> || std::is_same_v<OutEdgeListS, pool_s>),
+      std::conditional_t<!std::is_same_v<vertex_descriptor_or_void, void> &&
+                             (std::is_same_v<OutEdgeListS, vec_s> || std::is_same_v<OutEdgeListS, pool_s>),
                          container_detail::edge_desc<vertex_descriptor_or_void, std::size_t>, void>;
 };
 
@@ -690,10 +691,6 @@ class adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, 
   using edges_size_type = typename bidir_storage_type::edges_size_type;
   using degree_size_type = edges_size_type;
 
-  using bidir_out_edge_range = typename bidir_storage_type::out_edge_range;
-  using bidir_in_edge_range = typename bidir_storage_type::in_edge_range;
-  using undir_ioedge_range = adjlist_detail::adjlist_undir_ioerange<edge_descriptor, bidir_in_edge_range, bidir_out_edge_range>;
-
   using vertex_stored_impl = typename bidir_storage_type::vertex_stored_type;
   using vertex_value_impl = typename bidir_storage_type::vertex_value_type;
 
@@ -815,7 +812,8 @@ auto target(const typename BAGL_ADJACENCY_LIST_UNDIR::edge_descriptor& e, const 
 
 template <BAGL_ADJACENCY_LIST_UNDIR_ARGS>
 auto out_edges(typename BAGL_ADJACENCY_LIST_UNDIR::vertex_descriptor v, const BAGL_ADJACENCY_LIST_UNDIR& g) {
-  return typename BAGL_ADJACENCY_LIST_UNDIR::undir_ioedge_range{true, g.m_pack.in_edges(v), g.m_pack.out_edges(v)};
+  return make_adjlist_undir_ioerange<typename BAGL_ADJACENCY_LIST_UNDIR::edge_descriptor>(true, g.m_pack.in_edges(v),
+                                                                                          g.m_pack.out_edges(v));
 }
 
 template <BAGL_ADJACENCY_LIST_UNDIR_ARGS>
@@ -829,7 +827,8 @@ std::size_t out_degree(typename BAGL_ADJACENCY_LIST_UNDIR::vertex_descriptor v, 
 
 template <BAGL_ADJACENCY_LIST_UNDIR_ARGS>
 auto in_edges(typename BAGL_ADJACENCY_LIST_UNDIR::vertex_descriptor v, const BAGL_ADJACENCY_LIST_UNDIR& g) {
-  return typename BAGL_ADJACENCY_LIST_UNDIR::undir_ioedge_range{false, g.m_pack.in_edges(v), g.m_pack.out_edges(v)};
+  return make_adjlist_undir_ioerange<typename BAGL_ADJACENCY_LIST_UNDIR::edge_descriptor>(false, g.m_pack.in_edges(v),
+                                                                                          g.m_pack.out_edges(v));
 }
 
 template <BAGL_ADJACENCY_LIST_UNDIR_ARGS>
