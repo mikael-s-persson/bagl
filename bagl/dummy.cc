@@ -93,6 +93,9 @@
 #include "bagl/linked_tree.h"
 #include "bagl/lookup_edge.h"
 #include "bagl/loop_erased_random_walk.h"
+#include "bagl/make_biconnected_planar.h"
+#include "bagl/make_connected.h"
+#include "bagl/make_maximal_planar.h"
 #include "bagl/matrix_property_map.h"
 #include "bagl/maximum_adjacency_search.h"
 #include "bagl/more_property_maps.h"
@@ -104,6 +107,7 @@
 #include "bagl/numeric_values.h"
 #include "bagl/one_bit_color_map.h"
 #include "bagl/partial_range.h"
+#include "bagl/planar_face_traversal.h"
 #include "bagl/prim_minimum_spanning_tree.h"
 #include "bagl/properties.h"
 #include "bagl/property.h"
@@ -124,6 +128,7 @@
 #include "bagl/vebl_d_ary_tree.h"
 #include "bagl/vector_property_map.h"
 #include "bagl/visitors.h"
+#include "bagl/wavefront.h"
 #include "bagl/zip_range.h"
 
 int dummy() {

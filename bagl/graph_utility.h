@@ -258,6 +258,15 @@ auto num_vertices_or_zero(const G& g) {
   }
 }
 
+template <typename G>
+auto num_edges_or_zero(const G& g) {
+  if constexpr (concepts::EdgeListGraph<G>) {
+    return num_edges(g);
+  } else {
+    return 0;
+  }
+}
+
 template <typename Graph>
 bool has_no_vertices(const Graph& g) {
   auto [a, b] = vertices(g);
