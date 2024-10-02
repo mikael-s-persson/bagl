@@ -32,6 +32,9 @@ struct bidirectional_s {
   using is_bidir_t = std::true_type;
 };
 
+// A type selector that denotes the use of some default value.
+struct default_s {};
+
 }  // namespace bagl
 
 #endif  // BAGL_BAGL_GRAPH_SELECTORS_H_

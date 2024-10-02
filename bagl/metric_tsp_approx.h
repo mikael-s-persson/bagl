@@ -137,7 +137,7 @@ void metric_tsp_approx_from_vertex(const G& g, graph_vertex_descriptor_t<G> star
   auto mst_verts = vertices(mst);
   for (auto v : pred_pmap.storage_range()) {
     if (indexmap[v] != cnt) {
-      add_edge(*std::advance(mst_verts.begin(), indexmap[v]), *std::advance(mst_verts.begin(), cnt), mst);
+      add_edge(*std::next(mst_verts.begin(), indexmap[v]), *std::next(mst_verts.begin(), cnt), mst);
     }
     ++cnt;
   }
@@ -156,7 +156,7 @@ void metric_tsp_approx_from_vertex(const G& g, graph_vertex_descriptor_t<G> star
   auto g_verts = vertices(g);
   for (auto curr : tvis) {
     // TODO: This is will be O(n^2) if vertex storage of g != vec_s.
-    GVertex v = *std::advance(g_verts.begin(), get(vertex_index, mst)[curr]);
+    GVertex v = *std::next(g_verts.begin(), get(vertex_index, mst)[curr]);
     vis.visit_vertex(v, g);
   }
 

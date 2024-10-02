@@ -9,9 +9,11 @@
 #include <concepts>
 #include <ranges>
 #include <vector>
+#include <queue>
 
 #include "bagl/graph_concepts.h"
 #include "bagl/graph_traits.h"
+#include "bagl/two_bit_color_map.h"
 #include "bagl/visitors.h"
 
 namespace bagl {
@@ -76,12 +78,12 @@ void breadth_first_visit(const G& g, Seeds seeds, Buffer& q, V vis,
 }  // breadth_first_visit
 
 // Single-seed version
-template <concepts::IncidenceGraph G, class Buffer, concepts::BFSVisitor<G> V, class ColorMap>
+template <concepts::IncidenceGraph G, concepts::Buffer Buffer, concepts::BFSVisitor<G> V, concepts::ReadWriteVertexPropertyMap<G> ColorMap>
 void breadth_first_visit(const G& g, graph_vertex_descriptor_t<G> s, Buffer& q, V vis, ColorMap color) {
   breadth_first_visit(g, std::ranges::single_view(s), q, vis, color);
 }
 
-template <concepts::VertexListGraph G, std::ranges::input_range Seeds, class Buffer, concepts::BFSVisitor<G> V, class ColorMap>
+template <concepts::VertexListGraph G, std::ranges::input_range Seeds, concepts::Buffer Buffer, concepts::BFSVisitor<G> V, concepts::ReadWriteVertexPropertyMap<G> ColorMap>
 void breadth_first_search(const G& g, Seeds seeds, Buffer& q, V vis, ColorMap color) {
   // Initialization
   using ColorValue = property_traits_value_t<ColorMap>;
@@ -93,9 +95,27 @@ void breadth_first_search(const G& g, Seeds seeds, Buffer& q, V vis, ColorMap co
   breadth_first_visit(g, seeds, q, vis, color);
 }
 
-template <concepts::VertexListGraph G, class Buffer, concepts::BFSVisitor<G> V, class ColorMap>
+template <concepts::VertexListGraph G, concepts::Buffer Buffer, concepts::BFSVisitor<G> V, concepts::ReadWriteVertexPropertyMap<G> ColorMap>
 void breadth_first_search(const G& g, graph_vertex_descriptor_t<G> s, Buffer& q, V vis, ColorMap color) {
   breadth_first_search(g, std::ranges::single_view(s), q, vis, color);
+}
+
+template <concepts::VertexListGraph G, std::ranges::input_range Seeds, concepts::BFSVisitor<G> V, concepts::ReadWriteVertexPropertyMap<G> ColorMap>
+void breadth_first_search(const G& g, Seeds seeds, V vis, ColorMap color) {
+  std::queue<graph_vertex_descriptor_t<G>, std::vector<graph_vertex_descriptor_t<G>>> q;
+  breadth_first_search(q, seeds, q, vis, color);
+}
+
+template <concepts::VertexListGraph G, std::ranges::input_range Seeds, concepts::BFSVisitor<G> V, concepts::ReadableVertexIndexMap<G> IndexMap>
+void breadth_first_search(const G& g, Seeds seeds, V vis, IndexMap v_index) {
+  std::queue<graph_vertex_descriptor_t<G>, std::vector<graph_vertex_descriptor_t<G>>> q;
+  breadth_first_search(q, seeds, q, vis, two_bit_color_map(num_vertices(g), v_index));
+}
+
+template <concepts::VertexListGraph G, std::ranges::input_range Seeds, concepts::BFSVisitor<G> V>
+void breadth_first_search(const G& g, Seeds seeds, V vis) {
+  std::queue<graph_vertex_descriptor_t<G>, std::vector<graph_vertex_descriptor_t<G>>> q;
+  breadth_first_search(q, seeds, q, vis, two_bit_color_map(num_vertices(g), get(vertex_index, g)));
 }
 
 template <class Visitors = null_visitors>
