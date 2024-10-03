@@ -119,6 +119,8 @@
 #include "bagl/simple_point.h"
 #include "bagl/subgraph.h"
 #include "bagl/successive_shortest_path_nonnegative_weights.h"
+#include "bagl/st_connected.h"
+#include "bagl/stoer_wagner_min_cut.h"
 #include "bagl/strong_components.h"
 #include "bagl/tiernan_all_cycles.h"
 #include "bagl/topological_sort.h"

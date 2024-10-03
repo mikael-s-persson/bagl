@@ -133,6 +133,8 @@ cc_library(
         "simple_point.h",
         "subgraph.h",
         "successive_shortest_path_nonnegative_weights.h",
+        "st_connected.h",
+        "stoer_wagner_min_cut.h",
         "strong_components.h",
         "tiernan_all_cycles.h",
         "topological_sort.h",
