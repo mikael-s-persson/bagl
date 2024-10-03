@@ -62,7 +62,7 @@ concept DijkstraVisitor = std::copy_constructible<Visitor> &&
 
 }  // namespace concepts
 
-template <class Visitors = null_visitor>
+template <class Visitors = null_visitors>
 class dijkstra_visitor : public bfs_visitor<Visitors> {
  public:
   dijkstra_visitor() = default;
@@ -81,9 +81,9 @@ class dijkstra_visitor : public bfs_visitor<Visitors> {
   void tree_edge(Edge u, Graph& g) = delete;
 };
 
-template <typename Visitors>
-auto make_dijkstra_visitor(Visitors vis) {
-  return dijkstra_visitor(std::move(vis));
+template <typename... Visitors>
+auto make_dijkstra_visitor(Visitors&&... vis) {
+  return dijkstra_visitor(std::tuple{std::forward<Visitors>(vis)...});
 }
 using default_dijkstra_visitor = dijkstra_visitor<>;
 

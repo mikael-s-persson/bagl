@@ -139,20 +139,16 @@ struct distance_recorder_on_tree_edge {
 //========================================================================
 // time_stamper
 
-template <class TimeMap, class TimeT, class Tag>
-struct time_stamper : public base_visitor<time_stamper<TimeMap, TimeT, Tag> > {
-  time_stamper(TimeMap pa, TimeT& t) : m_time_pa(pa), m_time(t) {}
+template <class TimeMap, class TimeT>
+struct time_stamper_on_finish_vertex {
+  time_stamper_on_finish_vertex(TimeMap pa, TimeT& t) : m_time_pa(pa), m_time(t) {}
   template <class Vertex, class Graph>
-  void operator()(Vertex u, const Graph&) {
+  void finish_vertex(Vertex u, const Graph&) {
     put(m_time_pa, u, ++m_time);
   }
   TimeMap m_time_pa;
   TimeT& m_time;
 };
-template <class TimeMap, class TimeT, class Tag>
-time_stamper<TimeMap, TimeT, Tag> stamp_times(TimeMap pa, TimeT& time_counter, Tag) {
-  return time_stamper<TimeMap, TimeT, Tag>(pa, time_counter);
-}
 
 //========================================================================
 // property_writer
