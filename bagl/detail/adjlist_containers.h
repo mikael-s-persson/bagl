@@ -851,6 +851,7 @@ struct adjlist_vertex_container {
   std::size_t m_num_edges{0};
 
   adjlist_vertex_container() : m_vertices() {}
+  explicit adjlist_vertex_container(std::size_t num_vertices) : m_vertices(num_vertices) {}
 
   ~adjlist_vertex_container() { clear(); }
 

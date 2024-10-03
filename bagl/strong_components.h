@@ -82,17 +82,18 @@ class tarjan_scc_visitor : public dfs_visitor<> {
 }  // namespace scc_detail
 
 template <concepts::VertexListGraph Graph, concepts::ReadWriteVertexPropertyMap<Graph> ComponentMap,
-          concepts::ReadWriteVertexPropertyMap<Graph> RootMap, concepts::ReadWriteVertexPropertyMap<Graph> DiscoverTime>
+          concepts::ReadWriteVertexPropertyMap<Graph> RootMap, concepts::ReadWriteVertexPropertyMap<Graph> DiscoverTime,
+          concepts::ReadableVertexIndexMap<Graph> VertexIndexMap>
 requires std::convertible_to<property_traits_value_t<RootMap>, graph_vertex_descriptor_t<Graph>>
 auto strong_components(const Graph& g,     // Input
                        ComponentMap comp,  // Output
                        // Internal record keeping
-                       RootMap root, DiscoverTime discover_time) {
+                       RootMap root, DiscoverTime discover_time, VertexIndexMap v_index) {
   static_assert(is_directed_graph_v<Graph>);
   property_traits_value_t<ComponentMap> total = {};
 
   std::stack<graph_vertex_descriptor_t<Graph>> s;
-  depth_first_search(g, scc_detail::tarjan_scc_visitor(comp, root, discover_time, total, s));
+  depth_first_search(g, scc_detail::tarjan_scc_visitor(comp, root, discover_time, total, s), v_index);
   return total;
 }
 
@@ -103,7 +104,7 @@ auto strong_components(const Graph& g,     // Input
                        ComponentMap comp,  // Output
                        // Internal record keeping
                        RootMap root) {
-  return strong_components(g, comp, root, vector_property_map(num_vertices(g), get(vertex_index, g), std::size_t{0}));
+  return strong_components(g, comp, root, vector_property_map(num_vertices(g), get(vertex_index, g), std::size_t{0}), get(vertex_index, g));
 }
 
 template <concepts::VertexListGraph Graph, concepts::ReadWriteVertexPropertyMap<Graph> ComponentMap>
@@ -111,6 +112,15 @@ auto strong_components(const Graph& g,       // Input
                        ComponentMap comp) {  // Output
   return strong_components(
       g, comp, vector_property_map(num_vertices(g), get(vertex_index, g), graph_traits<Graph>::null_vertex()));
+}
+
+template <concepts::VertexListGraph Graph, concepts::ReadWriteVertexPropertyMap<Graph> ComponentMap,
+          concepts::ReadableVertexIndexMap<Graph> VertexIndexMap>
+auto strong_components(const Graph& g,       // Input
+                       ComponentMap comp,    // Output
+                       VertexIndexMap v_index) {
+  return strong_components(
+      g, comp, vector_property_map(num_vertices(g), v_index, graph_traits<Graph>::null_vertex()), vector_property_map(num_vertices(g), v_index, std::size_t{0}), v_index);
 }
 
 template <typename Graph, typename ComponentMap, typename ComponentLists>

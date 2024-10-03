@@ -138,6 +138,7 @@ cc_library(
         "topology.h",
         "transform_iterator.h",
         "transform_value_property_map.h",
+        "transitive_closure.h",
         "transpose_graph.h",
         "tree_adaptor.h",
         "tree_concepts.h",

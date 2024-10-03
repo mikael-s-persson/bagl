@@ -144,6 +144,8 @@ class adjacency_list {
    */
   adjacency_list() : m_pack() {}
 
+  explicit adjacency_list(std::size_t num_vertices) : m_pack(num_vertices) {}
+
   ~adjacency_list() = default;
 
   adjacency_list(const self& rhs) : m_pack() { do_graph_deep_copy(*this, rhs); }

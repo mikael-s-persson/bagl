@@ -124,6 +124,7 @@
 #include "bagl/topology.h"
 #include "bagl/transform_iterator.h"
 #include "bagl/transform_value_property_map.h"
+#include "bagl/transitive_closure.h"
 #include "bagl/tree_adaptor.h"
 #include "bagl/tree_concepts.h"
 #include "bagl/tree_traits.h"

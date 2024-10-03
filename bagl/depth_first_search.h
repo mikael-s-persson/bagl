@@ -170,14 +170,23 @@ void depth_first_search(const G& g, V vis, ColorMap color) {
   depth_first_search(g, vis, color, get_default_starting_vertex(g));
 }
 
-template <concepts::VertexListGraph G, concepts::DFSVisitor<G> V,
-          concepts::ReadWriteVertexPropertyMap<G> ColorMap>
+template <concepts::VertexListGraph G, concepts::DFSVisitor<G> V>
 void depth_first_search(const G& g, V vis) {
   if (vertices(g).empty()) {
     return;
   }
 
   depth_first_search(g, vis, two_bit_color_map(num_vertices(g), get(vertex_index, g)), get_default_starting_vertex(g));
+}
+
+template <concepts::VertexListGraph G, concepts::DFSVisitor<G> V,
+          concepts::ReadableVertexIndexMap<G> VertexIndexMap>
+void depth_first_search(const G& g, V vis, VertexIndexMap v_index) {
+  if (vertices(g).empty()) {
+    return;
+  }
+
+  depth_first_search(g, vis, two_bit_color_map(num_vertices(g), v_index), get_default_starting_vertex(g));
 }
 
 template <typename Visitors = null_visitors>
