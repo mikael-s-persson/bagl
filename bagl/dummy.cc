@@ -99,6 +99,7 @@
 #include "bagl/make_maximal_planar.h"
 #include "bagl/matrix_property_map.h"
 #include "bagl/maximum_adjacency_search.h"
+#include "bagl/minimum_degree_ordering.h"
 #include "bagl/more_property_maps.h"
 #include "bagl/mutable_heap.h"
 #include "bagl/mutable_queue.h"

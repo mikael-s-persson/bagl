@@ -108,6 +108,7 @@ cc_library(
         "make_maximal_planar.h",
         "matrix_property_map.h",
         "maximum_adjacency_search.h",
+        "minimum_degree_ordering.h",
         "more_property_maps.h",
         "mutable_heap.h",
         "mutable_queue.h",
