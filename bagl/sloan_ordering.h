@@ -69,10 +69,10 @@ auto rls_max_width(Distance& d, std::size_t depth) {
 //
 // This is to find a good starting node. "good" is in the sense
 // of the ordering generated.
-template <class Graph, class ColorMap, class DegreeMap>
-auto sloan_start_end_vertices(Graph& g, graph_vertex_descriptor_t<Graph>& s, ColorMap color, DegreeMap degree) {
+template <concepts::VertexListGraph G, concepts::ReadWriteVertexPropertyMap<G> DegreeMap>
+auto sloan_start_end_vertices(G& g, graph_vertex_descriptor_t<G>& s, DegreeMap degree) {
   using Degree = property_traits_value_t<DegreeMap>;
-  using Vertex = graph_vertex_descriptor_t<Graph>;
+  using Vertex = graph_vertex_descriptor_t<G>;
 
   // Creating a property_map for the indices of a vertex
   auto index_map = get(vertex_index, g);
@@ -180,14 +180,18 @@ auto sloan_start_end_vertices(Graph& g, graph_vertex_descriptor_t<Graph>& s, Col
 //
 // This algorithm requires user to provide a starting vertex to
 // compute Sloan ordering.
-template <class Graph, class OutputIterator, class ColorMap, class DegreeMap, class PriorityMap, class Weight>
-OutputIterator sloan_ordering(Graph& g, graph_vertex_descriptor_t<Graph> s, graph_vertex_descriptor_t<Graph> e,
-                              OutputIterator permutation, ColorMap color, DegreeMap degree, PriorityMap priority,
-                              Weight w1, Weight w2) {
+template <concepts::VertexListGraph G, std::output_iterator<graph_vertex_descriptor_t<G>> OutputIterator,
+          concepts::ReadWriteVertexPropertyMap<G> ColorMap, concepts::ReadWriteVertexPropertyMap<G> DegreeMap,
+          concepts::ReadWriteVertexPropertyMap<G> PriorityMap, class Weight>
+requires concepts::IncidenceGraph<G> OutputIterator sloan_ordering(G& g, graph_vertex_descriptor_t<G> s,
+                                                                   graph_vertex_descriptor_t<G> e,
+                                                                   OutputIterator permutation, ColorMap color,
+                                                                   DegreeMap degree, PriorityMap priority, Weight w1,
+                                                                   Weight w2) {
   using Degree = property_traits_value_t<PriorityMap>;
   using ColorValue = property_traits_value_t<ColorMap>;
   using Color = color_traits<ColorValue>;
-  using Vertex = graph_vertex_descriptor_t<Graph>;
+  using Vertex = graph_vertex_descriptor_t<G>;
 
   // Creating a property_map for the indices of a vertex
   auto index_map = get(vertex_index, g);
@@ -275,9 +279,13 @@ OutputIterator sloan_ordering(Graph& g, graph_vertex_descriptor_t<Graph> s, grap
 
 // Same algorithm as before, but without the weights given (taking default
 // weights
-template <class Graph, class OutputIterator, class ColorMap, class DegreeMap, class PriorityMap>
-OutputIterator sloan_ordering(Graph& g, graph_vertex_descriptor_t<Graph> s, graph_vertex_descriptor_t<Graph> e,
-                              OutputIterator permutation, ColorMap color, DegreeMap degree, PriorityMap priority) {
+template <concepts::VertexListGraph G, std::output_iterator<graph_vertex_descriptor_t<G>> OutputIterator,
+          concepts::ReadWriteVertexPropertyMap<G> ColorMap, concepts::ReadWriteVertexPropertyMap<G> DegreeMap,
+          concepts::ReadWriteVertexPropertyMap<G> PriorityMap>
+requires concepts::IncidenceGraph<G> OutputIterator sloan_ordering(G& g, graph_vertex_descriptor_t<G> s,
+                                                                   graph_vertex_descriptor_t<G> e,
+                                                                   OutputIterator permutation, ColorMap color,
+                                                                   DegreeMap degree, PriorityMap priority) {
   return sloan_ordering(g, s, e, permutation, color, degree, priority, sloan_default_weight1, sloan_default_weight2);
 }
 
@@ -285,23 +293,28 @@ OutputIterator sloan_ordering(Graph& g, graph_vertex_descriptor_t<Graph> s, grap
 //
 // This algorithm finds a good starting vertex itself to
 // compute Sloan-ordering.
+template <concepts::VertexListGraph G, std::output_iterator<graph_vertex_descriptor_t<G>> OutputIterator,
+          concepts::ReadWriteVertexPropertyMap<G> Color, concepts::ReadWriteVertexPropertyMap<G> Degree,
+          concepts::ReadWriteVertexPropertyMap<G> Priority, class Weight>
+requires concepts::IncidenceGraph<G> OutputIterator sloan_ordering(G& g, OutputIterator permutation, Color color,
+                                                                   Degree degree, Priority priority, Weight w1,
+                                                                   Weight w2) {
+  using Vertex = graph_vertex_descriptor_t<G>;
 
-template <class Graph, class OutputIterator, class Color, class Degree, class Priority, class Weight>
-OutputIterator sloan_ordering(Graph& G, OutputIterator permutation, Color color, Degree degree, Priority priority,
-                              Weight w1, Weight w2) {
-  using Vertex = graph_vertex_descriptor_t<Graph>;
+  Vertex s = graph_traits<G>::null_vertex();
+  Vertex e = sloan_start_end_vertices(g, s, degree);
 
-  Vertex s = graph_traits<Graph>::null_vertex();
-  Vertex e = sloan_start_end_vertices(G, s, color, degree);
-
-  return sloan_ordering(G, s, e, permutation, color, degree, priority, w1, w2);
+  return sloan_ordering(g, s, e, permutation, color, degree, priority, w1, w2);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // Same as before, but without given weights (default weights are taken instead)
-template <class Graph, class OutputIterator, class Color, class Degree, class Priority>
-OutputIterator sloan_ordering(Graph& G, OutputIterator permutation, Color color, Degree degree, Priority priority) {
-  return sloan_ordering(G, permutation, color, degree, priority, sloan_default_weight1, sloan_default_weight2);
+template <concepts::VertexListGraph G, std::output_iterator<graph_vertex_descriptor_t<G>> OutputIterator,
+          concepts::ReadWriteVertexPropertyMap<G> Color, concepts::ReadWriteVertexPropertyMap<G> Degree,
+          concepts::ReadWriteVertexPropertyMap<G> Priority>
+requires concepts::IncidenceGraph<G> OutputIterator sloan_ordering(G& g, OutputIterator permutation, Color color,
+                                                                   Degree degree, Priority priority) {
+  return sloan_ordering(g, permutation, color, degree, priority, sloan_default_weight1, sloan_default_weight2);
 }
 
 }  // namespace bagl

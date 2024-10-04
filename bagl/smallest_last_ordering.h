@@ -28,28 +28,33 @@
 
 namespace bagl {
 
-template <class VertexListGraph, class Order, class Degree, class Marker>
-void smallest_last_vertex_ordering(const VertexListGraph& G, Order order, Degree degree, Marker marker) {
-  using Vertex = graph_vertex_descriptor_t<VertexListGraph>;
+template <concepts::VertexListGraph G, concepts::WritablePropertyMap<std::size_t> Order,
+          concepts::ReadWriteVertexPropertyMap<G> Degree, concepts::ReadWriteVertexPropertyMap<G> Marker>
+requires concepts::AdjacencyGraph<G> && concepts::IncidenceGraph<G>
+void smallest_last_vertex_ordering(const G& g, Order order, Degree degree, Marker marker) {
+  using Vertex = graph_vertex_descriptor_t<G>;
 
-  using ID = property_map_t<VertexListGraph, vertex_index_t>;
+  using ID = property_map_t<G, vertex_index_t>;
   using BucketSorter = bucket_sorter<std::size_t, Vertex, Degree, ID>;
 
-  const std::size_t num = num_vertices(G);
-  BucketSorter degree_bucket_sorter(num, num, degree, get(vertex_index, G));
+  const std::size_t num = num_vertices(g);
+  BucketSorter degree_bucket_sorter(num, num, degree, get(vertex_index, g));
 
-  smallest_last_vertex_ordering(G, order, degree, marker, degree_bucket_sorter);
+  smallest_last_vertex_ordering(g, order, degree, marker, degree_bucket_sorter);
 }
 
-template <class VertexListGraph, class Order, class Degree, class Marker, class BucketSorter>
-void smallest_last_vertex_ordering(const VertexListGraph& G, Order order, Degree degree, Marker marker,
+template <concepts::VertexListGraph G, concepts::WritablePropertyMap<std::size_t> Order,
+          concepts::ReadWriteVertexPropertyMap<G> Degree, concepts::ReadWriteVertexPropertyMap<G> Marker,
+          class BucketSorter>
+requires concepts::AdjacencyGraph<G> && concepts::IncidenceGraph<G>
+void smallest_last_vertex_ordering(const G& g, Order order, Degree degree, Marker marker,
                                    BucketSorter& degree_buckets) {
-  using Vertex = graph_vertex_descriptor_t<VertexListGraph>;
+  using Vertex = graph_vertex_descriptor_t<G>;
 
-  const std::size_t num = num_vertices(G);
-  for (auto v : vertices(G)) {
+  const std::size_t num = num_vertices(g);
+  for (auto v : vertices(g)) {
     put(marker, v, num);
-    put(degree, v, out_degree(v, G));
+    put(degree, v, out_degree(v, g));
     degree_buckets.push(v);
   }
 
@@ -73,7 +78,7 @@ void smallest_last_vertex_ordering(const VertexListGraph& G, Order order, Degree
     minimum_degree_stack.pop();
     put(marker, node, 0);  // node has been ordered.
 
-    for (auto v : adjacent_vertices(node, G)) {
+    for (auto v : adjacent_vertices(node, g)) {
       if (get(marker, v) > current_order) {
         // v is unordered vertex
         // mark the columns adjacent to node
@@ -98,17 +103,18 @@ void smallest_last_vertex_ordering(const VertexListGraph& G, Order order, Degree
   // at this point, order[i] = v_i;
 }
 
-template <class VertexListGraph, class Order>
-void smallest_last_vertex_ordering(const VertexListGraph& G, Order order) {
-  smallest_last_vertex_ordering(G, order, vector_property_map(num_vertices(G), get(vertex_index, G), std::size_t{0}),
-                                vector_property_map(num_vertices(G), get(vertex_index, G), std::size_t{0}));
+template <concepts::VertexListGraph G, concepts::WritablePropertyMap<std::size_t> Order>
+requires concepts::AdjacencyGraph<G> && concepts::IncidenceGraph<G>
+void smallest_last_vertex_ordering(const G& g, Order order) {
+  smallest_last_vertex_ordering(g, order, vector_property_map(num_vertices(g), get(vertex_index, g), std::size_t{0}),
+                                vector_property_map(num_vertices(g), get(vertex_index, g), std::size_t{0}));
 }
 
-template <class VertexListGraph>
-std::vector<typename graph_traits<VertexListGraph>::vertex_descriptor> smallest_last_vertex_ordering(
-    const VertexListGraph& G) {
-  std::vector<graph_vertex_descriptor_t<VertexListGraph> > o(num_vertices(G));
-  smallest_last_vertex_ordering(G, make_iterator_property_map(o.begin(), typed_identity_property_map<std::size_t>()));
+template <concepts::VertexListGraph G>
+requires concepts::AdjacencyGraph<G> && concepts::IncidenceGraph<G> std::vector<graph_vertex_descriptor_t<G>>
+smallest_last_vertex_ordering(const G& g) {
+  std::vector<graph_vertex_descriptor_t<G>> o(num_vertices(g));
+  smallest_last_vertex_ordering(g, make_iterator_property_map(o.begin(), typed_identity_property_map<std::size_t>()));
   return o;
 }
 
