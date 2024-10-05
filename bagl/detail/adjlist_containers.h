@@ -274,53 +274,6 @@ void adjlist_add_in_edge(
 
 // for OutEdgeListS = list_s, multiset_s, ...
 template <typename Container, typename EdgeProperties, typename VertexDesc>
-auto adjlist_add_edge(Container& cont, const EdgeProperties& ep, VertexDesc v) {
-  using ValueType = typename Container::value_type;
-  return std::pair(cont.insert(cont.end(), ValueType(v, ep)), true);
-}
-
-// for OutEdgeListS = set_s
-template <typename ValueType, typename EdgeProperties, typename VertexDesc>
-auto adjlist_add_edge(std::set<ValueType>& cont, const EdgeProperties& ep, VertexDesc v) {
-  return cont.insert(ValueType(v, ep));
-}
-
-// for OutEdgeListS = unordered_set_s
-template <typename ValueType, typename EdgeProperties, typename VertexDesc>
-auto adjlist_add_edge(std::unordered_set<ValueType>& cont, const EdgeProperties& ep, VertexDesc v) {
-  return cont.insert(ValueType(v, ep));
-}
-
-// for OutEdgeListS = vec_s
-template <typename ValueType, typename EdgeProperties, typename VertexDesc>
-std::pair<std::size_t, bool> adjlist_add_edge(std::vector<ValueType>& cont, const EdgeProperties& ep, VertexDesc v) {
-  cont.push_back(ValueType(v, ep));
-  return {cont.size() - 1, true};
-}
-
-// for OutEdgeListS = pool_s
-template <typename ValueType, typename EdgeProperties, typename VertexDesc>
-std::pair<std::size_t, bool> adjlist_add_edge(container_detail::pooled_vector<ValueType>& cont,
-                                              const EdgeProperties& ep, VertexDesc v) {
-  if (cont.m_first_hole == container_detail::hole_desc()) {
-    auto it = cont.m_data.insert(cont.m_data.end(), ValueType(v, ep));
-    ++(cont.m_num_elements);
-    return {it - cont.m_data.begin(), true};
-  }
-  auto it = cont.m_data.begin() + cont.m_first_hole.value;
-  cont.m_first_hole = std::get<container_detail::hole_desc>(cont.m_data[cont.m_first_hole.value]);
-  *it = ValueType(v, ep);
-  ++(cont.m_num_elements);
-  return {it - cont.m_data.begin(), true};
-}
-
-template <typename Container, typename EdgeProperties, typename VertexDesc>
-auto adjlist_add_edge(Container* cont, const EdgeProperties& ep, VertexDesc v) {
-  return adjlist_add_edge(*cont, ep, v);
-}
-
-// for OutEdgeListS = list_s, multiset_s, ...
-template <typename Container, typename EdgeProperties, typename VertexDesc>
 auto adjlist_add_edge(Container& cont, EdgeProperties&& ep, VertexDesc v) {
   using ValueType = typename Container::value_type;
   return std::pair(cont.insert(cont.end(), ValueType(v, std::forward<EdgeProperties>(ep))), true);
@@ -750,46 +703,6 @@ void adjlist_erase_vertex(container_detail::pooled_vector<ValueType>& cont, std:
 // bidir:         O(1)        O(1)        O(1)
 
 template <typename Container, typename VertexProperties>
-auto adjlist_add_vertex(Container& cont, const VertexProperties& vp) {
-  using ValueType = typename Container::value_type;
-  auto it = cont.insert(cont.end(), ValueType(vp));
-  using OEFactory = adjlist_out_edges_factory<typename ValueType::edge_container_ptr>;
-  OEFactory::create_out_edges(*it);
-  return it;
-}
-
-template <typename ValueType, typename VertexProperties>
-std::size_t adjlist_add_vertex(std::vector<ValueType>& cont, const VertexProperties& vp) {
-  auto it = cont.insert(cont.end(), ValueType(vp));
-  using OEFactory = adjlist_out_edges_factory<typename ValueType::edge_container_ptr>;
-  OEFactory::create_out_edges(*it);
-  return it - cont.begin();
-}
-
-template <typename ValueType, typename VertexProperties>
-std::size_t adjlist_add_vertex(container_detail::pooled_vector<ValueType>& cont, const VertexProperties& vp) {
-  using OEFactory = adjlist_out_edges_factory<typename ValueType::edge_container_ptr>;
-
-  if (cont.m_first_hole == container_detail::hole_desc()) {
-    auto it = cont.m_data.insert(cont.m_data.end(), ValueType(vp));
-    ++(cont.m_num_elements);
-    OEFactory::create_out_edges(get<ValueType>(*it));
-    return it - cont.m_data.begin();
-  }
-  auto it = cont.m_data.begin() + cont.m_first_hole.value;
-  cont.m_first_hole = std::get<container_detail::hole_desc>(cont.m_data[cont.m_first_hole.value]);
-  *it = ValueType(vp);
-  ++(cont.m_num_elements);
-  OEFactory::create_out_edges(get<ValueType>(*it));
-  return it - cont.m_data.begin();
-}
-
-template <typename Container, typename VertexProperties>
-auto adjlist_add_vertex(Container* cont, const VertexProperties& vp) {
-  return adjlist_add_vertex(*cont, vp);
-}
-
-template <typename Container, typename VertexProperties>
 auto adjlist_add_vertex(Container& cont, VertexProperties&& vp) {
   using ValueType = typename Container::value_type;
   return cont.insert(cont.end(), ValueType(std::forward<VertexProperties>(vp)));
@@ -895,8 +808,8 @@ struct adjlist_vertex_container {
 
   // NOTE: this operation does not invalidate anything.
   // NOTE: This WORKS for ALL vertex container types.
-  vertex_descriptor add_vertex(const VertexProperties& vp) { return adjlist_add_vertex(m_vertices, vp); }
-  vertex_descriptor add_vertex(VertexProperties&& vp) { return adjlist_add_vertex(m_vertices, std::move(vp)); }
+  template <typename VProp>
+  vertex_descriptor add_vertex(VProp&& vp) { return adjlist_add_vertex(m_vertices, std::forward<VProp>(vp)); }
 
   // NOTE: this operation only invalidates existing vertex-iterators,
   // and possibly edge-descriptors linked to vertices adjacent to v (if edge-list is vec_s).
@@ -915,22 +828,11 @@ struct adjlist_vertex_container {
 
   // NOTE: this operation does not invalidate anything.
   // NOTE: This WORKS for ALL vertex container types.
-  std::pair<edge_descriptor, bool> add_edge(vertex_descriptor u, vertex_descriptor v, const EdgeProperties& ep) {
+  template <typename EProp>
+  std::pair<edge_descriptor, bool> add_edge(vertex_descriptor u, vertex_descriptor v, EProp&& ep) {
     using RawEDesc = typename edge_descriptor::edge_id_type;
 
-    std::pair<RawEDesc, bool> raw_result = adjlist_add_edge(get_stored_vertex(u).out_edges, ep, v);
-
-    if (raw_result.second) {
-      ++m_num_edges;
-      adjlist_add_in_edge(get_stored_vertex(v), edge_descriptor(u, raw_result.first));
-      return std::pair<edge_descriptor, bool>(edge_descriptor(u, raw_result.first), true);
-    }
-    return std::pair<edge_descriptor, bool>(edge_descriptor(), false);
-  }
-  std::pair<edge_descriptor, bool> add_edge(vertex_descriptor u, vertex_descriptor v, EdgeProperties&& ep) {
-    using RawEDesc = typename edge_descriptor::edge_id_type;
-
-    std::pair<RawEDesc, bool> raw_result = adjlist_add_edge(get_stored_vertex(u).out_edges, std::move(ep), v);
+    std::pair<RawEDesc, bool> raw_result = adjlist_add_edge(get_stored_vertex(u).out_edges, std::forward<EProp>(ep), v);
 
     if (raw_result.second) {
       ++m_num_edges;

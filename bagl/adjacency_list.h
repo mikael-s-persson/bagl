@@ -3,6 +3,8 @@
 #ifndef BAGL_BAGL_ADJACENCY_LIST_H_
 #define BAGL_BAGL_ADJACENCY_LIST_H_
 
+#include <ranges>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 
@@ -11,8 +13,11 @@
 #include "bagl/detail/adjlist_ranges.h"
 #include "bagl/graph_concepts.h"
 #include "bagl/graph_mutability_traits.h"
+#include "bagl/graph_traits.h"
 #include "bagl/more_property_maps.h"
 #include "bagl/properties.h"
+#include "bagl/property.h"
+#include "bagl/property_map.h"
 #include "bagl/tree_traits.h"
 
 namespace bagl {
@@ -62,14 +67,15 @@ struct adjacency_list_disallowed_vertex_list<unordered_multiset_s> {};
 
 // forward-declare:
 template <typename OutEdgeListS = vec_s, typename VertexListS = vec_s, typename DirectedS = directed_s,
-          typename VertexProperties = no_property, typename EdgeProperties = no_property>
+          typename VertexProperties = no_property, typename EdgeProperties = no_property,
+          typename GraphProperties = no_property>
 class adjacency_list;
 
 template <typename OutEdgeListS, typename VertexListS, typename DirectedS, typename VertexProperties,
-          typename EdgeProperties>
+          typename EdgeProperties, typename GraphProperties>
 void do_graph_deep_copy(
-    adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperties, EdgeProperties>& lhs,
-    const adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperties, EdgeProperties>& rhs);
+    adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperties, EdgeProperties, GraphProperties>& lhs,
+    const adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperties, EdgeProperties, GraphProperties>& rhs);
 
 /**
  * This class implements an adjacency-list based on Boost.Containers that is tailored
@@ -81,12 +87,12 @@ void do_graph_deep_copy(
  * \tparam EdgeProperties A type to be attached to each edge in the tree.
  */
 template <typename OutEdgeListS, typename VertexListS, typename DirectedS, typename VertexProperties,
-          typename EdgeProperties>
+          typename EdgeProperties, typename GraphProperties>
 class adjacency_list {
  public:
   using check_allowed_vertex_list = typename adjacency_list_disallowed_vertex_list<VertexListS>::type;
 
-  using self = adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperties, EdgeProperties>;
+  using self = adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperties, EdgeProperties, GraphProperties>;
 
   using out_edge_list_selector = OutEdgeListS;
   using vertex_list_selector = VertexListS;
@@ -94,9 +100,11 @@ class adjacency_list {
 
   using vertex_property_type = VertexProperties;
   using edge_property_type = EdgeProperties;
+  using graph_property_type = GraphProperties;
 
-  using vertex_bundled = VertexProperties;
-  using edge_bundled = EdgeProperties;
+  using vertex_bundled = lookup_one_property_t<VertexProperties, vertex_bundle_t>;
+  using edge_bundled = lookup_one_property_t<EdgeProperties, edge_bundle_t>;
+  using graph_bundled = lookup_one_property_t<GraphProperties, graph_bundle_t>;
 
   using storage_type = typename adjlist_detail::adjlist_vertex_container<VertexListS, OutEdgeListS, DirectedS,
                                                                          VertexProperties, EdgeProperties>;
@@ -138,64 +146,159 @@ class adjacency_list {
 
   // private:
   storage_type m_pack;
+  graph_property_type m_graph_prop;
 
   /**
    * Constructs an empty adjacency-list.
    */
-  adjacency_list() : m_pack() {}
+  adjacency_list() : m_pack(), m_graph_prop() {}
 
-  explicit adjacency_list(std::size_t num_vertices) : m_pack(num_vertices) {}
+  explicit adjacency_list(std::size_t num_vertices, graph_property_type graph_prop = {})
+      : m_pack(num_vertices), m_graph_prop(std::move(graph_prop)) {}
 
   ~adjacency_list() = default;
 
-  adjacency_list(const self& rhs) : m_pack() { do_graph_deep_copy(*this, rhs); }
+  adjacency_list(const self& rhs) : m_pack(), m_graph_prop(rhs.m_graph_prop) { do_graph_deep_copy(*this, rhs); }
   self& operator=(const self& rhs) {
     if (this != &rhs) {
+      m_graph_prop = rhs.m_graph_prop;
       do_graph_deep_copy(*this, rhs);
     }
     return *this;
   }
 
-  adjacency_list(self&& rhs) noexcept : m_pack(std::move(rhs.m_pack)) {}
+  adjacency_list(self&& rhs) noexcept : m_pack(std::move(rhs.m_pack)), m_graph_prop(std::move(rhs.m_graph_prop)) {}
   self& operator=(self&& rhs) noexcept {
     m_pack = std::move(rhs.m_pack);
+    m_graph_prop = std::move(rhs.m_graph_prop);
     return *this;
+  }
+
+  // Construct from a given number of vertices and an edge range.
+  // Edges should be represented as pairs of vertex indices.
+  template <std::ranges::input_range EdgeRange>
+  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> adjacency_list(
+      vertices_size_type num_vertices, const EdgeRange& e_range, graph_property_type graph_prop = {})
+      : m_pack(), m_graph_prop(std::move(graph_prop)) {
+    std::vector<vertex_descriptor> tmp_vs(num_vertices);
+    for (auto& v : tmp_vs) {
+      v = m_pack.add_vertex(vertex_property_type{});
+    }
+
+    for (auto [u, v] : e_range) {
+      m_pack.add_edge(tmp_vs[u], tmp_vs[v], edge_property_type{});
+    }
+  }
+
+  // Construct from a given number of vertices and an edge and edge-property range.
+  // Edges should be represented as pairs of vertex indices.
+  template <std::ranges::input_range EdgeRange, std::ranges::input_range EdgePropRange>
+  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> &&
+      std::convertible_to<std::ranges::range_reference_t<EdgePropRange>, edge_property_type>
+      adjacency_list(vertices_size_type num_vertices, const EdgeRange& e_range, const EdgePropRange& ep_range,
+                     graph_property_type graph_prop = {})
+      : m_pack(), m_graph_prop(std::move(graph_prop)) {
+    std::vector<vertex_descriptor> tmp_vs(num_vertices);
+    for (auto& v : tmp_vs) {
+      v = m_pack.add_vertex(vertex_property_type{});
+    }
+
+    for (auto [e, ep] : zip_range(e_range, ep_range)) {
+      auto [u, v] = e;
+      m_pack.add_edge(tmp_vs[u], tmp_vs[v], ep);
+    }
+  }
+
+  // Construct from a given number of vertices and an edge and vertex-property range.
+  // Edges should be represented as pairs of vertex indices.
+  template <std::ranges::input_range VertexPropRange, std::ranges::input_range EdgeRange>
+  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> &&
+      std::convertible_to<std::ranges::range_reference_t<VertexPropRange>, vertex_property_type>
+      adjacency_list(vertices_size_type num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
+                     graph_property_type graph_prop = {})
+      : m_pack(), m_graph_prop(std::move(graph_prop)) {
+    std::vector<vertex_descriptor> tmp_vs(num_vertices);
+    for (auto& [v, vp] : zip_range(tmp_vs, vp_range)) {
+      v = m_pack.add_vertex(vp);
+    }
+
+    for (auto [u, v] : e_range) {
+      m_pack.add_edge(tmp_vs[u], tmp_vs[v], edge_property_type{});
+    }
+  }
+
+  // Construct from a given number of vertices and an edge and vertex-property range.
+  // Edges should be represented as pairs of vertex indices.
+  template <std::ranges::input_range VertexPropRange, std::ranges::input_range EdgeRange,
+            std::ranges::input_range EdgePropRange>
+  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> &&
+      std::convertible_to<std::ranges::range_reference_t<VertexPropRange>, vertex_property_type> &&
+      std::convertible_to<std::ranges::range_reference_t<EdgePropRange>, edge_property_type>
+      adjacency_list(vertices_size_type num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
+                     const EdgePropRange& ep_range, graph_property_type graph_prop = {})
+      : m_pack(), m_graph_prop(std::move(graph_prop)) {
+    std::vector<vertex_descriptor> tmp_vs(num_vertices);
+    for (auto& [v, vp] : zip_range(tmp_vs, vp_range)) {
+      v = m_pack.add_vertex(vp);
+    }
+
+    for (auto [e, ep] : zip_range(e_range, ep_range)) {
+      auto [u, v] = e;
+      m_pack.add_edge(tmp_vs[u], tmp_vs[v], ep);
+    }
   }
 
   /**
    * Swaps the adjacency-list with another.
    */
-  void swap(self& rhs) { m_pack.swap(rhs.m_pack); }
+  void swap(self& rhs) {
+    using std::swap;
+    swap(m_graph_prop, rhs.m_graph_prop);
+    m_pack.swap(rhs.m_pack);
+  }
 
   /**
    * Clears the adjacency-list of all vertices and edges.
    */
   void clear() { m_pack.clear(); }
 
-  /**
-   * Indexing operator. Returns a reference to the vertex-property associated to the given vertex descriptor.
-   * \param v The vertex descriptor of the sought-after vertex-property.
-   * \return The vertex-property, by reference, associated to the given vertex descriptor.
-   */
-  vertex_property_type& operator[](vertex_descriptor v) { return m_pack.get_stored_vertex(v).data; }
-  /**
-   * Indexing operator. Returns a const-reference to the vertex-property associated to the given vertex descriptor.
-   * \param v The vertex descriptor of the sought-after vertex-property.
-   * \return The vertex-property, by const-reference, associated to the given vertex descriptor.
-   */
-  const vertex_property_type& operator[](vertex_descriptor v) const { return m_pack.get_stored_vertex(v).data; }
-  /**
-   * Indexing operator. Returns a reference to the edge-property associated to the given edge descriptor.
-   * \param e The edge descriptor of the sought-after edge-property.
-   * \return The edge-property, by reference, associated to the given edge descriptor.
-   */
-  edge_property_type& operator[](const edge_descriptor& e) { return m_pack.get_stored_edge(e).data; }
-  /**
-   * Indexing operator. Returns a const-reference to the edge-property associated to the given edge descriptor.
-   * \param e The edge descriptor of the sought-after edge-property.
-   * \return The edge-property, by const-reference, associated to the given edge descriptor.
-   */
-  const edge_property_type& operator[](const edge_descriptor& e) const { return m_pack.get_stored_edge(e).data; }
+  // Indexing operator. Returns a reference to the vertex-bundle associated to the given vertex descriptor.
+  auto& operator[](vertex_descriptor v) { return get_property_value(m_pack.get_stored_vertex(v).data, vertex_bundle); }
+  // Indexing operator. Returns a const-reference to the vertex-bundle associated to the given vertex descriptor.
+  const auto& operator[](vertex_descriptor v) const {
+    return get_property_value(m_pack.get_stored_vertex(v).data, vertex_bundle);
+  }
+
+  // Indexing operator. Returns a reference to the edge-bundle associated to the given edge descriptor.
+  auto& operator[](const edge_descriptor& e) {
+    return get_property_value(m_pack.get_stored_edge(bidir_edge_descriptor(e)).data, edge_bundle);
+  }
+  // Indexing operator. Returns a const-reference to the edge-bundle associated to the given edge descriptor.
+  const auto& operator[](const edge_descriptor& e) const {
+    return get_property_value(m_pack.get_stored_edge(bidir_edge_descriptor(e)).data, edge_bundle);
+  }
+
+  // Indexing operator. Returns a reference to the graph-bundle associated to the graph.
+  auto& operator[](graph_bundle_t /*unused*/) { return get_property_value(m_graph_prop, graph_bundle); }
+  // Indexing operator. Returns a const-reference to the graph-bundle associated to the graph.
+  const auto& operator[](graph_bundle_t /*unused*/) const { return get_property_value(m_graph_prop, graph_bundle); }
+
+  // Get a reference to the vertex-property associated to the given vertex descriptor.
+  auto& get_property(vertex_descriptor v) { return m_pack.get_stored_vertex(v).data; }
+  // Get a const-reference to the vertex-property associated to the given vertex descriptor.
+  const auto& get_property(vertex_descriptor v) const { return m_pack.get_stored_vertex(v).data; }
+
+  // Get a reference to the edge-property associated to the given edge descriptor.
+  auto& get_property(const edge_descriptor& e) { return m_pack.get_stored_edge(bidir_edge_descriptor(e)).data; }
+  // Get a const-reference to the edge-property associated to the given edge descriptor.
+  const auto& get_property(const edge_descriptor& e) const {
+    return m_pack.get_stored_edge(bidir_edge_descriptor(e)).data;
+  }
+
+  // Get a reference to the graph-property associated to the graph.
+  auto& get_property(graph_all_t /*unused*/) { return m_graph_prop; }
+  // Get a const-reference to the graph-property associated to the graph.
+  const auto& get_property(graph_all_t /*unused*/) const { return m_graph_prop; }
 };
 
 /**
@@ -221,9 +324,11 @@ struct tree_traits<adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexPr
       typename adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperty, EdgeProperty>::vertex_descriptor;
 };
 
-#define BAGL_ADJACENCY_LIST_ARGS \
-  typename OutEdgeListS, typename VertexListS, typename DirectedS, typename VertexProperties, typename EdgeProperties
-#define BAGL_ADJACENCY_LIST adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperties, EdgeProperties>
+#define BAGL_ADJACENCY_LIST_ARGS                                                                                       \
+  typename OutEdgeListS, typename VertexListS, typename DirectedS, typename VertexProperties, typename EdgeProperties, \
+      typename GraphProperties
+#define BAGL_ADJACENCY_LIST \
+  adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperties, EdgeProperties, GraphProperties>
 
 template <BAGL_ADJACENCY_LIST_ARGS>
 void swap(BAGL_ADJACENCY_LIST& lhs, BAGL_ADJACENCY_LIST& rhs) {
@@ -335,8 +440,8 @@ auto edge(typename BAGL_ADJACENCY_LIST::vertex_descriptor u, typename BAGL_ADJAC
 
 template <BAGL_ADJACENCY_LIST_ARGS>
 auto add_vertex(BAGL_ADJACENCY_LIST& g) {
-  using VertexBundled = typename BAGL_ADJACENCY_LIST::vertex_bundled;
-  return g.m_pack.add_vertex(VertexBundled());
+  using VertexProp = typename BAGL_ADJACENCY_LIST::vertex_property_type;
+  return g.m_pack.add_vertex(VertexProp{});
 }
 
 template <BAGL_ADJACENCY_LIST_ARGS>
@@ -352,8 +457,8 @@ void remove_vertex(typename BAGL_ADJACENCY_LIST::vertex_descriptor v, BAGL_ADJAC
 template <BAGL_ADJACENCY_LIST_ARGS>
 auto add_edge(typename BAGL_ADJACENCY_LIST::vertex_descriptor u, typename BAGL_ADJACENCY_LIST::vertex_descriptor v,
               BAGL_ADJACENCY_LIST& g) {
-  using EdgeBundled = typename BAGL_ADJACENCY_LIST::edge_bundled;
-  return g.m_pack.add_edge(u, v, EdgeBundled());
+  using EdgeProp = typename BAGL_ADJACENCY_LIST::edge_property_type;
+  return g.m_pack.add_edge(u, v, EdgeProp{});
 }
 
 template <BAGL_ADJACENCY_LIST_ARGS>
@@ -374,210 +479,168 @@ void remove_edge(const typename BAGL_ADJACENCY_LIST::edge_descriptor& e, BAGL_AD
  *                  MutablePropertyGraph concept
  ******************************************************************************************/
 
-template <BAGL_ADJACENCY_LIST_ARGS>
-auto add_vertex(const typename BAGL_ADJACENCY_LIST::vertex_property_type& vp, BAGL_ADJACENCY_LIST& g) {
-  return g.m_pack.add_vertex(vp);
+template <BAGL_ADJACENCY_LIST_ARGS, typename VProp>
+auto add_vertex(VProp&& vp, BAGL_ADJACENCY_LIST& g) {
+  return g.m_pack.add_vertex(std::forward<VProp>(vp));
 }
 
-template <BAGL_ADJACENCY_LIST_ARGS>
-void remove_vertex(typename BAGL_ADJACENCY_LIST::vertex_descriptor v,
-                   typename BAGL_ADJACENCY_LIST::vertex_property_type& vp, BAGL_ADJACENCY_LIST& g) {
-  vp = std::move(g[v]);
+template <BAGL_ADJACENCY_LIST_ARGS, typename VProp>
+void remove_vertex(typename BAGL_ADJACENCY_LIST::vertex_descriptor v, VProp& vp, BAGL_ADJACENCY_LIST& g) {
+  vp = std::move(g.get_property(v));
   g.m_pack.remove_vertex(v);
 }
 
-template <BAGL_ADJACENCY_LIST_ARGS>
+template <BAGL_ADJACENCY_LIST_ARGS, typename EProp>
 auto add_edge(typename BAGL_ADJACENCY_LIST::vertex_descriptor u, typename BAGL_ADJACENCY_LIST::vertex_descriptor v,
-              const typename BAGL_ADJACENCY_LIST::edge_property_type& ep, BAGL_ADJACENCY_LIST& g) {
-  return g.m_pack.add_edge(u, v, ep);
+              EProp&& ep, BAGL_ADJACENCY_LIST& g) {
+  return g.m_pack.add_edge(u, v, std::forward<EProp>(ep));
 }
 
-template <BAGL_ADJACENCY_LIST_ARGS>
+template <BAGL_ADJACENCY_LIST_ARGS, typename EProp>
 void remove_edge(typename BAGL_ADJACENCY_LIST::vertex_descriptor u, typename BAGL_ADJACENCY_LIST::vertex_descriptor v,
-                 typename BAGL_ADJACENCY_LIST::edge_property_type& ep, BAGL_ADJACENCY_LIST& g) {
+                 EProp& ep, BAGL_ADJACENCY_LIST& g) {
   auto [e, e_found] = edge(u, v, g);
   if (e_found) {
-    ep = std::move(g[e]);
+    ep = std::move(g.get_property(e));
     g.m_pack.remove_edge(e);
   }
 }
 
-template <BAGL_ADJACENCY_LIST_ARGS>
+template <BAGL_ADJACENCY_LIST_ARGS, typename EProp>
 void remove_edge(const typename BAGL_ADJACENCY_LIST::edge_descriptor& e,
-                 typename BAGL_ADJACENCY_LIST::edge_property_type& ep, BAGL_ADJACENCY_LIST& g) {
-  ep = std::move(g[e]);
+                 EProp& ep, BAGL_ADJACENCY_LIST& g) {
+  ep = std::move(g.get_property(e));
   g.m_pack.remove_edge(e);
-}
-
-template <BAGL_ADJACENCY_LIST_ARGS>
-auto add_vertex(typename BAGL_ADJACENCY_LIST::vertex_property_type&& vp, BAGL_ADJACENCY_LIST& g) {
-  return g.m_pack.add_vertex(std::move(vp));
-}
-
-template <BAGL_ADJACENCY_LIST_ARGS>
-auto add_edge(typename BAGL_ADJACENCY_LIST::vertex_descriptor u, typename BAGL_ADJACENCY_LIST::vertex_descriptor v,
-              typename BAGL_ADJACENCY_LIST::edge_property_type&& ep, BAGL_ADJACENCY_LIST& g) {
-  return g.m_pack.add_edge(u, v, std::move(ep));
 }
 
 /***********************************************************************************************
  *                             Property Maps (from bundles)
  * ********************************************************************************************/
 
-/**
- * Returns a const-reference to the vertex-property associated to the given vertex descriptor.
- * \param g The tree from which to draw the vertex.
- * \param v The vertex descriptor of the sought-after vertex-property.
- * \return The vertex-property, by const-reference, associated to the given vertex descriptor.
- */
+// Returns a const-reference to the vertex-bundle associated to the given vertex descriptor.
 template <BAGL_ADJACENCY_LIST_ARGS>
-const typename BAGL_ADJACENCY_LIST::vertex_property_type& get(const BAGL_ADJACENCY_LIST& g,
-                                                              typename BAGL_ADJACENCY_LIST::vertex_descriptor v) {
+const auto& get(const BAGL_ADJACENCY_LIST& g, typename BAGL_ADJACENCY_LIST::vertex_descriptor v) {
+  return g[v];
+}
+template <BAGL_ADJACENCY_LIST_ARGS>
+auto& get(BAGL_ADJACENCY_LIST& g, typename BAGL_ADJACENCY_LIST::vertex_descriptor v) {
   return g[v];
 }
 
-/**
- * Returns a const-reference to the edge-property associated to the given edge descriptor.
- * \param g The tree from which to draw the edge.
- * \param e The edge descriptor of the sought-after edge-property.
- * \return The edge-property, by const-reference, associated to the given edge descriptor.
- */
+// Returns a const-reference to the edge-bundle associated to the given edge descriptor.
 template <BAGL_ADJACENCY_LIST_ARGS>
-const typename BAGL_ADJACENCY_LIST::edge_property_type& get(const BAGL_ADJACENCY_LIST& g,
-                                                            const typename BAGL_ADJACENCY_LIST::edge_descriptor& e) {
+const auto& get(const BAGL_ADJACENCY_LIST& g, const typename BAGL_ADJACENCY_LIST::edge_descriptor& e) {
+  return g[e];
+}
+template <BAGL_ADJACENCY_LIST_ARGS>
+auto& get(BAGL_ADJACENCY_LIST& g, const typename BAGL_ADJACENCY_LIST::edge_descriptor& e) {
   return g[e];
 }
 
-/**
- * Sets the vertex-property associated to the given vertex descriptor.
- * \param g The tree from which the vertex is drawn.
- * \param v The vertex descriptor of the vertex-property to be set.
- * \param value The vertex-property, by const-reference, to be associated to the given vertex.
- */
+// Returns a const-reference to the graph-bundle associated to the graph.
 template <BAGL_ADJACENCY_LIST_ARGS>
-void put(BAGL_ADJACENCY_LIST& g, typename BAGL_ADJACENCY_LIST::vertex_descriptor v,
-         const typename BAGL_ADJACENCY_LIST::vertex_property_type& value) {
-  g[v] = value;
+const auto& get(const BAGL_ADJACENCY_LIST& g, graph_bundle_t /*unused*/) {
+  return g[graph_bundle];
+}
+template <BAGL_ADJACENCY_LIST_ARGS>
+auto& get(BAGL_ADJACENCY_LIST& g, graph_bundle_t /*unused*/) {
+  return g[graph_bundle];
 }
 
-/**
- * Sets the edge-property associated to the given edge descriptor.
- * \param g The tree from which the edge is drawn.
- * \param e The edge descriptor of the edge-property to be set.
- * \param value The edge-property, by const-reference, to be associated to the given edge.
- */
-template <BAGL_ADJACENCY_LIST_ARGS>
-void put(BAGL_ADJACENCY_LIST& g, const typename BAGL_ADJACENCY_LIST::edge_descriptor& e,
-         const typename BAGL_ADJACENCY_LIST::edge_property_type& value) {
-  g[e] = value;
+// Sets the vertex-bundle associated to the given vertex descriptor.
+template <BAGL_ADJACENCY_LIST_ARGS, typename VProp>
+void put(BAGL_ADJACENCY_LIST& g, typename BAGL_ADJACENCY_LIST::vertex_descriptor v, VProp&& value) {
+  g[v] = std::forward<VProp>(value);
 }
 
-/**
- * Sets the vertex-property associated to the given vertex descriptor.
- * \param g The tree from which the vertex is drawn.
- * \param v The vertex descriptor of the vertex-property to be set.
- * \param value The vertex-property, by rvalue-reference, to be associated to the given vertex.
- */
-template <BAGL_ADJACENCY_LIST_ARGS>
-void put(BAGL_ADJACENCY_LIST& g, typename BAGL_ADJACENCY_LIST::vertex_descriptor v,
-         typename BAGL_ADJACENCY_LIST::vertex_property_type&& value) {
-  g[v] = std::move(value);
+// Sets the edge-bundle associated to the given edge descriptor.
+template <BAGL_ADJACENCY_LIST_ARGS, typename EProp>
+void put(BAGL_ADJACENCY_LIST& g, const typename BAGL_ADJACENCY_LIST::edge_descriptor& e, EProp&& value) {
+  g[e] = std::forward<EProp>(value);
 }
 
-/**
- * Sets the edge-property associated to the given edge descriptor.
- * \param g The tree from which the edge is drawn.
- * \param e The edge descriptor of the edge-property to be set.
- * \param value The edge-property, by rvalue-reference, to be associated to the given edge.
- */
-template <BAGL_ADJACENCY_LIST_ARGS>
-void put(BAGL_ADJACENCY_LIST& g, const typename BAGL_ADJACENCY_LIST::edge_descriptor& e,
-         typename BAGL_ADJACENCY_LIST::edge_property_type&& value) {
-  g[e] = std::move(value);
+// Sets the graph-bundle associated to the graph.
+template <BAGL_ADJACENCY_LIST_ARGS, typename GProp>
+void put(BAGL_ADJACENCY_LIST& g, graph_bundle_t /*unused*/, GProp&& value) {
+  g[graph_bundle] = std::forward<GProp>(value);
 }
 
-/**
- * Returns a reference to the vertex-property associated to the given vertex descriptor.
- * \param v The vertex descriptor of the sought-after vertex-property.
- * \param g The tree from which to draw the vertex.
- * \return The vertex-property, by reference, associated to the given vertex descriptor.
- */
+// Returns a reference to the vertex-property associated to the given vertex descriptor.
 template <BAGL_ADJACENCY_LIST_ARGS>
-typename BAGL_ADJACENCY_LIST::vertex_property_type& get_property(typename BAGL_ADJACENCY_LIST::vertex_descriptor v,
-                                                                 BAGL_ADJACENCY_LIST& g) {
-  return g[v];
+auto& get_property(typename BAGL_ADJACENCY_LIST::vertex_descriptor v, BAGL_ADJACENCY_LIST& g) {
+  return g.get_property(v);
 }
 
-/**
- * Returns a const-reference to the vertex-property associated to the given vertex descriptor.
- * \param v The vertex descriptor of the sought-after vertex-property.
- * \param g The tree from which to draw the vertex.
- * \return The vertex-property, by const-reference, associated to the given vertex descriptor.
- */
+// Returns a const-reference to the vertex-property associated to the given vertex descriptor.
 template <BAGL_ADJACENCY_LIST_ARGS>
-const typename BAGL_ADJACENCY_LIST::vertex_property_type& get_property(
-    typename BAGL_ADJACENCY_LIST::vertex_descriptor v, const BAGL_ADJACENCY_LIST& g) {
-  return g[v];
+const auto& get_property(typename BAGL_ADJACENCY_LIST::vertex_descriptor v, const BAGL_ADJACENCY_LIST& g) {
+  return g.get_property(v);
 }
 
-/**
- * Returns a reference to the edge-property associated to the given edge descriptor.
- * \param e The edge descriptor of the sought-after edge-property.
- * \param g The tree from which to draw the edge.
- * \return The edge-property, by reference, associated to the given edge descriptor.
- */
+// Returns a reference to the edge-property associated to the given edge descriptor.
 template <BAGL_ADJACENCY_LIST_ARGS>
-typename BAGL_ADJACENCY_LIST::edge_property_type& get_property(const typename BAGL_ADJACENCY_LIST::edge_descriptor& e,
-                                                               BAGL_ADJACENCY_LIST& g) {
-  return g[e];
+auto& get_property(const typename BAGL_ADJACENCY_LIST::edge_descriptor& e, BAGL_ADJACENCY_LIST& g) {
+  return g.get_property(e);
 }
 
-/**
- * Returns a const-reference to the edge-property associated to the given edge descriptor.
- * \param e The edge descriptor of the sought-after edge-property.
- * \param g The tree from which to draw the edge.
- * \return The edge-property, by const-reference, associated to the given edge descriptor.
- */
+// Returns a const-reference to the edge-property associated to the given edge descriptor.
 template <BAGL_ADJACENCY_LIST_ARGS>
-const typename BAGL_ADJACENCY_LIST::edge_property_type& get_property(
-    const typename BAGL_ADJACENCY_LIST::edge_descriptor& e, const BAGL_ADJACENCY_LIST& g) {
-  return g[e];
+const auto& get_property(const typename BAGL_ADJACENCY_LIST::edge_descriptor& e, const BAGL_ADJACENCY_LIST& g) {
+  return g.get_property(e);
+}
+
+template <BAGL_ADJACENCY_LIST_ARGS>
+auto& get_property(BAGL_ADJACENCY_LIST& g, graph_all_t /*unused*/) {
+  return g.get_property(graph_all);
+}
+
+template <BAGL_ADJACENCY_LIST_ARGS>
+const auto& get_property(const BAGL_ADJACENCY_LIST& g, graph_all_t /*unused*/) {
+  return g.get_property(graph_all);
+}
+
+// Handle graph property tags, also handles graph_bundle_t.
+
+template <BAGL_ADJACENCY_LIST_ARGS, typename Tag>
+std::enable_if_t<std::is_same_v<property_kind_t<Tag>, graph_property_tag>, lookup_one_property_t<GraphProperties, Tag>&>
+get_property(BAGL_ADJACENCY_LIST& g, Tag /*unused*/) {
+  return get_property_value(g.get_property(graph_all), Tag{});
+}
+
+template <BAGL_ADJACENCY_LIST_ARGS, typename Tag>
+std::enable_if_t<std::is_same_v<property_kind_t<Tag>, graph_property_tag>,
+                 const lookup_one_property_t<GraphProperties, Tag>&>
+get_property(const BAGL_ADJACENCY_LIST& g, Tag /*unused*/) {
+  return get_property_value(g.get_property(graph_all), Tag{});
 }
 
 template <BAGL_ADJACENCY_LIST_ARGS, typename T, typename Bundle>
 struct property_map<BAGL_ADJACENCY_LIST, T Bundle::*> {
   using non_const_Bundle = std::remove_cv_t<Bundle>;
   using non_const_T = std::remove_cv_t<T>;
-  static constexpr bool is_vertex_bundle_v = std::is_convertible_v<
-      typename adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperties, EdgeProperties>::vertex_bundled*,
-      non_const_Bundle*>;
-  using type =
-      bundle_member_property_map<non_const_T,
-                                 adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperties, EdgeProperties>,
-                                 std::conditional_t<is_vertex_bundle_v, vertex_bundle_t, edge_bundle_t>>;
-  using const_type = bundle_member_property_map<
-      const non_const_T, const adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperties, EdgeProperties>,
-      std::conditional_t<is_vertex_bundle_v, vertex_bundle_t, edge_bundle_t>>;
+  static constexpr bool is_vertex_bundle_v =
+      std::is_convertible_v<typename BAGL_ADJACENCY_LIST::vertex_bundled*, non_const_Bundle*>;
+  static constexpr bool is_edge_bundle_v =
+      std::is_convertible_v<typename BAGL_ADJACENCY_LIST::edge_bundled*, non_const_Bundle*>;
+  using tag_type = std::conditional_t<is_vertex_bundle_v, vertex_bundle_t,
+                                      std::conditional_t<is_edge_bundle_v, edge_bundle_t, graph_bundle_t>>;
+  using type = bundle_member_property_map<non_const_T, BAGL_ADJACENCY_LIST, tag_type>;
+  using const_type = bundle_member_property_map<const non_const_T, const BAGL_ADJACENCY_LIST, tag_type>;
 };
 
 template <BAGL_ADJACENCY_LIST_ARGS, typename T, typename Bundle>
-typename property_map<BAGL_ADJACENCY_LIST, T Bundle::*>::type get(T Bundle::*p, BAGL_ADJACENCY_LIST& g) {
-  return {&g, p};
+auto get(T Bundle::*p, BAGL_ADJACENCY_LIST& g) {
+  return typename property_map<BAGL_ADJACENCY_LIST, T Bundle::*>::type{&g, p};
 }
 
 template <BAGL_ADJACENCY_LIST_ARGS, typename T, typename Bundle>
-typename property_map<BAGL_ADJACENCY_LIST, T Bundle::*>::const_type get(T Bundle::*p, const BAGL_ADJACENCY_LIST& g) {
-  return {&g, p};
+auto get(T Bundle::*p, const BAGL_ADJACENCY_LIST& g) {
+  return typename property_map<BAGL_ADJACENCY_LIST, T Bundle::*>::const_type{&g, p};
 }
 
 template <BAGL_ADJACENCY_LIST_ARGS, typename T, typename Bundle, typename Key>
 const std::remove_cv_t<T>& get(T Bundle::*p, const BAGL_ADJACENCY_LIST& g, const Key& k) {
   return (g[k]).*p;
-}
-
-template <BAGL_ADJACENCY_LIST_ARGS, typename T, typename Bundle, typename Key>
-void put(T Bundle::*p, BAGL_ADJACENCY_LIST& g, const Key& k, const T& val) {
-  (g[k]).*p = val;
 }
 
 template <BAGL_ADJACENCY_LIST_ARGS, typename T, typename Bundle, typename Key>
@@ -594,8 +657,8 @@ struct adj_list_property_selector {
   struct bind_ {
     using value_type = typename property_value<Property, Tag>::type;
 
-    using type = tagged_from_bundle_property_map<value_type, Graph, Tag>;
-    using const_type = tagged_from_bundle_property_map<const value_type, const Graph, Tag>;
+    using type = tagged_in_property_property_map<value_type, Graph, Tag>;
+    using const_type = tagged_in_property_property_map<const value_type, const Graph, Tag>;
   };
 };
 
@@ -623,18 +686,18 @@ auto get(Property p, const BAGL_ADJACENCY_LIST& g) {
 }
 
 template <BAGL_ADJACENCY_LIST_ARGS, typename Property, typename Key>
-auto get(Property p, const BAGL_ADJACENCY_LIST& g, const Key& k) {
-  return get_property_value(g[k], p);
+decltype(auto) get(Property p, const BAGL_ADJACENCY_LIST& g, const Key& k) {
+  return get_property_value(g.get_property(k), p);
 }
 
-template <BAGL_ADJACENCY_LIST_ARGS, typename Property, typename Key, typename Value>
-void put(Property p, BAGL_ADJACENCY_LIST& g, const Key& k, const Value& val) {
-  get_property_value(g[k], p) = val;
+template <BAGL_ADJACENCY_LIST_ARGS, typename Property, typename Key>
+decltype(auto) get(Property p, BAGL_ADJACENCY_LIST& g, const Key& k) {
+  return get_property_value(g.get_property(k), p);
 }
 
 template <BAGL_ADJACENCY_LIST_ARGS, typename Property, typename Key, typename Value>
 void put(Property p, BAGL_ADJACENCY_LIST& g, const Key& k, Value&& val) {
-  get_property_value(g[k], p) = std::forward<Value>(val);
+  get_property_value(g.get_property(k), p) = std::forward<Value>(val);
 }
 
 template <BAGL_ADJACENCY_LIST_ARGS>
@@ -659,6 +722,63 @@ void do_graph_deep_copy(BAGL_ADJACENCY_LIST& lhs, const BAGL_ADJACENCY_LIST& rhs
 #undef BAGL_ADJACENCY_LIST_ARGS
 #undef BAGL_ADJACENCY_LIST
 
+/***********************************************************************************************
+ *                             Vertex Index Map for vec_s and pool_s
+ * ********************************************************************************************/
+
+// Note that the vertex index values for a pool_s vertex list will not be contiguous or ordered
+// since holes in the vertex pool retain their associated index (index into raw vector).
+
+template <typename OutEdgeListS, typename DirectedS, typename VertexProperties, typename EdgeProperties,
+          typename GraphProperties>
+struct property_map<adjacency_list<OutEdgeListS, vec_s, DirectedS, VertexProperties, EdgeProperties, GraphProperties>,
+                    vertex_index_t> {
+  using type = typed_identity_property_map<std::size_t>;
+  using const_type = typed_identity_property_map<std::size_t>;
+};
+
+template <typename OutEdgeListS, typename DirectedS, typename VertexProperties, typename EdgeProperties,
+          typename GraphProperties>
+auto get(
+    vertex_index_t /*unused*/,
+    const adjacency_list<OutEdgeListS, vec_s, DirectedS, VertexProperties, EdgeProperties, GraphProperties>& /*g*/) {
+  return typed_identity_property_map<std::size_t>{};
+}
+
+template <typename OutEdgeListS, typename DirectedS, typename VertexProperties, typename EdgeProperties,
+          typename GraphProperties>
+std::size_t get(
+    vertex_index_t /*unused*/,
+    const adjacency_list<OutEdgeListS, vec_s, DirectedS, VertexProperties, EdgeProperties, GraphProperties>& /*g*/,
+    const std::size_t& k) {
+  return k;
+}
+
+template <typename OutEdgeListS, typename DirectedS, typename VertexProperties, typename EdgeProperties,
+          typename GraphProperties>
+struct property_map<adjacency_list<OutEdgeListS, pool_s, DirectedS, VertexProperties, EdgeProperties, GraphProperties>,
+                    vertex_index_t> {
+  using type = typed_identity_property_map<std::size_t>;
+  using const_type = typed_identity_property_map<std::size_t>;
+};
+
+template <typename OutEdgeListS, typename DirectedS, typename VertexProperties, typename EdgeProperties,
+          typename GraphProperties>
+auto get(
+    vertex_index_t /*unused*/,
+    const adjacency_list<OutEdgeListS, pool_s, DirectedS, VertexProperties, EdgeProperties, GraphProperties>& /*g*/) {
+  return typed_identity_property_map<std::size_t>{};
+}
+
+template <typename OutEdgeListS, typename DirectedS, typename VertexProperties, typename EdgeProperties,
+          typename GraphProperties>
+std::size_t get(
+    vertex_index_t /*unused*/,
+    const adjacency_list<OutEdgeListS, pool_s, DirectedS, VertexProperties, EdgeProperties, GraphProperties>& /*g*/,
+    const std::size_t& k) {
+  return k;
+}
+
 /**
  * This class implements an adjacency-list based on Boost.Containers that is tailored
  * to store elements of an undirected graph.
@@ -668,18 +788,22 @@ void do_graph_deep_copy(BAGL_ADJACENCY_LIST& lhs, const BAGL_ADJACENCY_LIST& rhs
  * \tparam VertexProperties A type to be attached to each vertex in the tree.
  * \tparam EdgeProperties A type to be attached to each edge in the tree.
  */
-template <typename OutEdgeListS, typename VertexListS, typename VertexProperties, typename EdgeProperties>
-class adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, EdgeProperties> {
+template <typename OutEdgeListS, typename VertexListS, typename VertexProperties, typename EdgeProperties,
+          typename GraphProperties>
+class adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, EdgeProperties, GraphProperties> {
  public:
   using check_allowed_vertex_list = typename adjacency_list_disallowed_vertex_list<VertexListS>::type;
 
-  using self = adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, EdgeProperties>;
+  using self =
+      adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, EdgeProperties, GraphProperties>;
 
   using vertex_property_type = VertexProperties;
   using edge_property_type = EdgeProperties;
+  using graph_property_type = GraphProperties;
 
-  using vertex_bundled = VertexProperties;
-  using edge_bundled = EdgeProperties;
+  using vertex_bundled = lookup_one_property_t<VertexProperties, vertex_bundle_t>;
+  using edge_bundled = lookup_one_property_t<EdgeProperties, edge_bundle_t>;
+  using graph_bundled = lookup_one_property_t<GraphProperties, graph_bundle_t>;
 
   using bidir_storage_type =
       typename adjlist_detail::adjlist_vertex_container<VertexListS, OutEdgeListS, bidirectional_s, VertexProperties,
@@ -725,72 +849,170 @@ class adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, 
 
   // private:
   bidir_storage_type m_pack;
+  graph_property_type m_graph_prop;
 
   /**
    * Constructs an empty adjacency-list.
    */
-  adjacency_list() : m_pack() {}
+  adjacency_list() : m_pack(), m_graph_prop() {}
+
+  explicit adjacency_list(std::size_t num_vertices, graph_property_type graph_prop = {})
+      : m_pack(num_vertices), m_graph_prop(std::move(graph_prop)) {}
 
   ~adjacency_list() = default;
 
-  adjacency_list(const self& rhs) : m_pack() { do_graph_deep_copy(*this, rhs); }
+  adjacency_list(const self& rhs) : m_pack(), m_graph_prop(rhs.m_graph_prop) { do_graph_deep_copy(*this, rhs); }
   self& operator=(const self& rhs) {
     if (this != &rhs) {
+      m_graph_prop = rhs.m_graph_prop;
       do_graph_deep_copy(*this, rhs);
     }
     return *this;
   }
 
-  adjacency_list(self&& rhs) noexcept : m_pack(std::move(rhs.m_pack)) {}
+  adjacency_list(self&& rhs) noexcept : m_pack(std::move(rhs.m_pack)), m_graph_prop(rhs.m_graph_prop) {}
   self& operator=(self&& rhs) noexcept {
     m_pack = std::move(rhs.m_pack);
+    m_graph_prop = std::move(rhs.m_graph_prop);
     return *this;
+  }
+
+  // Construct from a given number of vertices and an edge range.
+  // Edges should be represented as pairs of vertex indices.
+  template <std::ranges::input_range EdgeRange>
+  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> adjacency_list(
+      vertices_size_type num_vertices, const EdgeRange& e_range, graph_property_type graph_prop = {})
+      : m_pack(), m_graph_prop(std::move(graph_prop)) {
+    std::vector<vertex_descriptor> tmp_vs(num_vertices);
+    for (auto& v : tmp_vs) {
+      v = m_pack.add_vertex(vertex_property_type{});
+    }
+
+    for (auto [u, v] : e_range) {
+      m_pack.add_edge(tmp_vs[u], tmp_vs[v], edge_property_type{});
+    }
+  }
+
+  // Construct from a given number of vertices and an edge and edge-property range.
+  // Edges should be represented as pairs of vertex indices.
+  template <std::ranges::input_range EdgeRange, std::ranges::input_range EdgePropRange>
+  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> &&
+      std::convertible_to<std::ranges::range_reference_t<EdgePropRange>, edge_property_type>
+      adjacency_list(vertices_size_type num_vertices, const EdgeRange& e_range, const EdgePropRange& ep_range,
+                     graph_property_type graph_prop = {})
+      : m_pack(), m_graph_prop(std::move(graph_prop)) {
+    std::vector<vertex_descriptor> tmp_vs(num_vertices);
+    for (auto& v : tmp_vs) {
+      v = m_pack.add_vertex(vertex_property_type{});
+    }
+
+    for (auto [e, ep] : zip_range(e_range, ep_range)) {
+      auto [u, v] = e;
+      m_pack.add_edge(tmp_vs[u], tmp_vs[v], ep);
+    }
+  }
+
+  // Construct from a given number of vertices and an edge and vertex-property range.
+  // Edges should be represented as pairs of vertex indices.
+  template <std::ranges::input_range VertexPropRange, std::ranges::input_range EdgeRange>
+  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> &&
+      std::convertible_to<std::ranges::range_reference_t<VertexPropRange>, vertex_property_type>
+      adjacency_list(vertices_size_type num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
+                     graph_property_type graph_prop = {})
+      : m_pack(), m_graph_prop(std::move(graph_prop)) {
+    std::vector<vertex_descriptor> tmp_vs(num_vertices);
+    for (auto& [v, vp] : zip_range(tmp_vs, vp_range)) {
+      v = m_pack.add_vertex(vp);
+    }
+
+    for (auto [u, v] : e_range) {
+      m_pack.add_edge(tmp_vs[u], tmp_vs[v], edge_property_type{});
+    }
+  }
+
+  // Construct from a given number of vertices and an edge and vertex-property range.
+  // Edges should be represented as pairs of vertex indices.
+  template <std::ranges::input_range VertexPropRange, std::ranges::input_range EdgeRange,
+            std::ranges::input_range EdgePropRange>
+  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> &&
+      std::convertible_to<std::ranges::range_reference_t<VertexPropRange>, vertex_property_type> &&
+      std::convertible_to<std::ranges::range_reference_t<EdgePropRange>, edge_property_type>
+      adjacency_list(vertices_size_type num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
+                     const EdgePropRange& ep_range, graph_property_type graph_prop = {})
+      : m_pack(), m_graph_prop(std::move(graph_prop)) {
+    std::vector<vertex_descriptor> tmp_vs(num_vertices);
+    for (auto& [v, vp] : zip_range(tmp_vs, vp_range)) {
+      v = m_pack.add_vertex(vp);
+    }
+
+    for (auto [e, ep] : zip_range(e_range, ep_range)) {
+      auto [u, v] = e;
+      m_pack.add_edge(tmp_vs[u], tmp_vs[v], ep);
+    }
   }
 
   /**
    * Swaps the adjacency-list with another.
    */
-  void swap(self& rhs) { m_pack.swap(rhs.m_pack); }
+  void swap(self& rhs) {
+    using std::swap;
+    m_pack.swap(rhs.m_pack);
+    swap(m_graph_prop, rhs.m_graph_prop);
+  }
 
   /**
    * Clears the adjacency-list of all vertices and edges.
    */
   void clear() { m_pack.clear(); }
 
-  /**
-   * Indexing operator. Returns a reference to the vertex-property associated to the given vertex descriptor.
-   * \param v The vertex descriptor of the sought-after vertex-property.
-   * \return The vertex-property, by reference, associated to the given vertex descriptor.
-   */
-  vertex_property_type& operator[](vertex_descriptor v) { return m_pack.get_stored_vertex(v).data; }
-  /**
-   * Indexing operator. Returns a const-reference to the vertex-property associated to the given vertex descriptor.
-   * \param v The vertex descriptor of the sought-after vertex-property.
-   * \return The vertex-property, by const-reference, associated to the given vertex descriptor.
-   */
-  const vertex_property_type& operator[](vertex_descriptor v) const { return m_pack.get_stored_vertex(v).data; }
-  /**
-   * Indexing operator. Returns a reference to the edge-property associated to the given edge descriptor.
-   * \param e The edge descriptor of the sought-after edge-property.
-   * \return The edge-property, by reference, associated to the given edge descriptor.
-   */
-  edge_property_type& operator[](const edge_descriptor& e) {
+  // Indexing operator. Returns a reference to the vertex-bundle associated to the given vertex descriptor.
+  vertex_bundled& operator[](vertex_descriptor v) {
+    return get_property_value(m_pack.get_stored_vertex(v).data, vertex_bundle);
+  }
+  // Indexing operator. Returns a const-reference to the vertex-bundle associated to the given vertex descriptor.
+  const vertex_bundled& operator[](vertex_descriptor v) const {
+    return get_property_value(m_pack.get_stored_vertex(v).data, vertex_bundle);
+  }
+
+  // Indexing operator. Returns a reference to the edge-bundle associated to the given edge descriptor.
+  edge_bundled& operator[](const edge_descriptor& e) {
+    return get_property_value(m_pack.get_stored_edge(bidir_edge_descriptor(e)).data, edge_bundle);
+  }
+  // Indexing operator. Returns a const-reference to the edge-bundle associated to the given edge descriptor.
+  const edge_bundled& operator[](const edge_descriptor& e) const {
+    return get_property_value(m_pack.get_stored_edge(bidir_edge_descriptor(e)).data, edge_bundle);
+  }
+
+  // Indexing operator. Returns a reference to the graph-bundle associated to the graph.
+  edge_bundled& operator[](graph_bundle_t /*unused*/) { return get_property_value(m_graph_prop, graph_bundle); }
+  // Indexing operator. Returns a const-reference to the graph-bundle associated to the graph.
+  const edge_bundled& operator[](graph_bundle_t /*unused*/) const {
+    return get_property_value(m_graph_prop, graph_bundle);
+  }
+
+  // Get a reference to the vertex-property associated to the given vertex descriptor.
+  auto& get_property(vertex_descriptor v) { return m_pack.get_stored_vertex(v).data; }
+  // Get a const-reference to the vertex-property associated to the given vertex descriptor.
+  const auto& get_property(vertex_descriptor v) const { return m_pack.get_stored_vertex(v).data; }
+
+  // Get a reference to the edge-property associated to the given edge descriptor.
+  auto& get_property(const edge_descriptor& e) { return m_pack.get_stored_edge(bidir_edge_descriptor(e)).data; }
+  // Get a const-reference to the edge-property associated to the given edge descriptor.
+  const auto& get_property(const edge_descriptor& e) const {
     return m_pack.get_stored_edge(bidir_edge_descriptor(e)).data;
   }
-  /**
-   * Indexing operator. Returns a const-reference to the edge-property associated to the given edge descriptor.
-   * \param e The edge descriptor of the sought-after edge-property.
-   * \return The edge-property, by const-reference, associated to the given edge descriptor.
-   */
-  const edge_property_type& operator[](const edge_descriptor& e) const {
-    return m_pack.get_stored_edge(bidir_edge_descriptor(e)).data;
-  }
+
+  // Get a reference to the graph-property associated to the graph.
+  auto& get_property(graph_all_t /*unused*/) { return m_graph_prop; }
+  // Get a const-reference to the graph-property associated to the graph.
+  const auto& get_property(graph_all_t /*unused*/) const { return m_graph_prop; }
 };
 
-#define BAGL_ADJACENCY_LIST_UNDIR_ARGS \
-  typename OutEdgeListS, typename VertexListS, typename VertexProperties, typename EdgeProperties
+#define BAGL_ADJACENCY_LIST_UNDIR_ARGS                                                             \
+  typename OutEdgeListS, typename VertexListS, typename VertexProperties, typename EdgeProperties, \
+      typename GraphProperties
 #define BAGL_ADJACENCY_LIST_UNDIR \
-  adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, EdgeProperties>
+  adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, EdgeProperties, GraphProperties>
 
 /***********************************************************************************************
  *                             IncidenceGraphConcept
@@ -883,9 +1105,9 @@ auto edge(typename BAGL_ADJACENCY_LIST_UNDIR::vertex_descriptor u,
 template <BAGL_ADJACENCY_LIST_UNDIR_ARGS>
 auto add_edge(typename BAGL_ADJACENCY_LIST_UNDIR::vertex_descriptor u,
               typename BAGL_ADJACENCY_LIST_UNDIR::vertex_descriptor v, BAGL_ADJACENCY_LIST_UNDIR& g) {
-  using EdgeBundled = typename BAGL_ADJACENCY_LIST_UNDIR::edge_bundled;
+  using EdgeProp = typename BAGL_ADJACENCY_LIST_UNDIR::edge_property_type;
   using Edge = typename BAGL_ADJACENCY_LIST_UNDIR::edge_descriptor;
-  auto [be, be_found] = g.m_pack.add_edge(u, v, EdgeBundled());
+  auto [be, be_found] = g.m_pack.add_edge(u, v, EdgeProp{});
   return std::pair(Edge(be), be_found);
 }
 

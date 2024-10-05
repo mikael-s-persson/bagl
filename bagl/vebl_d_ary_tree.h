@@ -12,6 +12,7 @@
 #include "bagl/detail/vebl_tree_ranges.h"
 #include "bagl/more_property_maps.h"
 #include "bagl/properties.h"
+#include "bagl/property.h"
 #include "bagl/tree_traits.h"
 
 namespace bagl {
@@ -34,17 +35,19 @@ struct vebl_d_ary_tree_tag {};
  * \tparam VertexProperties A type to be attached to each vertex in the tree.
  * \tparam EdgeProperties A type to be attached to each edge in the tree.
  */
-template <std::size_t Arity = 2, typename VertexProperties = no_property, typename EdgeProperties = no_property>
+template <std::size_t Arity = 2, typename VertexProperties = no_property, typename EdgeProperties = no_property,
+          typename GraphProperties = no_property>
 class vebl_d_ary_tree {
  public:
   using self = vebl_d_ary_tree<Arity, VertexProperties, EdgeProperties>;
 
   using vertex_property_type = VertexProperties;
   using edge_property_type = EdgeProperties;
+  using graph_property_type = GraphProperties;
 
-  using vertex_bundled = vertex_property_type;
-  using edge_bundled = edge_property_type;
-  using graph_bundled = void;
+  using vertex_bundled = lookup_one_property_t<VertexProperties, vertex_bundle_t>;
+  using edge_bundled = lookup_one_property_t<EdgeProperties, edge_bundle_t>;
+  using graph_bundled = lookup_one_property_t<GraphProperties, graph_bundle_t>;
 
   using value_type = bfl_detail::bfltree_value_type<vertex_property_type, edge_property_type>;
 
@@ -91,6 +94,7 @@ class vebl_d_ary_tree {
   // private:
   container_type m_vertices;
   vertices_size_type m_vertex_count{0};
+  graph_property_type m_graph_prop;
 
   bfl_detail::vebl_depth_records m_depth_recs;
 
@@ -107,7 +111,7 @@ class vebl_d_ary_tree {
    * Construct the D-ary BF-tree with a given reserved depth.
    * \param aDepth The depth of the graph to reserve space for.
    */
-  explicit vebl_d_ary_tree(vertices_size_type aDepth = 0) {
+  explicit vebl_d_ary_tree(vertices_size_type aDepth = 0) : m_graph_prop() {
     m_depth_recs.T.push_back(0);
     m_depth_recs.B.push_back(1);
     m_depth_recs.D.push_back(0);
@@ -148,6 +152,7 @@ class vebl_d_ary_tree {
     using std::swap;
     m_vertices.swap(rhs.m_vertices);
     swap(m_vertex_count, rhs.m_vertex_count);
+    swap(m_graph_prop, rhs.m_graph_prop);
     m_depth_recs.T.swap(rhs.m_depth_recs.T);
     m_depth_recs.B.swap(rhs.m_depth_recs.B);
     m_depth_recs.D.swap(rhs.m_depth_recs.D);
@@ -168,32 +173,43 @@ class vebl_d_ary_tree {
     m_vertex_count = 0;
   }
 
-  /**
-   * Indexing operator. Returns a reference to the vertex-property associated to the given vertex descriptor.
-   * \param v The vertex descriptor of the sought-after vertex-property.
-   * \return The vertex-property, by reference, associated to the given vertex descriptor.
-   */
-  vertex_property_type& operator[](const vertex_descriptor& v) { return get_vertex_value_impl(v).vertex(); }
-  /**
-   * Indexing operator. Returns a const-reference to the vertex-property associated to the given vertex descriptor.
-   * \param v The vertex descriptor of the sought-after vertex-property.
-   * \return The vertex-property, by const-reference, associated to the given vertex descriptor.
-   */
-  const vertex_property_type& operator[](const vertex_descriptor& v) const { return get_vertex_value_impl(v).vertex(); }
-  /**
-   * Indexing operator. Returns a reference to the edge-property associated to the given edge descriptor.
-   * \param e The edge descriptor of the sought-after edge-property.
-   * \return The edge-property, by reference, associated to the given edge descriptor.
-   */
-  edge_property_type& operator[](const edge_descriptor& e) { return get_vertex_value_impl(e.target_vertex).edge(); }
-  /**
-   * Indexing operator. Returns a const-reference to the edge-property associated to the given edge descriptor.
-   * \param e The edge descriptor of the sought-after edge-property.
-   * \return The edge-property, by const-reference, associated to the given edge descriptor.
-   */
-  const edge_property_type& operator[](const edge_descriptor& e) const {
-    return get_vertex_value_impl(e.target_vertex).edge();
+  // Indexing operator. Returns a reference to the vertex-bundle associated to the given vertex descriptor.
+  vertex_bundled& operator[](const vertex_descriptor& v) {
+    return get_property_value(get_vertex_value_impl(v).vertex(), vertex_bundle);
   }
+  // Indexing operator. Returns a const-reference to the vertex-bundle associated to the given vertex descriptor.
+  const vertex_bundled& operator[](const vertex_descriptor& v) const {
+    return get_property_value(get_vertex_value_impl(v).vertex(), vertex_bundle);
+  }
+  // Indexing operator. Returns a reference to the edge-bundle associated to the given edge descriptor.
+  edge_bundled& operator[](const edge_descriptor& e) {
+    return get_property_value(get_vertex_value_impl(e.target_vertex).edge(), edge_bundle);
+  }
+  // Indexing operator. Returns a const-reference to the edge-bundle associated to the given edge descriptor.
+  const edge_bundled& operator[](const edge_descriptor& e) const {
+    return get_property_value(get_vertex_value_impl(e.target_vertex).edge(), edge_bundle);
+  }
+  // Indexing operator. Returns a reference to the edge-bundle associated to the given edge descriptor.
+  graph_bundled& operator[](graph_bundle_t /*unused*/) { return get_property_value(m_graph_prop, graph_bundle); }
+  // Indexing operator. Returns a const-reference to the edge-bundle associated to the given edge descriptor.
+  const graph_bundled& operator[](graph_bundle_t /*unused*/) const {
+    return get_property_value(m_graph_prop, graph_bundle);
+  }
+
+  // Get a reference to the vertex-property associated to the given vertex descriptor.
+  auto& get_property(vertex_descriptor v) { return get_vertex_value_impl(v).vertex(); }
+  // Get a const-reference to the vertex-property associated to the given vertex descriptor.
+  const auto& get_property(vertex_descriptor v) const { return get_vertex_value_impl(v).vertex(); }
+
+  // Get a reference to the edge-property associated to the given edge descriptor.
+  auto& get_property(const edge_descriptor& e) { return get_vertex_value_impl(e.target_vertex).edge(); }
+  // Get a const-reference to the edge-property associated to the given edge descriptor.
+  const auto& get_property(const edge_descriptor& e) const { return get_vertex_value_impl(e.target_vertex).edge(); }
+
+  // Get a reference to the graph-property associated to the graph.
+  auto& get_property(graph_all_t /*unused*/) { return m_graph_prop; }
+  // Get a const-reference to the graph-property associated to the graph.
+  const auto& get_property(graph_all_t /*unused*/) const { return m_graph_prop; }
 
   /**
    * Adds a child vertex to the given parent vertex, and initializes the properties of the newly created
@@ -395,8 +411,9 @@ struct tree_storage_traits<vebl_d_ary_tree_storage<Arity>> {
   using edge_descriptor = bfl_detail::bfltree_edge_desc;
 };
 
-#define BAGL_VEBL_D_ARY_TREE_ARGS std::size_t Arity, typename VertexProperties, typename EdgeProperties
-#define BAGL_VEBL_D_ARY_TREE vebl_d_ary_tree<Arity, VertexProperties, EdgeProperties>
+#define BAGL_VEBL_D_ARY_TREE_ARGS \
+  std::size_t Arity, typename VertexProperties, typename EdgeProperties, typename GraphProperties
+#define BAGL_VEBL_D_ARY_TREE vebl_d_ary_tree<Arity, VertexProperties, EdgeProperties, GraphProperties>
 
 /**
  * Standard swap function. Swaps the contents of two objects.
@@ -812,124 +829,103 @@ std::pair<VertexOIter, EdgeOIter> clear_children(typename BAGL_VEBL_D_ARY_TREE::
  *                             Property Maps (from bundles)
  * ********************************************************************************************/
 
-/**
- * Returns a const-reference to the vertex-property associated to the given vertex descriptor.
- * \param g The tree from which to draw the vertex.
- * \param v The vertex descriptor of the sought-after vertex-property.
- * \return The vertex-property, by const-reference, associated to the given vertex descriptor.
- */
+// Returns a const-reference to the vertex-property associated to the given vertex descriptor.
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-const typename BAGL_VEBL_D_ARY_TREE::vertex_property_type& get(const BAGL_VEBL_D_ARY_TREE& g,
-                                                               typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v) {
+const auto& get(const BAGL_VEBL_D_ARY_TREE& g, typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v) {
+  return g[v];
+}
+template <BAGL_VEBL_D_ARY_TREE_ARGS>
+auto& get(BAGL_VEBL_D_ARY_TREE& g, typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v) {
   return g[v];
 }
 
-/**
- * Returns a const-reference to the edge-property associated to the given edge descriptor.
- * \param g The tree from which to draw the edge.
- * \param e The edge descriptor of the sought-after edge-property.
- * \return The edge-property, by const-reference, associated to the given edge descriptor.
- */
+// Returns a const-reference to the edge-property associated to the given edge descriptor.
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-const typename BAGL_VEBL_D_ARY_TREE::edge_property_type& get(const BAGL_VEBL_D_ARY_TREE& g,
-                                                             typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e) {
+const auto& get(const BAGL_VEBL_D_ARY_TREE& g, typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e) {
+  return g[e];
+}
+template <BAGL_VEBL_D_ARY_TREE_ARGS>
+auto& get(BAGL_VEBL_D_ARY_TREE& g, typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e) {
   return g[e];
 }
 
-/**
- * Sets the vertex-property associated to the given vertex descriptor.
- * \param g The tree from which the vertex is drawn.
- * \param v The vertex descriptor of the vertex-property to be set.
- * \param value The vertex-property, by const-reference, to be associated to the given vertex.
- */
+// Returns a const-reference to the graph-bundle associated to the graph.
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-void put(BAGL_VEBL_D_ARY_TREE& g, typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
-         const typename BAGL_VEBL_D_ARY_TREE::vertex_property_type& value) {
-  g[v] = value;
+const auto& get(const BAGL_VEBL_D_ARY_TREE& g, graph_bundle_t /*unused*/) {
+  return g[graph_bundle];
+}
+template <BAGL_VEBL_D_ARY_TREE_ARGS>
+auto& get(BAGL_VEBL_D_ARY_TREE& g, graph_bundle_t /*unused*/) {
+  return g[graph_bundle];
 }
 
-/**
- * Sets the edge-property associated to the given edge descriptor.
- * \param g The tree from which the edge is drawn.
- * \param e The edge descriptor of the edge-property to be set.
- * \param value The edge-property, by const-reference, to be associated to the given edge.
- */
-template <BAGL_VEBL_D_ARY_TREE_ARGS>
-void put(BAGL_VEBL_D_ARY_TREE& g, typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e,
-         const typename BAGL_VEBL_D_ARY_TREE::edge_property_type& value) {
-  g[e] = value;
+// Sets the vertex-bundle associated to the given vertex descriptor.
+template <BAGL_VEBL_D_ARY_TREE_ARGS, typename VProp>
+void put(BAGL_VEBL_D_ARY_TREE& g, typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, VProp&& value) {
+  g[v] = std::forward<VProp>(value);
 }
 
-/**
- * Sets the vertex-property associated to the given vertex descriptor.
- * \param g The tree from which the vertex is drawn.
- * \param v The vertex descriptor of the vertex-property to be set.
- * \param value The vertex-property, by rvalue-reference, to be associated to the given vertex.
- */
-template <BAGL_VEBL_D_ARY_TREE_ARGS>
-void put(BAGL_VEBL_D_ARY_TREE& g, typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
-         typename BAGL_VEBL_D_ARY_TREE::vertex_property_type&& value) {
-  g[v] = std::move(value);
+// Sets the edge-property associated to the given edge descriptor.
+template <BAGL_VEBL_D_ARY_TREE_ARGS, typename EProp>
+void put(BAGL_VEBL_D_ARY_TREE& g, typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e, EProp&& value) {
+  g[e] = std::forward<EProp>(value);
 }
 
-/**
- * Sets the edge-property associated to the given edge descriptor.
- * \param g The tree from which the edge is drawn.
- * \param e The edge descriptor of the edge-property to be set.
- * \param value The edge-property, by rvalue-reference, to be associated to the given edge.
- */
-template <BAGL_VEBL_D_ARY_TREE_ARGS>
-void put(BAGL_VEBL_D_ARY_TREE& g, typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e,
-         typename BAGL_VEBL_D_ARY_TREE::edge_property_type&& value) {
-  g[e] = std::move(value);
+// Sets the edge-property associated to the given edge descriptor.
+template <BAGL_VEBL_D_ARY_TREE_ARGS, typename GProp>
+void put(BAGL_VEBL_D_ARY_TREE& g, graph_bundle_t /*unused*/, GProp&& value) {
+  g[graph_bundle] = std::forward<GProp>(value);
 }
 
-/**
- * Returns a reference to the vertex-property associated to the given vertex descriptor.
- * \param v The vertex descriptor of the sought-after vertex-property.
- * \param g The tree from which to draw the vertex.
- * \return The vertex-property, by reference, associated to the given vertex descriptor.
- */
+// Returns a reference to the vertex-property associated to the given vertex descriptor.
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-typename BAGL_VEBL_D_ARY_TREE::vertex_property_type& get_property(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
-                                                                  BAGL_VEBL_D_ARY_TREE& g) {
-  return g[v];
+auto& get_property(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, BAGL_VEBL_D_ARY_TREE& g) {
+  return g.get_property(v);
 }
 
-/**
- * Returns a const-reference to the vertex-property associated to the given vertex descriptor.
- * \param v The vertex descriptor of the sought-after vertex-property.
- * \param g The tree from which to draw the vertex.
- * \return The vertex-property, by const-reference, associated to the given vertex descriptor.
- */
+// Returns a const-reference to the vertex-property associated to the given vertex descriptor.
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-const typename BAGL_VEBL_D_ARY_TREE::vertex_property_type& get_property(
-    typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, const BAGL_VEBL_D_ARY_TREE& g) {
-  return g[v];
+const auto& get_property(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, const BAGL_VEBL_D_ARY_TREE& g) {
+  return g.get_property(v);
 }
 
-/**
- * Returns a reference to the edge-property associated to the given edge descriptor.
- * \param e The edge descriptor of the sought-after edge-property.
- * \param g The tree from which to draw the edge.
- * \return The edge-property, by reference, associated to the given edge descriptor.
- */
+// Returns a reference to the edge-property associated to the given edge descriptor.
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-typename BAGL_VEBL_D_ARY_TREE::edge_property_type& get_property(typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e,
-                                                                BAGL_VEBL_D_ARY_TREE& g) {
-  return g[e];
+auto& get_property(typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e, BAGL_VEBL_D_ARY_TREE& g) {
+  return g.get_property(e);
 }
 
-/**
- * Returns a const-reference to the edge-property associated to the given edge descriptor.
- * \param e The edge descriptor of the sought-after edge-property.
- * \param g The tree from which to draw the edge.
- * \return The edge-property, by const-reference, associated to the given edge descriptor.
- */
+// Returns a const-reference to the edge-property associated to the given edge descriptor.
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-const typename BAGL_VEBL_D_ARY_TREE::edge_property_type& get_property(typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e,
-                                                                      const BAGL_VEBL_D_ARY_TREE& g) {
-  return g[e];
+const auto& get_property(typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e, const BAGL_VEBL_D_ARY_TREE& g) {
+  return g.get_property(e);
+}
+
+// Returns a reference to the graph-property associated to the graph.
+template <BAGL_VEBL_D_ARY_TREE_ARGS>
+auto& get_property(BAGL_VEBL_D_ARY_TREE& g, graph_all_t /*unused*/) {
+  return g.get_property(graph_all);
+}
+
+// Returns a const-reference to the graph-property associated to the graph.
+template <BAGL_VEBL_D_ARY_TREE_ARGS>
+const auto& get_property(const BAGL_VEBL_D_ARY_TREE& g, graph_all_t /*unused*/) {
+  return g.get_property(graph_all);
+}
+
+// Handle graph property tags, also handles graph_bundle_t.
+
+template <BAGL_VEBL_D_ARY_TREE_ARGS, typename Tag>
+std::enable_if_t<std::is_same_v<property_kind_t<Tag>, graph_property_tag>, lookup_one_property_t<GraphProperties, Tag>&>
+get_property(BAGL_VEBL_D_ARY_TREE& g, Tag /*unused*/) {
+  return get_property_value(g.get_property(graph_all), Tag{});
+}
+
+template <BAGL_VEBL_D_ARY_TREE_ARGS, typename Tag>
+std::enable_if_t<std::is_same_v<property_kind_t<Tag>, graph_property_tag>,
+                 const lookup_one_property_t<GraphProperties, Tag>&>
+get_property(const BAGL_VEBL_D_ARY_TREE& g, Tag /*unused*/) {
+  return get_property_value(g.get_property(graph_all), Tag{});
 }
 
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename T, typename Bundle>
@@ -938,10 +934,12 @@ struct property_map<BAGL_VEBL_D_ARY_TREE, T Bundle::*> {
   using non_const_t = std::remove_cv_t<T>;
   static constexpr bool is_vertex_bundle_v =
       std::is_convertible_v<typename BAGL_VEBL_D_ARY_TREE::vertex_bundled*, non_const_bundle*>;
-  using type = bundle_member_property_map<non_const_t, BAGL_VEBL_D_ARY_TREE,
-                                          std::conditional_t<is_vertex_bundle_v, vertex_bundle_t, edge_bundle_t>>;
-  using const_type = bundle_member_property_map<const non_const_t, const BAGL_VEBL_D_ARY_TREE,
-                                                std::conditional_t<is_vertex_bundle_v, vertex_bundle_t, edge_bundle_t>>;
+  static constexpr bool is_edge_bundle_v =
+      std::is_convertible_v<typename BAGL_VEBL_D_ARY_TREE::edge_bundled*, non_const_bundle*>;
+  using tag_type = std::conditional_t<is_vertex_bundle_v, vertex_bundle_t,
+                                      std::conditional_t<is_edge_bundle_v, edge_bundle_t, graph_bundle_t>>;
+  using type = bundle_member_property_map<non_const_t, BAGL_VEBL_D_ARY_TREE, tag_type>;
+  using const_type = bundle_member_property_map<const non_const_t, const BAGL_VEBL_D_ARY_TREE, tag_type>;
 };
 
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename T, typename Bundle>
@@ -955,13 +953,8 @@ auto get(T Bundle::*p, const BAGL_VEBL_D_ARY_TREE& g) {
 }
 
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename T, typename Bundle, typename Key>
-const auto& get(T Bundle::*p, const BAGL_VEBL_D_ARY_TREE& g, const Key& k) {
+const std::remove_cv_t<T>& get(T Bundle::*p, const BAGL_VEBL_D_ARY_TREE& g, const Key& k) {
   return (g[k]).*p;
-}
-
-template <BAGL_VEBL_D_ARY_TREE_ARGS, typename T, typename Bundle, typename Key>
-void put(T Bundle::*p, BAGL_VEBL_D_ARY_TREE& g, const Key& k, const T& val) {
-  (g[k]).*p = val;
 }
 
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename T, typename Bundle, typename Key>
@@ -977,9 +970,8 @@ struct vebl_d_ary_tree_property_selector {
   template <class Graph, class Property, class Tag>
   struct bind_ {
     using value_type = typename property_value<Property, Tag>::type;
-
-    using type = tagged_from_bundle_property_map<value_type, Graph, Tag>;
-    using const_type = tagged_from_bundle_property_map<const value_type, const Graph, Tag>;
+    using type = tagged_in_property_property_map<value_type, Graph, Tag>;
+    using const_type = tagged_in_property_property_map<const value_type, const Graph, Tag>;
   };
 };
 
@@ -1007,18 +999,18 @@ auto get(Property p, const BAGL_VEBL_D_ARY_TREE& g) {
 }
 
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename Property, typename Key>
-auto get(Property p, const BAGL_VEBL_D_ARY_TREE& g, const Key& k) {
-  return get_property_value(g[k], p);
+decltype(auto) get(Property p, const BAGL_VEBL_D_ARY_TREE& g, const Key& k) {
+  return get_property_value(g.get_property(k), p);
 }
 
-template <BAGL_VEBL_D_ARY_TREE_ARGS, typename Property, typename Key, typename Value>
-void put(Property p, BAGL_VEBL_D_ARY_TREE& g, const Key& k, const Value& val) {
-  get_property_value(g[k], p) = val;
+template <BAGL_VEBL_D_ARY_TREE_ARGS, typename Property, typename Key>
+decltype(auto) get(Property p, BAGL_VEBL_D_ARY_TREE& g, const Key& k) {
+  return get_property_value(g.get_property(k), p);
 }
 
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename Property, typename Key, typename Value>
 void put(Property p, BAGL_VEBL_D_ARY_TREE& g, const Key& k, Value&& val) {
-  get_property_value(g[k], p) = std::forward<Value>(val);
+  get_property_value(g.get_property(k), p) = std::forward<Value>(val);
 }
 
 #undef BAGL_VEBL_D_ARY_TREE_ARGS

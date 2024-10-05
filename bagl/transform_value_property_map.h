@@ -33,6 +33,11 @@ class transform_value_property_map : public put_get_helper<transform_value_prope
   PM pm_;
 };
 
+template <typename Key, typename Func>
+auto transformed_property_map(Func&& f) {
+  return transform_value_property_map{std::forward<Func>(f), typed_identity_property_map<Key>{}};
+}
+
 }  // namespace bagl
 
 #endif  // BAGL_BAGL_TRANSFORM_VALUE_PROPERTY_MAP_H_

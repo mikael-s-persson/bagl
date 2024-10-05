@@ -8,6 +8,7 @@
 #include "bagl/adjacency_range.h"
 #include "bagl/detail/ltree_containers.h"
 #include "bagl/graph_concepts.h"
+#include "bagl/graph_traits.h"
 #include "bagl/more_property_maps.h"
 #include "bagl/properties.h"
 #include "bagl/tree_traits.h"
@@ -88,19 +89,22 @@ struct linked_tree_disallowed_undirected<undirected_s> {};
  * \tparam EdgeProperties A POD type to be attached to each edge in the tree.
  */
 template <typename OutEdgeListS = vec_s, typename VertexListS = vec_s, typename DirectedS = directed_s,
-          typename VertexProperties = no_property, typename EdgeProperties = no_property>
+          typename VertexProperties = no_property, typename EdgeProperties = no_property,
+          typename GraphProperties = no_property>
 class linked_tree {
  public:
   using check_allowed_vertex_list = typename linked_tree_disallowed_vertex_list<VertexListS>::type;
   using check_allowed_directionality = typename linked_tree_disallowed_undirected<DirectedS>::type;
 
-  using self = linked_tree<OutEdgeListS, VertexListS, DirectedS, VertexProperties, EdgeProperties>;
+  using self = linked_tree<OutEdgeListS, VertexListS, DirectedS, VertexProperties, EdgeProperties, GraphProperties>;
 
   using vertex_property_type = VertexProperties;
   using edge_property_type = EdgeProperties;
+  using graph_property_type = GraphProperties;
 
-  using vertex_bundled = VertexProperties;
-  using edge_bundled = EdgeProperties;
+  using vertex_bundled = lookup_one_property_t<VertexProperties, vertex_bundle_t>;
+  using edge_bundled = lookup_one_property_t<EdgeProperties, edge_bundle_t>;
+  using graph_bundled = lookup_one_property_t<GraphProperties, graph_bundle_t>;
 
   using storage_type = typename adjlist_detail::ltree_vertex_container<VertexListS, OutEdgeListS, DirectedS,
                                                                        VertexProperties, EdgeProperties>;
@@ -142,11 +146,12 @@ class linked_tree {
 
   // private:
   storage_type m_pack;
+  graph_property_type m_graph_prop;
 
   /**
    * Constructs an empty linked-tree.
    */
-  linked_tree() : m_pack(){};
+  linked_tree() : m_pack(), m_graph_prop(){};
 
   ~linked_tree() = default;
 
@@ -157,12 +162,13 @@ class linked_tree {
   /**
    * Constructs a linked-tree as a copy of the given tree.
    */
-  linked_tree(const self& rhs) : m_pack() { do_deep_copy_from(rhs); };
+  linked_tree(const self& rhs) : m_pack(), m_graph_prop(rhs.m_graph_prop) { do_deep_copy_from(rhs); };
   /**
    * Assigns the linked-tree as a copy of the given tree.
    */
   self& operator=(const self& rhs) {
     if (this != &rhs) {
+      m_graph_prop = rhs.m_graph_prop;
       do_deep_copy_from(rhs);
     }
     return *this;
@@ -171,12 +177,13 @@ class linked_tree {
   /**
    * Constructs a linked-tree by moving the given tree into it.
    */
-  linked_tree(self&& rhs) noexcept : m_pack(std::move(rhs.m_pack)){};
+  linked_tree(self&& rhs) noexcept : m_pack(std::move(rhs.m_pack)), m_graph_prop(std::move(rhs.m_graph_prop)){};
   /**
    * Assigns a linked-tree by moving the given tree into it.
    */
   linked_tree& operator=(self&& rhs) noexcept {
     if (this != rhs) {
+      m_graph_prop = std::move(rhs.m_graph_prop);
       m_pack = std::move(rhs.m_pack);
     }
     return *this;
@@ -224,30 +231,43 @@ class linked_tree {
    */
   void clear() { m_pack.clear(); };
 
-  /**
-   * Indexing operator. Returns a reference to the vertex-property associated to the given vertex descriptor.
-   * \param v The vertex descriptor of the sought-after vertex-property.
-   * \return The vertex-property, by reference, associated to the given vertex descriptor.
-   */
-  vertex_property_type& operator[](vertex_descriptor v) { return m_pack.get_stored_vertex(v).data; };
-  /**
-   * Indexing operator. Returns a const-reference to the vertex-property associated to the given vertex descriptor.
-   * \param v The vertex descriptor of the sought-after vertex-property.
-   * \return The vertex-property, by const-reference, associated to the given vertex descriptor.
-   */
-  const vertex_property_type& operator[](vertex_descriptor v) const { return m_pack.get_stored_vertex(v).data; };
-  /**
-   * Indexing operator. Returns a reference to the edge-property associated to the given edge descriptor.
-   * \param e The edge descriptor of the sought-after edge-property.
-   * \return The edge-property, by reference, associated to the given edge descriptor.
-   */
-  edge_property_type& operator[](const edge_descriptor& e) { return m_pack.get_stored_edge(e).data; };
-  /**
-   * Indexing operator. Returns a const-reference to the edge-property associated to the given edge descriptor.
-   * \param e The edge descriptor of the sought-after edge-property.
-   * \return The edge-property, by const-reference, associated to the given edge descriptor.
-   */
-  const edge_property_type& operator[](const edge_descriptor& e) const { return m_pack.get_stored_edge(e).data; };
+  // Indexing operator. Returns a reference to the vertex-bundle associated to the given vertex descriptor.
+  vertex_bundled& operator[](vertex_descriptor v) {
+    return get_property_value(m_pack.get_stored_vertex(v).data, vertex_bundle);
+  };
+  // Indexing operator. Returns a const-reference to the vertex-bundle associated to the given vertex descriptor.
+  const vertex_bundled& operator[](vertex_descriptor v) const {
+    return get_property_value(m_pack.get_stored_vertex(v).data, vertex_bundle);
+  };
+  // Indexing operator. Returns a reference to the edge-bundle associated to the given edge descriptor.
+  edge_bundled& operator[](const edge_descriptor& e) {
+    return get_property_value(m_pack.get_stored_edge(e).data, edge_bundle);
+  };
+  // Indexing operator. Returns a const-reference to the edge-bundle associated to the given edge descriptor.
+  const edge_bundled& operator[](const edge_descriptor& e) const {
+    return get_property_value(m_pack.get_stored_edge(e).data, edge_bundle);
+  };
+  // Indexing operator. Returns a reference to the graph-bundle associated to the graph.
+  graph_bundled& operator[](graph_bundle_t /*unused*/) { return get_property_value(m_graph_prop, graph_bundle); };
+  // Indexing operator. Returns a const-reference to the graph-bundle associated to the graph.
+  const graph_bundled& operator[](graph_bundle_t /*unused*/) const {
+    return get_property_value(m_graph_prop, graph_bundle);
+  };
+
+  // Get a reference to the vertex-property associated to the given vertex descriptor.
+  auto& get_property(vertex_descriptor v) { return m_pack.get_stored_vertex(v).data; }
+  // Get a const-reference to the vertex-property associated to the given vertex descriptor.
+  const auto& get_property(vertex_descriptor v) const { return m_pack.get_stored_vertex(v).data; }
+
+  // Get a reference to the edge-property associated to the given edge descriptor.
+  auto& get_property(const edge_descriptor& e) { return m_pack.get_stored_edge(e).data; }
+  // Get a const-reference to the edge-property associated to the given edge descriptor.
+  const auto& get_property(const edge_descriptor& e) const { return m_pack.get_stored_edge(e).data; }
+
+  // Get a reference to the graph-property associated to the graph.
+  auto& get_property(graph_all_t /*unused*/) { return m_graph_prop; }
+  // Get a const-reference to the graph-property associated to the graph.
+  const auto& get_property(graph_all_t /*unused*/) const { return m_graph_prop; }
 };
 
 /**
@@ -266,9 +286,11 @@ template <typename OutEdgeListS, typename VertexListS, typename DirectedS>
 struct tree_storage_traits<linked_tree_storage<OutEdgeListS, VertexListS, DirectedS>>
     : linked_tree_traits<OutEdgeListS, VertexListS, DirectedS> {};
 
-#define BAGL_LINKED_TREE_ARGS \
-  typename OutEdgeListS, typename VertexListS, typename DirectedS, typename VertexProperties, typename EdgeProperties
-#define BAGL_LINKED_TREE linked_tree<OutEdgeListS, VertexListS, DirectedS, VertexProperties, EdgeProperties>
+#define BAGL_LINKED_TREE_ARGS                                                                                          \
+  typename OutEdgeListS, typename VertexListS, typename DirectedS, typename VertexProperties, typename EdgeProperties, \
+      typename GraphProperties
+#define BAGL_LINKED_TREE \
+  linked_tree<OutEdgeListS, VertexListS, DirectedS, VertexProperties, EdgeProperties, GraphProperties>
 
 /**
  * Standard swap function. Swaps the contents of two objects.
@@ -654,119 +676,138 @@ std::pair<VertexOIter, EdgeOIter> remove_branch(typename BAGL_LINKED_TREE::verte
  *                             Property Maps (from bundles)
  * ********************************************************************************************/
 
-/**
- * Returns a const-reference to the vertex-property associated to the given vertex descriptor.
- * \param g The tree from which to draw the vertex.
- * \param v The vertex descriptor of the sought-after vertex-property.
- * \return The vertex-property, by const-reference, associated to the given vertex descriptor.
- */
+// Returns a const-reference to the vertex-bundle associated to the given vertex descriptor.
 template <BAGL_LINKED_TREE_ARGS>
 const auto& get(const BAGL_LINKED_TREE& g, typename BAGL_LINKED_TREE::vertex_descriptor v) {
   return g[v];
-};
+}
+template <BAGL_LINKED_TREE_ARGS>
+auto& get(BAGL_LINKED_TREE& g, typename BAGL_LINKED_TREE::vertex_descriptor v) {
+  return g[v];
+}
 
-/**
- * Returns a const-reference to the edge-property associated to the given edge descriptor.
- * \param g The tree from which to draw the edge.
- * \param e The edge descriptor of the sought-after edge-property.
- * \return The edge-property, by const-reference, associated to the given edge descriptor.
- */
+// Returns a const-reference to the edge-bundle associated to the given edge descriptor.
 template <BAGL_LINKED_TREE_ARGS>
 const auto& get(const BAGL_LINKED_TREE& g, typename BAGL_LINKED_TREE::edge_descriptor e) {
   return g[e];
-};
+}
+template <BAGL_LINKED_TREE_ARGS>
+auto& get(BAGL_LINKED_TREE& g, typename BAGL_LINKED_TREE::edge_descriptor e) {
+  return g[e];
+}
 
-/**
- * Sets the vertex-property associated to the given vertex descriptor.
- * \param g The tree from which the vertex is drawn.
- * \param v The vertex descriptor of the vertex-property to be set.
- * \param value The vertex-property to be associated to the given vertex.
- */
+// Returns a const-reference to the graph-bundle associated to the graph.
+template <BAGL_LINKED_TREE_ARGS>
+const auto& get(const BAGL_LINKED_TREE& g, graph_bundle_t /*unused*/) {
+  return g[graph_bundle];
+}
+template <BAGL_LINKED_TREE_ARGS>
+auto& get(BAGL_LINKED_TREE& g, graph_bundle_t /*unused*/) {
+  return g[graph_bundle];
+}
+
+// Sets the vertex-bundle associated to the given vertex descriptor.
 template <BAGL_LINKED_TREE_ARGS, typename VProp>
 void put(BAGL_LINKED_TREE& g, typename BAGL_LINKED_TREE::vertex_descriptor v, VProp&& value) {
   g[v] = std::forward<VProp>(value);
-};
+}
 
-/**
- * Sets the edge-property associated to the given edge descriptor.
- * \param g The tree from which the edge is drawn.
- * \param e The edge descriptor of the edge-property to be set.
- * \param value The edge-property to be associated to the given edge.
- */
+// Sets the edge-bundle associated to the given edge descriptor.
 template <BAGL_LINKED_TREE_ARGS, typename EProp>
 void put(BAGL_LINKED_TREE& g, typename BAGL_LINKED_TREE::edge_descriptor e, EProp&& value) {
   g[e] = std::forward<EProp>(value);
-};
+}
 
-/**
- * Returns a reference to the vertex-property associated to the given vertex descriptor.
- * \param v The vertex descriptor of the sought-after vertex-property.
- * \param g The tree from which to draw the vertex.
- * \return The vertex-property, by reference, associated to the given vertex descriptor.
- */
+// Sets the graph-bundle associated to the graph.
+template <BAGL_LINKED_TREE_ARGS, typename GProp>
+void put(BAGL_LINKED_TREE& g, graph_bundle_t /*unused*/, GProp&& value) {
+  g[graph_bundle] = std::forward<GProp>(value);
+}
+
+// Returns a reference to the vertex-property associated to the given vertex descriptor.
 template <BAGL_LINKED_TREE_ARGS>
 auto& get_property(typename BAGL_LINKED_TREE::vertex_descriptor v, BAGL_LINKED_TREE& g) {
-  return g[v];
-};
+  return g.get_property(v);
+}
 
-/**
- * Returns a const-reference to the vertex-property associated to the given vertex descriptor.
- * \param v The vertex descriptor of the sought-after vertex-property.
- * \param g The tree from which to draw the vertex.
- * \return The vertex-property, by const-reference, associated to the given vertex descriptor.
- */
+// Returns a const-reference to the vertex-property associated to the given vertex descriptor.
 template <BAGL_LINKED_TREE_ARGS>
 const auto& get_property(typename BAGL_LINKED_TREE::vertex_descriptor v, const BAGL_LINKED_TREE& g) {
-  return g[v];
-};
+  return g.get_property(v);
+}
 
-/**
- * Returns a reference to the edge-property associated to the given edge descriptor.
- * \param e The edge descriptor of the sought-after edge-property.
- * \param g The tree from which to draw the edge.
- * \return The edge-property, by reference, associated to the given edge descriptor.
- */
+// Returns a reference to the edge-property associated to the given edge descriptor.
 template <BAGL_LINKED_TREE_ARGS>
 auto& get_property(typename BAGL_LINKED_TREE::edge_descriptor e, BAGL_LINKED_TREE& g) {
-  return g[e];
-};
+  return g.get_property(e);
+}
 
-/**
- * Returns a const-reference to the edge-property associated to the given edge descriptor.
- * \param e The edge descriptor of the sought-after edge-property.
- * \param g The tree from which to draw the edge.
- * \return The edge-property, by const-reference, associated to the given edge descriptor.
- */
+// Returns a const-reference to the edge-property associated to the given edge descriptor.
 template <BAGL_LINKED_TREE_ARGS>
 const auto& get_property(typename BAGL_LINKED_TREE::edge_descriptor e, const BAGL_LINKED_TREE& g) {
-  return g[e];
-};
+  return g.get_property(e);
+}
+
+// Returns a reference to the graph-property associated to the graph.
+template <BAGL_LINKED_TREE_ARGS>
+auto& get_property(BAGL_LINKED_TREE& g, graph_all_t /*unused*/) {
+  return g.get_property(graph_all);
+}
+
+// Returns a const-reference to the graph-property associated to the graph.
+template <BAGL_LINKED_TREE_ARGS>
+const auto& get_property(const BAGL_LINKED_TREE& g, graph_all_t /*unused*/) {
+  return g.get_property(graph_all);
+}
+
+// Handle graph property tags, also handles graph_bundle_t.
+
+template <BAGL_LINKED_TREE_ARGS, typename Tag>
+std::enable_if_t<std::is_same_v<property_kind_t<Tag>, graph_property_tag>, lookup_one_property_t<GraphProperties, Tag>&>
+get_property(BAGL_LINKED_TREE& g, Tag /*unused*/) {
+  return get_property_value(g.get_property(graph_all), Tag{});
+}
+
+template <BAGL_LINKED_TREE_ARGS, typename Tag>
+std::enable_if_t<std::is_same_v<property_kind_t<Tag>, graph_property_tag>,
+                 const lookup_one_property_t<GraphProperties, Tag>&>
+get_property(const BAGL_LINKED_TREE& g, Tag /*unused*/) {
+  return get_property_value(g.get_property(graph_all), Tag{});
+}
 
 template <BAGL_LINKED_TREE_ARGS, typename T, typename Bundle>
 struct property_map<BAGL_LINKED_TREE, T Bundle::*> {
-  using non_const_Bundle = std::remove_cv_t<Bundle>;
-  using non_const_T = std::remove_cv_t<T>;
-  static constexpr bool is_vertex_bundle_v = std::is_convertible_v<
-      typename linked_tree<OutEdgeListS, VertexListS, DirectedS, VertexProperties, EdgeProperties>::vertex_bundled*,
-      non_const_Bundle*>;
-  using type =
-      bundle_member_property_map<non_const_T,
-                                 linked_tree<OutEdgeListS, VertexListS, DirectedS, VertexProperties, EdgeProperties>,
-                                 std::conditional_t<is_vertex_bundle_v, vertex_bundle_t, edge_bundle_t>>;
-  using const_type = bundle_member_property_map<
-      const non_const_T, const linked_tree<OutEdgeListS, VertexListS, DirectedS, VertexProperties, EdgeProperties>,
-      std::conditional_t<is_vertex_bundle_v, vertex_bundle_t, edge_bundle_t>>;
+  using non_const_bundle = std::remove_cv_t<Bundle>;
+  using non_const_t = std::remove_cv_t<T>;
+  static constexpr bool is_vertex_bundle_v =
+      std::is_convertible_v<typename BAGL_LINKED_TREE::vertex_bundled*, non_const_bundle*>;
+  static constexpr bool is_edge_bundle_v =
+      std::is_convertible_v<typename BAGL_LINKED_TREE::edge_bundled*, non_const_bundle*>;
+  using tag_type = std::conditional_t<is_vertex_bundle_v, vertex_bundle_t,
+                                      std::conditional_t<is_edge_bundle_v, edge_bundle_t, graph_bundle_t>>;
+  using type = bundle_member_property_map<non_const_t, BAGL_LINKED_TREE, tag_type>;
+  using const_type = bundle_member_property_map<const non_const_t, const BAGL_LINKED_TREE, tag_type>;
 };
 
 template <BAGL_LINKED_TREE_ARGS, typename T, typename Bundle>
 auto get(T Bundle::*p, BAGL_LINKED_TREE& g) {
   return typename property_map<BAGL_LINKED_TREE, T Bundle::*>::type(&g, p);
-};
+}
 
 template <BAGL_LINKED_TREE_ARGS, typename T, typename Bundle>
 auto get(T Bundle::*p, const BAGL_LINKED_TREE& g) {
   return typename property_map<BAGL_LINKED_TREE, T Bundle::*>::const_type(&g, p);
-};
+}
+
+template <BAGL_LINKED_TREE_ARGS, typename T, typename Bundle, typename Key>
+const std::remove_cv_t<T>& get(T Bundle::*p, const BAGL_LINKED_TREE& g, const Key& k) {
+  return (g[k]).*p;
+}
+
+template <BAGL_LINKED_TREE_ARGS, typename T, typename Bundle, typename Key>
+void put(T Bundle::*p, BAGL_LINKED_TREE& g, const Key& k, T&& val) {
+  (g[k]).*p = std::forward<T>(val);
+}
 
 /***********************************************************************************************
  *                             Property Maps (from tags)
@@ -777,8 +818,8 @@ struct linked_tree_property_selector {
   struct bind_ {
     using value_type = typename property_value<Property, Tag>::type;
 
-    using type = tagged_from_bundle_property_map<value_type, Graph, Tag>;
-    using const_type = tagged_from_bundle_property_map<const value_type, const Graph, Tag>;
+    using type = tagged_in_property_property_map<value_type, Graph, Tag>;
+    using const_type = tagged_in_property_property_map<const value_type, const Graph, Tag>;
   };
 };
 
@@ -797,23 +838,28 @@ template <BAGL_LINKED_TREE_ARGS, typename Property>
 auto get(Property p, BAGL_LINKED_TREE& g) {
   using Map = typename property_map<BAGL_LINKED_TREE, Property>::type;
   return Map(&g, p);
-};
+}
 
 template <BAGL_LINKED_TREE_ARGS, typename Property>
 auto get(Property p, const BAGL_LINKED_TREE& g) {
   using Map = typename property_map<BAGL_LINKED_TREE, Property>::const_type;
   return Map(&g, p);
-};
+}
 
 template <BAGL_LINKED_TREE_ARGS, typename Property, typename Key>
-auto get(Property p, const BAGL_LINKED_TREE& g, const Key& k) {
-  return get_property_value(g[k], p);
-};
+decltype(auto) get(Property p, const BAGL_LINKED_TREE& g, const Key& k) {
+  return get_property_value(g.get_property(k), p);
+}
+
+template <BAGL_LINKED_TREE_ARGS, typename Property, typename Key>
+decltype(auto) get(Property p, BAGL_LINKED_TREE& g, const Key& k) {
+  return get_property_value(g.get_property(k), p);
+}
 
 template <BAGL_LINKED_TREE_ARGS, typename Property, typename Key, typename Value>
 void put(Property p, BAGL_LINKED_TREE& g, const Key& k, Value&& val) {
-  get_property_value(g[k], p) = std::forward<Value>(val);
-};
+  get_property_value(g.get_property(k), p) = std::forward<Value>(val);
+}
 
 template <BAGL_LINKED_TREE_ARGS>
 void BAGL_LINKED_TREE::do_deep_copy_from(const BAGL_LINKED_TREE& rhs) {
@@ -844,4 +890,4 @@ void BAGL_LINKED_TREE::do_deep_copy_from(const BAGL_LINKED_TREE& rhs) {
 
 };  // namespace bagl
 
-#endif // BAGL_BAGL_LINKED_TREE_H_
+#endif  // BAGL_BAGL_LINKED_TREE_H_

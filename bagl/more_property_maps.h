@@ -17,45 +17,61 @@ namespace bagl {
 // for the relevant descriptor type. This operator[] should deliver the vertex/edge bundle.
 template <typename Graph, typename PropertyMapTag>
 struct whole_bundle_property_map : public put_get_helper<whole_bundle_property_map<Graph, PropertyMapTag>> {
- private:
-  Graph* pg_ = nullptr;
-
  public:
   static constexpr bool is_vertex_bundle_v = std::is_same_v<PropertyMapTag, vertex_bundle_t>;
+  static constexpr bool is_edge_bundle_v = std::is_same_v<PropertyMapTag, edge_bundle_t>;
   static constexpr bool is_const_graph_v = std::is_const_v<Graph>;
-  using value_type = std::conditional_t<is_vertex_bundle_v, vertex_bundle_type<Graph>, edge_bundle_type<Graph>>;
+  using non_const_graph = std::remove_cv_t<Graph>;
+  using value_type = std::conditional_t<is_vertex_bundle_v, vertex_bundle_type<non_const_graph>, std::conditional_t<is_edge_bundle_v, edge_bundle_type<non_const_graph>, graph_bundle_type<non_const_graph>>>;
   using reference = std::conditional_t<is_const_graph_v, const value_type&, value_type&>;
-  using key_type =
-      std::conditional_t<is_vertex_bundle_v, graph_vertex_descriptor_t<Graph>, graph_edge_descriptor_t<Graph>>;
+  using key_type = std::conditional_t<is_vertex_bundle_v, graph_vertex_descriptor_t<non_const_graph>,
+                                      std::conditional_t<is_edge_bundle_v, graph_edge_descriptor_t<non_const_graph>, Graph&>>;
   using category = std::conditional_t<is_const_graph_v, readable_property_map_tag, lvalue_property_map_tag>;
 
-  explicit whole_bundle_property_map(Graph* aPG) : pg_(aPG) {}
+  explicit whole_bundle_property_map(Graph* pg) : pg_(pg) {}
   whole_bundle_property_map() = default;
-  reference operator[](key_type k) const { return (*pg_)[k]; }
-};
+  reference operator[](key_type k) const {
+    if constexpr (is_vertex_bundle_v || is_edge_bundle_v) {
+      return (*pg_)[k];
+    } else {
+      return k[graph_bundle];
+    }
+  }
 
-//======== Tagged from bundle property-map ==========
-
-// This property-map uses a graph's "get" function to obtain the
-// property value associated to a given tag.
-template <typename T, typename Graph, typename PropertyMapTag>
-struct tagged_from_bundle_property_map
-    : public put_get_helper<tagged_from_bundle_property_map<T, Graph, PropertyMapTag>> {
  private:
   Graph* pg_ = nullptr;
-  PropertyMapTag tag_ = {};
+};
+
+//======== Tagged-in-property property-map ==========
+
+// This property-map uses a graph's "get_property" function to get the
+// whole property and then extract the value associated to a given tag.
+template <typename T, typename Graph, typename PropertyMapTag>
+struct tagged_in_property_property_map
+    : public put_get_helper<tagged_in_property_property_map<T, Graph, PropertyMapTag>> {
+ private:
+  Graph* pg_ = nullptr;
 
  public:
   static constexpr bool is_vertex_prop_v = std::is_same_v<property_kind_t<PropertyMapTag>, vertex_property_tag>;
+  static constexpr bool is_edge_prop_v = std::is_same_v<property_kind_t<PropertyMapTag>, edge_property_tag>;
+  static constexpr bool is_const_graph_v = std::is_const_v<Graph>;
+  using non_const_graph = std::remove_cv_t<Graph>;
   using value_type = T;
   using reference = T&;
   using key_type =
-      std::conditional_t<is_vertex_prop_v, graph_vertex_descriptor_t<Graph>, graph_edge_descriptor_t<Graph>>;
+      std::conditional_t<is_vertex_prop_v, graph_vertex_descriptor_t<non_const_graph>, std::conditional_t<is_edge_prop_v, graph_edge_descriptor_t<non_const_graph>, Graph&>>;
   using category = std::conditional_t<std::is_const_v<T>, readable_property_map_tag, lvalue_property_map_tag>;
 
-  explicit tagged_from_bundle_property_map(Graph* aPG, PropertyMapTag aTag = {}) : pg_(aPG), tag_(aTag) {}
-  tagged_from_bundle_property_map() = default;
-  reference operator[](key_type k) const { return get_property_value((*pg_)[k], tag_); }
+  explicit tagged_in_property_property_map(Graph* pg, PropertyMapTag /*tag*/ = {}) : pg_(pg) {}
+  tagged_in_property_property_map() = default;
+  reference operator[](key_type k) const {
+    if constexpr (is_vertex_prop_v || is_edge_prop_v) {
+      return get_property_value(pg_->get_property(k), PropertyMapTag{});
+    } else {
+      return get_property_value(k.get_property(graph_all), PropertyMapTag{});
+    }
+  }
 };
 
 //======== Property-graph property-map ==========
@@ -66,7 +82,6 @@ template <typename T, typename Graph, typename PropertyMapTag>
 struct propgraph_property_map : public put_get_helper<propgraph_property_map<T, Graph, PropertyMapTag>> {
  private:
   Graph* pg_ = nullptr;
-  PropertyMapTag tag_ = {};
 
  public:
   static constexpr bool is_vertex_prop_v = std::is_same_v<property_kind_t<PropertyMapTag>, vertex_property_tag>;
@@ -76,9 +91,9 @@ struct propgraph_property_map : public put_get_helper<propgraph_property_map<T, 
       std::conditional_t<is_vertex_prop_v, graph_vertex_descriptor_t<Graph>, graph_edge_descriptor_t<Graph>>;
   using category = std::conditional_t<std::is_const_v<T>, readable_property_map_tag, lvalue_property_map_tag>;
 
-  explicit propgraph_property_map(Graph* aPG, PropertyMapTag aTag = {}) : pg_(aPG), tag_(aTag) {}
+  explicit propgraph_property_map(Graph* pg, PropertyMapTag /*tag*/ = {}) : pg_(pg) {}
   propgraph_property_map() = default;
-  reference operator[](key_type k) const { return get(tag_, *pg_, k); }
+  reference operator[](key_type k) const { return get(PropertyMapTag{}, *pg_, k); }
 };
 
 //======== Bundle-data-member property-map ==========
@@ -94,8 +109,12 @@ class bundle_member_property_map : public put_get_helper<bundle_member_property_
  public:
   using self = bundle_member_property_map<T, Graph, PropertyMapTag>;
   static constexpr bool is_vertex_bundle_v = std::is_same_v<PropertyMapTag, vertex_bundle_t>;
+  static constexpr bool is_edge_bundle_v = std::is_same_v<PropertyMapTag, edge_bundle_t>;
   static constexpr bool is_const_graph_v = std::is_const_v<Graph>;
-  using bundle_type = std::conditional_t<is_vertex_bundle_v, vertex_bundle_type<Graph>, edge_bundle_type<Graph>>;
+  using non_const_graph = std::remove_cv_t<Graph>;
+  using bundle_type =
+      std::conditional_t<is_vertex_bundle_v, vertex_bundle_type<non_const_graph>,
+                         std::conditional_t<is_edge_bundle_v, edge_bundle_type<non_const_graph>, graph_bundle_type<non_const_graph>>>;
   using member_ptr_type = T bundle_type::*;
 
  private:
@@ -105,13 +124,19 @@ class bundle_member_property_map : public put_get_helper<bundle_member_property_
  public:
   using value_type = T;
   using reference = T&;
-  using key_type =
-      std::conditional_t<is_vertex_bundle_v, graph_vertex_descriptor_t<Graph>, graph_edge_descriptor_t<Graph>>;
+  using key_type = std::conditional_t<is_vertex_bundle_v, graph_vertex_descriptor_t<non_const_graph>,
+                                      std::conditional_t<is_edge_bundle_v, graph_edge_descriptor_t<non_const_graph>, Graph&>>;
   using category = std::conditional_t<is_const_graph_v, readable_property_map_tag, lvalue_property_map_tag>;
 
-  explicit bundle_member_property_map(Graph* aPG, member_ptr_type aMemPtr = nullptr) : pg_(aPG), mem_ptr_(aMemPtr) {}
+  bundle_member_property_map(Graph* pg, member_ptr_type mem_ptr) : pg_(pg), mem_ptr_(mem_ptr) {}
   bundle_member_property_map() = default;
-  reference operator[](key_type p) const { return (*pg_)[p].*mem_ptr_; }
+  reference operator[](key_type k) const {
+    if constexpr (is_vertex_bundle_v || is_edge_bundle_v) {
+      return (*pg_)[k].*mem_ptr_;
+    } else {
+      return k[graph_bundle].*mem_ptr_;
+    }
+  }
 };
 
 //======== Sub-object put-get helper ==========
