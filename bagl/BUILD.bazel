@@ -6,6 +6,7 @@ cc_library(
     ],
     hdrs = [
         "adjacency_list.h",
+        "adjacency_matrix.h",
         "adjacency_range.h",
         "astar_search.h",
         "bandwidth.h",
@@ -162,6 +163,7 @@ cc_library(
         "tree_traits.h",
         "two_bit_color_map.h",
         "undirected_dfs.h",
+        "undirected_graph.h",
         "vebl_d_ary_tree.h",
         "vector_as_graph.h",
         "vector_property_map.h",

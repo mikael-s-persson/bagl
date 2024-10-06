@@ -1,34 +1,35 @@
 // (C) Copyright 2007-2009 Andrew Sutton
 // Copyright 2024 Mikael Persson - Modernized to C++20
 
-#ifndef BAGL_BAGL_DIRECTED_GRAPH_H_
-#define BAGL_BAGL_DIRECTED_GRAPH_H_
+#ifndef BAGL_BAGL_UNDIRECTED_GRAPH_H_
+#define BAGL_BAGL_UNDIRECTED_GRAPH_H_
 
 #include <limits>
 #include <ranges>
 #include <type_traits>
 
 #include "bagl/adjacency_list.h"
+#include "bagl/graph_selectors.h"
 #include "bagl/properties.h"
 #include "bagl/property.h"
 #include "bagl/transform_value_property_map.h"
 
 namespace bagl {
-struct directed_graph_tag {};
+struct undirected_graph_tag {};
 
 /**
- * The directed_graph class template is a simplified version of the BGL
+ * The undirected_graph class template is a simplified version of the BGL
  * adjacency list. This class is provided for ease of use, but may not
  * perform as well as custom-defined adjacency list classes. Instances of
- * this template model the BidirectionalGraph, VertexIndexGraph, and
- * EdgeIndexGraph concepts. The graph is also fully mutable, supporting
- * both insertions and removals of vertices and edges.
+ * this template model the VertexIndexGraph, and EdgeIndexGraph concepts. The
+ * graph is also fully mutable, supporting both insertions and removals of
+ * vertices and edges.
  *
  * @note Special care must be taken when removing vertices or edges since
  * those operations can invalidate the numbering of vertices.
  */
 template <typename VertexProp = no_property, typename EdgeProp = no_property, typename GraphProp = no_property>
-class directed_graph {
+class undirected_graph {
  public:
   using graph_property_type = GraphProp;
   using vertex_property_type = VertexProp;
@@ -42,7 +43,7 @@ class directed_graph {
   using internal_edge_property = property<edge_index_t, std::size_t, edge_property_type>;
 
   using graph_type =
-      adjacency_list<list_s, list_s, bidirectional_s, internal_vertex_property, internal_edge_property, GraphProp>;
+      adjacency_list<list_s, list_s, undirected_s, internal_vertex_property, internal_edge_property, GraphProp>;
 
  private:
   // storage selectors
@@ -54,7 +55,7 @@ class directed_graph {
   // So that we can transform some args in public constructors.
   struct non_empty_graph_ctor_t {};
   template <typename... Args>
-  explicit directed_graph(non_empty_graph_ctor_t /*unused*/, Args&&... args)
+  explicit undirected_graph(non_empty_graph_ctor_t /*unused*/, Args&&... args)
       : graph_(std::forward<Args>(args)...),
         num_vertices_(num_vertices(graph_)),
         num_edges_(num_edges(graph_)),
@@ -72,7 +73,7 @@ class directed_graph {
   using edge_descriptor = typename graph_type::edge_descriptor;
 
   // miscellaneous types
-  using graph_tag = directed_graph_tag;
+  using graph_tag = undirected_graph_tag;
   using directed_category = typename graph_type::directed_category;
   using edge_parallel_category = typename graph_type::edge_parallel_category;
   using traversal_category = typename graph_type::traversal_category;
@@ -80,42 +81,42 @@ class directed_graph {
   using vertex_index_type = std::size_t;
   using edge_index_type = std::size_t;
 
-  explicit directed_graph(GraphProp const& p = GraphProp()) : graph_(p) {}
-  ~directed_graph() = default;
+  explicit undirected_graph(GraphProp const& p = GraphProp()) : graph_(p) {}
+  ~undirected_graph() = default;
 
-  directed_graph(const directed_graph& x) = default;
-  directed_graph(directed_graph&& x) noexcept = default;
-  directed_graph& operator=(const directed_graph& x) = default;
-  directed_graph& operator=(directed_graph&& x) noexcept = default;
+  undirected_graph(const undirected_graph& x) = default;
+  undirected_graph(undirected_graph&& x) noexcept = default;
+  undirected_graph& operator=(const undirected_graph& x) = default;
+  undirected_graph& operator=(undirected_graph&& x) noexcept = default;
 
   // Construct from a given number of vertices and an edge range.
   // Edges should be represented as pairs of vertex indices.
   template <std::ranges::input_range EdgeRange>
-  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> directed_graph(
+  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> undirected_graph(
       vertices_size_type num_vertices, const EdgeRange& e_range, graph_property_type graph_prop = {})
-      : directed_graph(non_empty_graph_ctor_t{}, num_vertices, e_range, std::move(graph_prop)) {}
+      : undirected_graph(non_empty_graph_ctor_t{}, num_vertices, e_range, std::move(graph_prop)) {}
 
   // Construct from a given number of vertices and an edge and edge-property range.
   // Edges should be represented as pairs of vertex indices.
   template <std::ranges::input_range EdgeRange, std::ranges::input_range EdgePropRange>
   requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> &&
       std::convertible_to<std::ranges::range_reference_t<EdgePropRange>, edge_property_type>
-      directed_graph(vertices_size_type num_vertices, const EdgeRange& e_range, const EdgePropRange& ep_range,
-                     graph_property_type graph_prop = {})
-      : directed_graph(non_empty_graph_ctor_t{}, num_vertices, e_range,
-                       ep_range | std::views::transform(top_property_value_adder<edge_index_t, std::size_t>{0}),
-                       std::move(graph_prop)) {}
+      undirected_graph(vertices_size_type num_vertices, const EdgeRange& e_range, const EdgePropRange& ep_range,
+                       graph_property_type graph_prop = {})
+      : undirected_graph(non_empty_graph_ctor_t{}, num_vertices, e_range,
+                         ep_range | std::views::transform(top_property_value_adder<edge_index_t, std::size_t>{0}),
+                         std::move(graph_prop)) {}
 
   // Construct from a given number of vertices and an edge and vertex-property range.
   // Edges should be represented as pairs of vertex indices.
   template <std::ranges::input_range VertexPropRange, std::ranges::input_range EdgeRange>
   requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> &&
       std::convertible_to<std::ranges::range_reference_t<VertexPropRange>, vertex_property_type>
-      directed_graph(vertices_size_type num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
-                     graph_property_type graph_prop = {})
-      : directed_graph(non_empty_graph_ctor_t{}, num_vertices,
-                       vp_range | std::views::transform(top_property_value_adder<vertex_index_t, std::size_t>{0}),
-                       e_range, std::move(graph_prop)) {}
+      undirected_graph(vertices_size_type num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
+                       graph_property_type graph_prop = {})
+      : undirected_graph(non_empty_graph_ctor_t{}, num_vertices,
+                         vp_range | std::views::transform(top_property_value_adder<vertex_index_t, std::size_t>{0}),
+                         e_range, std::move(graph_prop)) {}
 
   // Construct from a given number of vertices and an edge and vertex-property range.
   // Edges should be represented as pairs of vertex indices.
@@ -124,13 +125,13 @@ class directed_graph {
   requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> &&
       std::convertible_to<std::ranges::range_reference_t<VertexPropRange>, vertex_property_type> &&
       std::convertible_to<std::ranges::range_reference_t<EdgePropRange>, edge_property_type>
-      directed_graph(vertices_size_type num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
-                     const EdgePropRange& ep_range, graph_property_type graph_prop = {})
-      : directed_graph(non_empty_graph_ctor_t{}, num_vertices,
-                       vp_range | std::views::transform(top_property_value_adder<vertex_index_t, std::size_t>{0}),
-                       e_range,
-                       ep_range | std::views::transform(top_property_value_adder<edge_index_t, std::size_t>{0}),
-                       std::move(graph_prop)) {}
+      undirected_graph(vertices_size_type num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
+                       const EdgePropRange& ep_range, graph_property_type graph_prop = {})
+      : undirected_graph(non_empty_graph_ctor_t{}, num_vertices,
+                         vp_range | std::views::transform(top_property_value_adder<vertex_index_t, std::size_t>{0}),
+                         e_range,
+                         ep_range | std::views::transform(top_property_value_adder<edge_index_t, std::size_t>{0}),
+                         std::move(graph_prop)) {}
 
   // The impl_() methods are not part of the public interface.
   graph_type& impl() { return graph_; }
@@ -138,7 +139,7 @@ class directed_graph {
   graph_type const& impl() const { return graph_; }
 
   // The following methods are not part of the public interface
-  [[nodiscard]] vertices_size_type num_vertices() const { return num_vertices_; }
+  vertices_size_type num_vertices() const { return num_vertices_; }
 
  private:
   // This helper function manages the attribution of vertex indices.
@@ -195,10 +196,6 @@ class directed_graph {
     --num_edges_;
   }
 
-  void remove_edge(vertex_descriptor u, vertex_descriptor v) {
-    remove_out_edge_if(u, [this, v](edge_descriptor e) { return target(e, graph_) == v; });
-  }
-
   template <typename Predicate>
   void remove_edge_if(Predicate pred) {
     // find all edges matching predicate.
@@ -236,10 +233,14 @@ class directed_graph {
       if (pred(e)) {
         // This loop breaks of selections change.
         static_assert(std::is_same_v<vertex_list_selector, list_s> && std::is_same_v<out_edge_list_selector, list_s> &&
-                      std::is_same_v<directed_selector, bidirectional_s>);
+                      std::is_same_v<directed_selector, undirected_s>);
         remove_edge(e);
       }
     }
+  }
+
+  void remove_edge(vertex_descriptor u, vertex_descriptor v) {
+    remove_out_edge_if(u, [this, v](edge_descriptor e) { return target(e, graph_) == v; });
   }
 
   [[nodiscard]] vertex_index_type max_vertex_index() const { return max_vertex_index_; }
@@ -308,12 +309,15 @@ class directed_graph {
 
   // bundled property support
   vertex_bundled& operator[](vertex_descriptor v) { return graph_[v]; }
+
   vertex_bundled const& operator[](vertex_descriptor v) const { return graph_[v]; }
 
   edge_bundled& operator[](edge_descriptor e) { return graph_[e]; }
+
   edge_bundled const& operator[](edge_descriptor e) const { return graph_[e]; }
 
   graph_bundled& operator[](graph_bundle_t /*unused*/) { return graph_[graph_bundle]; }
+
   graph_bundled const& operator[](graph_bundle_t /*unused*/) const { return graph_[graph_bundle]; }
 
   // Getting full properties out (mostly to extract tagged properties).
@@ -339,7 +343,7 @@ class directed_graph {
     num_edges_ = max_edge_index_ = 0;
   }
 
-  void swap(directed_graph& g) {
+  void swap(undirected_graph& g) {
     graph_.swap(g.graph_);
     std::swap(num_vertices_, g.num_vertices_);
     std::swap(max_vertex_index_, g.max_vertex_index_);
@@ -373,133 +377,138 @@ class directed_graph {
   edge_index_type max_edge_index_ = 0;
 };
 
-#define BAGL_DIRECTED_GRAPH_PARAMS typename VP, typename EP, typename GP
-#define BAGL_DIRECTED_GRAPH directed_graph<VP, EP, GP>
+#define BAGL_UNDIRECTED_GRAPH_PARAMS typename VP, typename EP, typename GP
+#define BAGL_UNDIRECTED_GRAPH undirected_graph<VP, EP, GP>
 
 // IncidenceGraph concepts
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-auto source(typename BAGL_DIRECTED_GRAPH::edge_descriptor e, BAGL_DIRECTED_GRAPH const& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+auto source(typename BAGL_UNDIRECTED_GRAPH::edge_descriptor e, BAGL_UNDIRECTED_GRAPH const& g) {
   return source(e, g.impl());
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-auto target(typename BAGL_DIRECTED_GRAPH::edge_descriptor e, BAGL_DIRECTED_GRAPH const& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+auto target(typename BAGL_UNDIRECTED_GRAPH::edge_descriptor e, BAGL_UNDIRECTED_GRAPH const& g) {
   return target(e, g.impl());
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-auto out_degree(typename BAGL_DIRECTED_GRAPH::vertex_descriptor v, BAGL_DIRECTED_GRAPH const& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+auto out_degree(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v, BAGL_UNDIRECTED_GRAPH const& g) {
   return out_degree(v, g.impl());
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-auto out_edges(typename BAGL_DIRECTED_GRAPH::vertex_descriptor v, BAGL_DIRECTED_GRAPH const& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+auto out_edges(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v, BAGL_UNDIRECTED_GRAPH const& g) {
   return out_edges(v, g.impl());
 }
 
 // BidirectionalGraph concepts
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-auto in_degree(typename BAGL_DIRECTED_GRAPH::vertex_descriptor v, BAGL_DIRECTED_GRAPH const& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+auto in_degree(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v, BAGL_UNDIRECTED_GRAPH const& g) {
   return in_degree(v, g.impl());
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-auto in_edges(typename BAGL_DIRECTED_GRAPH::vertex_descriptor v, BAGL_DIRECTED_GRAPH const& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+auto in_edges(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v, BAGL_UNDIRECTED_GRAPH const& g) {
   return in_edges(v, g.impl());
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-auto degree(typename BAGL_DIRECTED_GRAPH::vertex_descriptor v, BAGL_DIRECTED_GRAPH const& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+auto incident_edges(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v, BAGL_UNDIRECTED_GRAPH const& g) {
+  return out_edges(v, g.impl());
+}
+
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+auto degree(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v, BAGL_UNDIRECTED_GRAPH const& g) {
   return degree(v, g.impl());
 }
 
 // AdjacencyGraph concepts
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-auto adjacent_vertices(typename BAGL_DIRECTED_GRAPH::vertex_descriptor v, BAGL_DIRECTED_GRAPH const& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+auto adjacent_vertices(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v, BAGL_UNDIRECTED_GRAPH const& g) {
   return adjacent_vertices(v, g.impl());
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-auto vertex(typename BAGL_DIRECTED_GRAPH::vertices_size_type n, BAGL_DIRECTED_GRAPH const& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+auto vertex(typename BAGL_UNDIRECTED_GRAPH::vertices_size_type n, BAGL_UNDIRECTED_GRAPH const& g) {
   return vertex(n, g.impl());
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-auto edge(typename BAGL_DIRECTED_GRAPH::vertex_descriptor u, typename BAGL_DIRECTED_GRAPH::vertex_descriptor v,
-          BAGL_DIRECTED_GRAPH const& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+auto edge(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor u, typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v,
+          BAGL_UNDIRECTED_GRAPH const& g) {
   return edge(u, v, g.impl());
 }
 
 // VertexListGraph concepts
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-auto num_vertices(BAGL_DIRECTED_GRAPH const& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+auto num_vertices(BAGL_UNDIRECTED_GRAPH const& g) {
   return g.num_vertices();
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-auto vertices(BAGL_DIRECTED_GRAPH const& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+auto vertices(BAGL_UNDIRECTED_GRAPH const& g) {
   return vertices(g.impl());
 }
 
 // EdgeListGraph concepts
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-auto num_edges(BAGL_DIRECTED_GRAPH const& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+auto num_edges(BAGL_UNDIRECTED_GRAPH const& g) {
   return g.num_edges();
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-auto edges(BAGL_DIRECTED_GRAPH const& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+auto edges(BAGL_UNDIRECTED_GRAPH const& g) {
   return edges(g.impl());
 }
 
 // MutableGraph concepts
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-auto add_vertex(BAGL_DIRECTED_GRAPH& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+auto add_vertex(BAGL_UNDIRECTED_GRAPH& g) {
   return g.add_vertex();
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS, typename VProp>
-auto add_vertex(VProp&& p, BAGL_DIRECTED_GRAPH& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename VProp>
+auto add_vertex(VProp&& p, BAGL_UNDIRECTED_GRAPH& g) {
   return g.add_vertex(std::forward<VProp>(p));
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-void clear_vertex(typename BAGL_DIRECTED_GRAPH::vertex_descriptor v, BAGL_DIRECTED_GRAPH& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+void clear_vertex(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v, BAGL_UNDIRECTED_GRAPH& g) {
   return g.clear_vertex(v);
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-void remove_vertex(typename BAGL_DIRECTED_GRAPH::vertex_descriptor v, BAGL_DIRECTED_GRAPH& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+void remove_vertex(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v, BAGL_UNDIRECTED_GRAPH& g) {
   return g.remove_vertex(v);
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS, typename VProp>
-void remove_vertex(typename BAGL_DIRECTED_GRAPH::vertex_descriptor v, VProp& vp, BAGL_DIRECTED_GRAPH& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename VProp>
+void remove_vertex(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v, VProp& vp, BAGL_UNDIRECTED_GRAPH& g) {
   vp = std::move(g.get_property(v));
   g.remove_vertex(v);
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-auto add_edge(typename BAGL_DIRECTED_GRAPH::vertex_descriptor u, typename BAGL_DIRECTED_GRAPH::vertex_descriptor v,
-              BAGL_DIRECTED_GRAPH& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+auto add_edge(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor u, typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v,
+              BAGL_UNDIRECTED_GRAPH& g) {
   return g.add_edge(u, v);
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS, typename EProp>
-auto add_edge(typename BAGL_DIRECTED_GRAPH::vertex_descriptor u, typename BAGL_DIRECTED_GRAPH::vertex_descriptor v, EProp&& p,
-              BAGL_DIRECTED_GRAPH& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename EProp>
+auto add_edge(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor u, typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v, EProp&& p,
+              BAGL_UNDIRECTED_GRAPH& g) {
   return g.add_edge(u, v, std::forward<EProp>(p));
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-void remove_edge(typename BAGL_DIRECTED_GRAPH::vertex_descriptor u, typename BAGL_DIRECTED_GRAPH::vertex_descriptor v,
-                 BAGL_DIRECTED_GRAPH& g) {
-  return g.remove_edge(u, v);
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+void remove_edge(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor u, typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v,
+                 BAGL_UNDIRECTED_GRAPH& g) {
+  g.remove_edge(u, v);
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS, typename EProp>
-void remove_edge(typename BAGL_DIRECTED_GRAPH::vertex_descriptor u, typename BAGL_DIRECTED_GRAPH::vertex_descriptor v, EProp& ep,
-                 BAGL_DIRECTED_GRAPH& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename EProp>
+void remove_edge(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor u, typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v,
+                 EProp& ep, BAGL_UNDIRECTED_GRAPH& g) {
   auto [e, e_found] = edge(u, v, g);
   if (e_found) {
     // We can only get property of first edge found.
@@ -509,199 +518,206 @@ void remove_edge(typename BAGL_DIRECTED_GRAPH::vertex_descriptor u, typename BAG
   }
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-void remove_edge(typename BAGL_DIRECTED_GRAPH::edge_descriptor e, BAGL_DIRECTED_GRAPH& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+void remove_edge(typename BAGL_UNDIRECTED_GRAPH::edge_descriptor e, BAGL_UNDIRECTED_GRAPH& g) {
   return g.remove_edge(e);
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS, typename EProp>
-void remove_edge(typename BAGL_DIRECTED_GRAPH::edge_descriptor e, EProp& ep, BAGL_DIRECTED_GRAPH& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename EProp>
+void remove_edge(typename BAGL_UNDIRECTED_GRAPH::edge_descriptor e, EProp& ep, BAGL_UNDIRECTED_GRAPH& g) {
   ep = std::move(g.get_property(e));
   g.remove_edge(e);
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS, class Predicate>
-void remove_edge_if(Predicate pred, BAGL_DIRECTED_GRAPH& g) {
-  return g.remove_edge_if(pred);
+template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename Predicate>
+void remove_edge_if(Predicate pred, BAGL_UNDIRECTED_GRAPH& g) {
+  g.remove_edge_if(pred);
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS, class Predicate>
-void remove_out_edge_if(typename BAGL_DIRECTED_GRAPH::vertex_descriptor v, Predicate pred, BAGL_DIRECTED_GRAPH& g) {
-  return g.remove_out_edge_if(v, pred);
+template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename Predicate>
+void remove_incident_edge_if(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v, Predicate pred, BAGL_UNDIRECTED_GRAPH& g) {
+  g.remove_out_edge_if(v, pred);
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS, class Predicate>
-void remove_in_edge_if(typename BAGL_DIRECTED_GRAPH::vertex_descriptor v, Predicate pred, BAGL_DIRECTED_GRAPH& g) {
-  return g.remove_in_edge_if(v, pred);
+template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename Predicate>
+void remove_out_edge_if(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v, Predicate pred, BAGL_UNDIRECTED_GRAPH& g) {
+  g.remove_out_edge_if(v, pred);
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS, typename Property>
-struct property_map<BAGL_DIRECTED_GRAPH, Property> : property_map<typename BAGL_DIRECTED_GRAPH::graph_type, Property> {};
+template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename Predicate>
+void remove_in_edge_if(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v, Predicate pred, BAGL_UNDIRECTED_GRAPH& g) {
+  g.remove_in_edge_if(v, pred);
+}
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-struct property_map<BAGL_DIRECTED_GRAPH, vertex_all_t> {
-  using const_type =
+template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename Property>
+struct property_map<BAGL_UNDIRECTED_GRAPH, Property> : property_map<typename BAGL_UNDIRECTED_GRAPH::graph_type, Property> {};
+
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+struct property_map<BAGL_UNDIRECTED_GRAPH, vertex_all_t> {
+  using const_type = transform_value_property_map<
+      top_property_remover, property_map_const_t<typename undirected_graph<VP, EP, GP>::graph_type, vertex_all_t>>;
+  using type =
       transform_value_property_map<top_property_remover,
-                                   property_map_const_t<typename BAGL_DIRECTED_GRAPH::graph_type, vertex_all_t>>;
-  using type = transform_value_property_map<top_property_remover,
-                                            property_map_t<typename BAGL_DIRECTED_GRAPH::graph_type, vertex_all_t>>;
+                                   property_map_t<typename undirected_graph<VP, EP, GP>::graph_type, vertex_all_t>>;
 };
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-struct property_map<BAGL_DIRECTED_GRAPH, edge_all_t> {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+struct property_map<BAGL_UNDIRECTED_GRAPH, edge_all_t> {
   using const_type =
       transform_value_property_map<top_property_remover,
-                                   property_map_const_t<typename BAGL_DIRECTED_GRAPH::graph_type, edge_all_t>>;
-  using type = transform_value_property_map<top_property_remover,
-                                            property_map_t<typename BAGL_DIRECTED_GRAPH::graph_type, edge_all_t>>;
+                                   property_map_const_t<typename undirected_graph<VP, EP, GP>::graph_type, edge_all_t>>;
+  using type =
+      transform_value_property_map<top_property_remover,
+                                   property_map_t<typename undirected_graph<VP, EP, GP>::graph_type, edge_all_t>>;
 };
 
 // PropertyGraph concepts
-template <BAGL_DIRECTED_GRAPH_PARAMS, typename Property>
-auto get(Property p, BAGL_DIRECTED_GRAPH& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename Property>
+auto get(Property p, BAGL_UNDIRECTED_GRAPH& g) {
   return get(p, g.impl());
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS, typename Property>
-auto get(Property p, BAGL_DIRECTED_GRAPH const& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename Property>
+auto get(Property p, BAGL_UNDIRECTED_GRAPH const& g) {
   return get(p, g.impl());
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-auto get(vertex_all_t /*unused*/, BAGL_DIRECTED_GRAPH& g) {
-  return property_map_t<BAGL_DIRECTED_GRAPH, vertex_all_t>(top_property_remover{}, get(vertex_all, g.impl()));
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+auto get(vertex_all_t /*unused*/, BAGL_UNDIRECTED_GRAPH& g) {
+  return property_map_t<BAGL_UNDIRECTED_GRAPH, vertex_all_t>(top_property_remover{}, get(vertex_all, g.impl()));
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-auto get(vertex_all_t /*unused*/, BAGL_DIRECTED_GRAPH const& g) {
-  return property_map_const_t<BAGL_DIRECTED_GRAPH, vertex_all_t>(top_property_remover{}, get(vertex_all, g.impl()));
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+auto get(vertex_all_t /*unused*/, BAGL_UNDIRECTED_GRAPH const& g) {
+  return property_map_const_t<BAGL_UNDIRECTED_GRAPH, vertex_all_t>(top_property_remover{}, get(vertex_all, g.impl()));
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-auto get(edge_all_t /*unused*/, BAGL_DIRECTED_GRAPH& g) {
-  return property_map_t<BAGL_DIRECTED_GRAPH, edge_all_t>(top_property_remover{}, get(edge_all, g.impl()));
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+auto get(edge_all_t /*unused*/, BAGL_UNDIRECTED_GRAPH& g) {
+  return property_map_t<BAGL_UNDIRECTED_GRAPH, edge_all_t>(top_property_remover{}, get(edge_all, g.impl()));
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-auto get(edge_all_t /*unused*/, BAGL_DIRECTED_GRAPH const& g) {
-  return property_map_const_t<BAGL_DIRECTED_GRAPH, edge_all_t>(top_property_remover{}, get(edge_all, g.impl()));
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+auto get(edge_all_t /*unused*/, BAGL_UNDIRECTED_GRAPH const& g) {
+  return property_map_const_t<BAGL_UNDIRECTED_GRAPH, edge_all_t>(top_property_remover{}, get(edge_all, g.impl()));
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS, typename Property, typename Key>
-decltype(auto) get(Property p, BAGL_DIRECTED_GRAPH const& g, Key const& k) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename Property, typename Key>
+decltype(auto) get(Property p, BAGL_UNDIRECTED_GRAPH const& g, Key const& k) {
   return get(p, g.impl(), k);
 }
-template <BAGL_DIRECTED_GRAPH_PARAMS, typename Property, typename Key>
-decltype(auto) get(Property p, BAGL_DIRECTED_GRAPH& g, Key const& k) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename Property, typename Key>
+decltype(auto) get(Property p, BAGL_UNDIRECTED_GRAPH& g, Key const& k) {
   return get(p, g.impl(), k);
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS, typename Key>
-decltype(auto) get(vertex_all_t /*unused*/, BAGL_DIRECTED_GRAPH const& g, Key const& k) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename Key>
+decltype(auto) get(vertex_all_t /*unused*/, BAGL_UNDIRECTED_GRAPH const& g, Key const& k) {
   return remove_top_property(get(vertex_all, g.impl(), k));
 }
-template <BAGL_DIRECTED_GRAPH_PARAMS, typename Key>
-decltype(auto) get(vertex_all_t /*unused*/, BAGL_DIRECTED_GRAPH& g, Key const& k) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename Key>
+decltype(auto) get(vertex_all_t /*unused*/, BAGL_UNDIRECTED_GRAPH& g, Key const& k) {
   return remove_top_property(get(vertex_all, g.impl(), k));
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS, typename Key>
-decltype(auto) get(edge_all_t /*unused*/, BAGL_DIRECTED_GRAPH const& g, Key const& k) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename Key>
+decltype(auto) get(edge_all_t /*unused*/, BAGL_UNDIRECTED_GRAPH const& g, Key const& k) {
   return remove_top_property(get(edge_all, g.impl(), k));
 }
-template <BAGL_DIRECTED_GRAPH_PARAMS, typename Key>
-decltype(auto) get(edge_all_t /*unused*/, BAGL_DIRECTED_GRAPH& g, Key const& k) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename Key>
+decltype(auto) get(edge_all_t /*unused*/, BAGL_UNDIRECTED_GRAPH& g, Key const& k) {
   return remove_top_property(get(edge_all, g.impl(), k));
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS, typename Property, typename Key, typename Value>
-void put(Property p, BAGL_DIRECTED_GRAPH& g, Key const& k, Value&& v) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename Property, typename Key, typename Value>
+void put(Property p, BAGL_UNDIRECTED_GRAPH& g, Key const& k, Value&& v) {
   put(p, g.impl(), k, std::forward<Value>(v));
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS, typename Key, typename Value>
-void put(vertex_all_t /*unused*/, BAGL_DIRECTED_GRAPH& g, Key const& k, Value&& v) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename Key, typename Value>
+void put(vertex_all_t /*unused*/, BAGL_UNDIRECTED_GRAPH& g, Key const& k, Value&& v) {
   put(vertex_all, g.impl(), k, add_top_property(vertex_index, get(vertex_index, g.impl(), k), std::forward<Value>(v)));
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS, typename Key, typename Value>
-void put(edge_all_t /*unused*/, BAGL_DIRECTED_GRAPH& g, Key const& k, Value&& v) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename Key, typename Value>
+void put(edge_all_t /*unused*/, BAGL_UNDIRECTED_GRAPH& g, Key const& k, Value&& v) {
   put(edge_all, g.impl(), k, add_top_property(edge_index, get(edge_index, g.impl(), k), std::forward<Value>(v)));
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS, class Property>
-auto& get_property(BAGL_DIRECTED_GRAPH& g, Property p) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS, class Property>
+auto& get_property(BAGL_UNDIRECTED_GRAPH& g, Property p) {
   return get_property(g.impl(), p);
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS, class Property>
-auto const& get_property(BAGL_DIRECTED_GRAPH const& g, Property p) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS, class Property>
+auto const& get_property(BAGL_UNDIRECTED_GRAPH const& g, Property p) {
   return get_property(g.impl(), p);
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS, class Property, class Value>
-void set_property(BAGL_DIRECTED_GRAPH& g, Property p, Value&& v) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS, class Property, class Value>
+void set_property(BAGL_UNDIRECTED_GRAPH& g, Property p, Value&& v) {
   return set_property(g.impl(), p, std::forward<Value>(v));
 }
 
-// Vertex index management
+// Indexed Vertex graph
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-auto get_vertex_index(typename BAGL_DIRECTED_GRAPH::vertex_descriptor v, BAGL_DIRECTED_GRAPH const& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+auto get_vertex_index(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v, BAGL_UNDIRECTED_GRAPH const& g) {
   return get(vertex_index, g, v);
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-auto max_vertex_index(BAGL_DIRECTED_GRAPH const& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+auto max_vertex_index(BAGL_UNDIRECTED_GRAPH const& g) {
   return g.max_vertex_index();
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-void renumber_vertex_indices(BAGL_DIRECTED_GRAPH& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+void renumber_vertex_indices(BAGL_UNDIRECTED_GRAPH& g) {
   g.renumber_vertex_indices();
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-void remove_vertex_and_renumber_indices(typename BAGL_DIRECTED_GRAPH::vertex_descriptor v, BAGL_DIRECTED_GRAPH& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+void remove_vertex_and_renumber_indices(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v, BAGL_UNDIRECTED_GRAPH& g) {
   g.remove_vertex_and_renumber_indices(v);
 }
 
 // Edge index management
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-auto get_edge_index(typename BAGL_DIRECTED_GRAPH::edge_descriptor v, BAGL_DIRECTED_GRAPH const& g) {
+
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+auto get_edge_index(typename BAGL_UNDIRECTED_GRAPH::edge_descriptor v, BAGL_UNDIRECTED_GRAPH const& g) {
   return get(edge_index, g, v);
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-auto max_edge_index(BAGL_DIRECTED_GRAPH const& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+auto max_edge_index(BAGL_UNDIRECTED_GRAPH const& g) {
   return g.max_edge_index();
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-void renumber_edge_indices(BAGL_DIRECTED_GRAPH& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+void renumber_edge_indices(BAGL_UNDIRECTED_GRAPH& g) {
   g.renumber_edge_indices();
 }
 
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-void remove_edge_and_renumber_indices(typename BAGL_DIRECTED_GRAPH::edge_descriptor e, BAGL_DIRECTED_GRAPH& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+void remove_edge_and_renumber_indices(typename BAGL_UNDIRECTED_GRAPH::edge_descriptor e, BAGL_UNDIRECTED_GRAPH& g) {
   g.remove_edge_and_renumber_indices(e);
 }
 
 // Index management
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-void renumber_indices(BAGL_DIRECTED_GRAPH& g) {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+void renumber_indices(BAGL_UNDIRECTED_GRAPH& g) {
   g.renumber_indices();
 }
 
 // Mutability Traits
-template <BAGL_DIRECTED_GRAPH_PARAMS>
-struct graph_mutability_traits<BAGL_DIRECTED_GRAPH> {
+template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+struct graph_mutability_traits<BAGL_UNDIRECTED_GRAPH> {
   using category = mutable_property_graph_tag;
 };
 
-#undef BAGL_DIRECTED_GRAPH_PARAMS
-#undef BAGL_DIRECTED_GRAPH
+#undef BAGL_UNDIRECTED_GRAPH_PARAMS
+#undef BAGL_UNDIRECTED_GRAPH
 
 }  // namespace bagl
 
-#endif  // BAGL_BAGL_DIRECTED_GRAPH_H_
+#endif  // BAGL_BAGL_UNDIRECTED_GRAPH_H_

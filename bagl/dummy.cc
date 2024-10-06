@@ -1,5 +1,6 @@
 
 #include "bagl/adjacency_list.h"
+#include "bagl/adjacency_matrix.h"
 #include "bagl/adjacency_range.h"
 #include "bagl/astar_search.h"
 #include "bagl/bandwidth.h"
@@ -147,6 +148,7 @@
 #include "bagl/tree_traits.h"
 #include "bagl/two_bit_color_map.h"
 #include "bagl/undirected_dfs.h"
+#include "bagl/undirected_graph.h"
 #include "bagl/vebl_d_ary_tree.h"
 #include "bagl/vector_as_graph.h"
 #include "bagl/vector_property_map.h"

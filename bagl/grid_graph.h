@@ -42,7 +42,7 @@ class grid_graph {
     vertex_descriptor source;
     vertex_descriptor target;
 
-    auto operator<=>(const edge_descriptor& rhs) {
+    auto operator<=>(const edge_descriptor& rhs) const {
       return std::pair{source, target} <=> std::pair{rhs.source, rhs.target};
     }
   };
