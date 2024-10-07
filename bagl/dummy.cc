@@ -53,6 +53,7 @@
 #include "bagl/detail/vebl_tree_ranges.h"
 #include "bagl/dijkstra_shortest_paths.h"
 #include "bagl/dijkstra_shortest_paths_no_color_map.h"
+#include "bagl/dimacs.h"
 #include "bagl/directed_graph.h"
 #include "bagl/disjoint_sets.h"
 #include "bagl/dominator_tree.h"

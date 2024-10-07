@@ -13,6 +13,7 @@
 #include <exception>
 #include <iostream>
 #include <iterator>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -38,26 +39,13 @@ class metis_reader {
     using pointer = const value_type*;
     using difference_type = std::ptrdiff_t;
 
-   private:
-    class postincrement_proxy {
-     public:
-      explicit postincrement_proxy(value_type value) : value_(std::move(value)) {}
-
-      [[nodiscard]] reference operator*() const { return value_; }
-      [[nodiscard]] pointer operator->() const { return &value_; }
-
-     private:
-      value_type value_;
-    };
-
-   public:
     edge_iterator& operator++() {
       advance(false);
       return *this;
     }
 
-    postincrement_proxy operator++(int) {
-      postincrement_proxy result(**this);
+    std::optional<value_type> operator++(int) {
+      std::optional<value_type> result = **this;
       ++(*this);
       return result;
     }
