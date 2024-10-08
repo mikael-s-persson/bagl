@@ -1,6 +1,7 @@
 // Copyright 2005 The Trustees of Indiana University.
 //  Authors: Alex Breuer
 //           Andrew Lumsdaine
+// Copyright 2024 Mikael Persson - Modernized to C++20
 
 #ifndef BAGL_BAGL_DIMACS_H_
 #define BAGL_BAGL_DIMACS_H_

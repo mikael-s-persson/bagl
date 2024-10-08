@@ -133,6 +133,7 @@
 #include "bagl/random_layout.h"
 #include "bagl/random_spanning_tree.h"
 #include "bagl/r_c_shortest_paths.h"
+#include "bagl/read_dimacs.h"
 #include "bagl/relax.h"
 #include "bagl/reverse_graph.h"
 #include "bagl/rmat_graph_generator.h"
@@ -166,6 +167,7 @@
 #include "bagl/vertex_and_edge_range.h"
 #include "bagl/visitors.h"
 #include "bagl/wavefront.h"
+#include "bagl/write_dimacs.h"
 #include "bagl/zip_range.h"
 
 int dummy() {
