@@ -116,6 +116,8 @@ cc_library(
         "make_maximal_planar.h",
         "matrix_property_map.h",
         "maximum_adjacency_search.h",
+        "maximum_weighted_matching.h",
+        "max_cardinality_matching.h",
         "mesh_graph_generator.h",
         "metis.h",
         "minimum_degree_ordering.h",
