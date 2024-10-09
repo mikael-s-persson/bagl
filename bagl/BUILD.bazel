@@ -118,6 +118,7 @@ cc_library(
         "maximum_adjacency_search.h",
         "maximum_weighted_matching.h",
         "max_cardinality_matching.h",
+        "mcgregor_common_subgraphs.h",
         "mesh_graph_generator.h",
         "metis.h",
         "minimum_degree_ordering.h",

@@ -109,6 +109,7 @@
 #include "bagl/maximum_adjacency_search.h"
 #include "bagl/maximum_weighted_matching.h"
 #include "bagl/max_cardinality_matching.h"
+#include "bagl/mcgregor_common_subgraphs.h"
 #include "bagl/mesh_graph_generator.h"
 #include "bagl/metis.h"
 #include "bagl/minimum_degree_ordering.h"
