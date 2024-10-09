@@ -171,6 +171,7 @@
 #include "bagl/vector_as_graph.h"
 #include "bagl/vector_property_map.h"
 #include "bagl/vertex_and_edge_range.h"
+#include "bagl/vf2_sub_graph_iso.h"
 #include "bagl/visitors.h"
 #include "bagl/wavefront.h"
 #include "bagl/write_dimacs.h"
