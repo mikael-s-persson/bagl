@@ -179,6 +179,7 @@ cc_library(
         "tree_concepts.h",
         "tree_traits.h",
         "two_bit_color_map.h",
+        "two_graphs_common_spanning_trees.h",
         "undirected_dfs.h",
         "undirected_graph.h",
         "vebl_d_ary_tree.h",

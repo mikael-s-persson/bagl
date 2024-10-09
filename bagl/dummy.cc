@@ -164,6 +164,7 @@
 #include "bagl/tree_concepts.h"
 #include "bagl/tree_traits.h"
 #include "bagl/two_bit_color_map.h"
+#include "bagl/two_graphs_common_spanning_trees.h"
 #include "bagl/undirected_dfs.h"
 #include "bagl/undirected_graph.h"
 #include "bagl/vebl_d_ary_tree.h"
