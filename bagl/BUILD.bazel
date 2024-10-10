@@ -3,11 +3,13 @@ cc_library(
     name = "bagl",
     srcs = [
         "dummy.cc",
+        "graphml.cc",
     ],
     hdrs = [
         "adjacency_list.h",
         "adjacency_matrix.h",
         "adjacency_range.h",
+        "any_iterator.h",
         "astar_search.h",
         "bandwidth.h",
         "bc_clustering.h",
@@ -66,6 +68,7 @@ cc_library(
         "directed_graph.h",
         "disjoint_sets.h",
         "dominator_tree.h",
+        "dynamic_graph.h",
         "dynamic_property_map.h",
         "edges_from_out_edges.h",
         "edmonds_karp_max_flow.h",

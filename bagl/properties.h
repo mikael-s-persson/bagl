@@ -226,6 +226,33 @@ class property_map_value {
   using type = property_traits_value_t<PMap>;
 };
 
+namespace properties_detail {
+
+template <typename Graph, typename Tag, typename Kind, typename Enable = void>
+struct has_property_map_check {
+  static constexpr bool value = false;
+};
+
+template <typename Graph, typename Tag>
+struct has_property_map_check<Graph, Tag, graph_property_tag, std::void_t<decltype(get_property(std::declval<const Graph&>(), Tag{}))>> {
+  static constexpr bool value = true;
+};
+
+template <typename Graph, typename Tag>
+struct has_property_map_check<Graph, Tag, vertex_property_tag, std::void_t<decltype(get(Tag{}, std::declval<const Graph&>()))>> {
+  static constexpr bool value = concepts::ReadableVertexPropertyMap<decltype(get(Tag{}, std::declval<const Graph&>())), Graph>;
+};
+
+template <typename Graph, typename Tag>
+struct has_property_map_check<Graph, Tag, edge_property_tag, std::void_t<decltype(get(Tag{}, std::declval<const Graph&>()))>> {
+  static constexpr bool value = concepts::ReadableEdgePropertyMap<decltype(get(Tag{}, std::declval<const Graph&>())), Graph>;
+};
+
+}  // namespace properties_detail
+
+template <typename Graph, typename Tag>
+constexpr bool has_property_map_v = properties_detail::has_property_map_check<Graph, Tag, property_kind_t<Tag>>::value;
+
 template <typename Graph, typename Property>
 using graph_property = typename property_value<graph_property_type<Graph>, Property>::type;
 

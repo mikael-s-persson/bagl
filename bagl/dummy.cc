@@ -57,6 +57,7 @@
 #include "bagl/directed_graph.h"
 #include "bagl/disjoint_sets.h"
 #include "bagl/dominator_tree.h"
+#include "bagl/dynamic_graph.h"
 #include "bagl/dynamic_property_map.h"
 #include "bagl/edges_from_out_edges.h"
 #include "bagl/edmonds_karp_max_flow.h"

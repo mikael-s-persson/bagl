@@ -139,13 +139,32 @@ class dynamic_property_map_adaptor : public dynamic_property_map {
  public:
   explicit dynamic_property_map_adaptor(PropertyMap property_map) : property_map_(std::move(property_map)) {}
 
-  [[nodiscard]] std::any get(const std::any& key_) override {
-    return get(property_map_, std::any_cast<property_traits_key_t<PropertyMap>>(key_));
+  [[nodiscard]] auto get_value(const std::any& in_key) {
+    if constexpr (std::is_pointer_v<property_traits_key_t<PropertyMap>>) {
+      // Handle both const T* and T*.
+      using non_const_key = std::remove_cv_t<std::remove_pointer_t<property_traits_key_t<PropertyMap>>>;
+      using ptr_to_const_key = std::add_pointer_t<std::add_const_t<non_const_key>>;
+      using ptr_to_non_const_key = std::add_pointer_t<non_const_key>;
+      if (in_key.type() == typeid(ptr_to_const_key)) {
+        return get(property_map_, std::any_cast<ptr_to_const_key>(in_key));
+      }
+      if (in_key.type() == typeid(ptr_to_non_const_key)) {
+        return get(property_map_, std::any_cast<ptr_to_non_const_key>(in_key));
+      }
+      // Probably will throw a bad_any_cast exception.
+      return get(property_map_, std::any_cast<property_traits_key_t<PropertyMap>>(in_key));
+    } else {
+      return get(property_map_, std::any_cast<property_traits_key_t<PropertyMap>>(in_key));
+    }
   }
 
-  [[nodiscard]] std::string get_string(const std::any& key_) override {
+  [[nodiscard]] std::any get(const std::any& in_key) override {
+    return get_value(in_key);
+  }
+
+  [[nodiscard]] std::string get_string(const std::any& in_key) override {
     std::ostringstream out;
-    out << get(property_map_, std::any_cast<property_traits_key_t<PropertyMap>>(key_));
+    out << get_value(in_key);
     return out.str();
   }
 
