@@ -3,7 +3,6 @@ cc_library(
     name = "bagl",
     srcs = [
         "dummy.cc",
-        "graphml.cc",
     ],
     hdrs = [
         "adjacency_list.h",
@@ -94,7 +93,6 @@ cc_library(
         "graph_stats.h",
         "graph_traits.h",
         "graph_utility.h",
-        "graphml.h",
         "grid_graph.h",
         "gursoy_atun_layout.h",
         "has_trait_member.h",
@@ -196,4 +194,19 @@ cc_library(
         "zip_range.h",
     ],
     visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "graphml",
+    srcs = [
+        "graphml.cc",
+    ],
+    hdrs = [
+        "graphml.h",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":bagl",
+        "@tinyxml2",
+    ],
 )

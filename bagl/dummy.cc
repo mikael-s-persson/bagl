@@ -83,7 +83,6 @@
 #include "bagl/graph_stats.h"
 #include "bagl/graph_traits.h"
 #include "bagl/graph_utility.h"
-#include "bagl/graphml.h"
 #include "bagl/grid_graph.h"
 #include "bagl/gursoy_atun_layout.h"
 #include "bagl/has_trait_member.h"

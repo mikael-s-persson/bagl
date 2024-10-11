@@ -31,10 +31,12 @@ struct parse_error : public graph_exception {
   std::string statement;
 };
 
-void read_graphml(std::istream& in, dynamic_graph_mutator& g, std::size_t desired_idx);
+constexpr std::size_t all_graphs_desired = std::numeric_limits<std::size_t>::max();
+
+void read_graphml(std::istream& in, dynamic_graph_mutator& g, std::size_t desired_idx = all_graphs_desired);
 
 template <concepts::MutableGraph Graph>
-void read_graphml(std::istream& in, Graph& g, dynamic_properties& dp, std::size_t desired_idx = 0) {
+void read_graphml(std::istream& in, Graph& g, dynamic_properties& dp, std::size_t desired_idx = all_graphs_desired) {
   dynamic_graph_mutator_wrapper<Graph> mg(g, dp);
   read_graphml(in, mg, desired_idx);
 }
