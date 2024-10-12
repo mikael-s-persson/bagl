@@ -210,3 +210,17 @@ cc_library(
         "@tinyxml2",
     ],
 )
+
+cc_library(
+    name = "graphviz",
+    srcs = [
+        "graphviz.cc",
+    ],
+    hdrs = [
+        "graphviz.h",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":bagl",
+    ],
+)

@@ -200,8 +200,10 @@ class subgraph {
 
   // Return the root graph of the subgraph tree.
   [[nodiscard]] subgraph& root() { return is_root() ? *this : m_parent->root(); }
+  [[nodiscard]] Graph& underlying() { return m_graph; }
 
   [[nodiscard]] const subgraph& root() const { return is_root() ? *this : m_parent->root(); }
+  [[nodiscard]] const Graph& underlying() const { return m_graph; }
 
   // Return the children subgraphs of this graph/subgraph.
   [[nodiscard]] auto children() const {
@@ -215,7 +217,7 @@ class subgraph {
 
   [[nodiscard]] std::size_t num_children() const { return m_children.size(); }
 
-  // Defualt property access delegates the lookup to global properties.
+  // Default property access delegates the lookup to global properties.
   template <typename Descriptor>
   [[nodiscard]] auto& operator[](Descriptor x) {
     return is_root() ? m_graph[x] : root().m_graph[local_to_global(x)];

@@ -83,6 +83,7 @@ struct numeric_values<default_color_type> {
 #define BAGL_DEF_PROPERTY(KIND, NAME) \
   struct KIND##_##NAME##_t {          \
     using kind = KIND##_property_tag; \
+    static constexpr std::string_view name = #KIND "_" #NAME; \
   };                                  \
   constexpr KIND##_##NAME##_t KIND##_##NAME = {};
 

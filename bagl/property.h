@@ -118,19 +118,37 @@ using property_kind_t = typename property_kind<PropertyTag>::type;
 
 
 // Some standard properties defined independently:
-struct vertex_all_t { using kind = vertex_property_tag; };
+struct vertex_all_t {
+  using kind = vertex_property_tag;
+  static constexpr std::string_view name = "vertex_all";
+};
 constexpr vertex_all_t vertex_all = {};
-struct edge_all_t { using kind = edge_property_tag; };
+struct edge_all_t {
+  using kind = edge_property_tag;
+  static constexpr std::string_view name = "edge_all";
+};
 constexpr edge_all_t edge_all = {};
-struct graph_all_t { using kind = graph_property_tag; };
+struct graph_all_t {
+  using kind = graph_property_tag;
+  static constexpr std::string_view name = "graph_all";
+};
 constexpr graph_all_t graph_all = {};
 
 // These tags are used for property bundles
-struct vertex_bundle_t { using kind = vertex_property_tag; };
+struct vertex_bundle_t {
+  using kind = vertex_property_tag;
+  static constexpr std::string_view name = "vertex_bundle";
+};
 constexpr vertex_bundle_t vertex_bundle = {};
-struct edge_bundle_t { using kind = edge_property_tag; };
+struct edge_bundle_t {
+  using kind = edge_property_tag;
+  static constexpr std::string_view name = "edge_bundle";
+};
 constexpr edge_bundle_t edge_bundle = {};
-struct graph_bundle_t { using kind = graph_property_tag; };
+struct graph_bundle_t {
+  using kind = graph_property_tag;
+  static constexpr std::string_view name = "graph_bundle";
+};
 constexpr graph_bundle_t graph_bundle = {};
 
 // Code to look up one property in a property list:

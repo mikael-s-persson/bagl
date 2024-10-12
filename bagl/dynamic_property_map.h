@@ -64,7 +64,9 @@ class dynamic_property_map {  // NOLINT
   virtual void put(const std::any& key, const std::any& value) = 0;
   virtual void put(const std::any& key, const std::string& value) = 0;
   [[nodiscard]] virtual const std::type_info& key() const = 0;
+  [[nodiscard]] virtual bool is_key_of_type(const std::type_info& info) const = 0;
   [[nodiscard]] virtual const std::type_info& value() const = 0;
+  [[nodiscard]] virtual bool is_value_of_type(const std::type_info& info) const = 0;
 };
 
 // Property map exceptions
@@ -140,9 +142,9 @@ class dynamic_property_map_adaptor : public dynamic_property_map {
   explicit dynamic_property_map_adaptor(PropertyMap property_map) : property_map_(std::move(property_map)) {}
 
   [[nodiscard]] auto get_value(const std::any& in_key) {
-    if constexpr (std::is_pointer_v<property_traits_key_t<PropertyMap>>) {
+    if constexpr (std::is_pointer_v<key_type>) {
       // Handle both const T* and T*.
-      using non_const_key = std::remove_cv_t<std::remove_pointer_t<property_traits_key_t<PropertyMap>>>;
+      using non_const_key = std::remove_cv_t<std::remove_pointer_t<key_type>>;
       using ptr_to_const_key = std::add_pointer_t<std::add_const_t<non_const_key>>;
       using ptr_to_non_const_key = std::add_pointer_t<non_const_key>;
       if (in_key.type() == typeid(ptr_to_const_key)) {
@@ -152,9 +154,9 @@ class dynamic_property_map_adaptor : public dynamic_property_map {
         return get(property_map_, std::any_cast<ptr_to_non_const_key>(in_key));
       }
       // Probably will throw a bad_any_cast exception.
-      return get(property_map_, std::any_cast<property_traits_key_t<PropertyMap>>(in_key));
+      return get(property_map_, std::any_cast<key_type>(in_key));
     } else {
-      return get(property_map_, std::any_cast<property_traits_key_t<PropertyMap>>(in_key));
+      return get(property_map_, std::any_cast<key_type>(in_key));
     }
   }
 
@@ -185,6 +187,28 @@ class dynamic_property_map_adaptor : public dynamic_property_map {
 
   [[nodiscard]] const std::type_info& key() const override { return typeid(key_type); }
   [[nodiscard]] const std::type_info& value() const override { return typeid(value_type); }
+  [[nodiscard]] bool is_key_of_type(const std::type_info& info) const override {
+    if constexpr (std::is_pointer_v<key_type>) {
+      // Handle both const T* and T*.
+      using non_const_key = std::remove_cv_t<std::remove_pointer_t<key_type>>;
+      using ptr_to_const_key = std::add_pointer_t<std::add_const_t<non_const_key>>;
+      using ptr_to_non_const_key = std::add_pointer_t<non_const_key>;
+      return (info == typeid(ptr_to_const_key)) || (info == typeid(ptr_to_non_const_key));
+    } else {
+      return (info == typeid(key_type));
+    }
+  }
+  [[nodiscard]] bool is_value_of_type(const std::type_info& info) const override {
+    if constexpr (std::is_pointer_v<value_type>) {
+      // Handle both const T* and T*.
+      using non_const_key = std::remove_cv_t<std::remove_pointer_t<value_type>>;
+      using ptr_to_const_key = std::add_pointer_t<std::add_const_t<non_const_key>>;
+      using ptr_to_non_const_key = std::add_pointer_t<non_const_key>;
+      return (info == typeid(ptr_to_const_key)) || (info == typeid(ptr_to_non_const_key));
+    } else {
+      return (info == typeid(value_type));
+    }
+  }
 
   [[nodiscard]] PropertyMap& base() { return property_map_; }
   [[nodiscard]] const PropertyMap& base() const { return property_map_; }
@@ -220,11 +244,23 @@ struct dynamic_properties {
     return *this;
   }
 
+  // Add property maps from tags (e.g. property(vertex_index, g) == property("vertex_index", get(vertex_index, g)))
+  template <typename PropertyTag, typename Graph>
+  std::enable_if_t<!std::is_same_v<PropertyTag, std::string>, dynamic_properties&> property(PropertyTag property_tag, Graph&& g) {
+    return property(std::string{PropertyTag::name}, get(property_tag, std::forward<Graph>(g)));
+  }
+
   template <typename PropertyMap>
   [[nodiscard]] dynamic_properties property(const std::string& name, PropertyMap property_map_) const {
     dynamic_properties result = *this;
     result.property(name, property_map_);
     return result;
+  }
+
+  // Add property maps from tags (e.g. property(vertex_index, g) == property("vertex_index", get(vertex_index, g)))
+  template <typename PropertyTag, typename Graph>
+  std::enable_if_t<!std::is_same_v<PropertyTag, std::string>, dynamic_properties> property(PropertyTag property_tag, Graph&& g) const {
+    return property(std::string{PropertyTag::name}, get(property_tag, std::forward<Graph>(g)));
   }
 
   [[nodiscard]] iterator begin() { return property_maps_.begin(); }
@@ -256,9 +292,16 @@ struct dynamic_properties {
 template <typename Key, typename Value>
 bool put(const std::string& name, dynamic_properties& dp, const Key& key, const Value& value) {
   for (auto [i, i_end] = dp.equal_range(name); i != i_end; ++i) {
-    if (i->second->key() == typeid(key)) {
-      i->second->put(key, value);
-      return true;
+    if constexpr (std::is_same_v<Key, std::any>) {
+      if (i->second->is_key_of_type(key.type())) {
+        i->second->put(key, value);
+        return true;
+      }
+    } else {
+      if (i->second->is_key_of_type(typeid(key))) {
+        i->second->put(key, value);
+        return true;
+      }
     }
   }
 
@@ -274,8 +317,14 @@ bool put(const std::string& name, dynamic_properties& dp, const Key& key, const 
 template <typename Value, typename Key>
 Value get(const std::string& name, const dynamic_properties& dp, const Key& key) {
   for (auto [i, i_end] = dp.equal_range(name); i != i_end; ++i) {
-    if (i->second->key() == typeid(key)) {
-      return std::any_cast<Value>(i->second->get(key));
+    if constexpr (std::is_same_v<Key, std::any>) {
+      if (i->second->is_key_of_type(key.type())) {
+        return std::any_cast<Value>(i->second->get(key));
+      }
+    } else {
+      if (i->second->is_key_of_type(typeid(key))) {
+        return std::any_cast<Value>(i->second->get(key));
+      }
     }
   }
   throw dynamic_get_failure(name);
@@ -284,8 +333,14 @@ Value get(const std::string& name, const dynamic_properties& dp, const Key& key)
 template <typename Value, typename Key>
 Value get(const std::string& name, const dynamic_properties& dp, const Key& key, Value* /*unused*/) {
   for (auto [i, i_end] = dp.equal_range(name); i != i_end; ++i) {
-    if (i->second->key() == typeid(key)) {
-      return std::any_cast<Value>(i->second->get(key));
+    if constexpr (std::is_same_v<Key, std::any>) {
+      if (i->second->is_key_of_type(key.type())) {
+        return std::any_cast<Value>(i->second->get(key));
+      }
+    } else {
+      if (i->second->is_key_of_type(typeid(key))) {
+        return std::any_cast<Value>(i->second->get(key));
+      }
     }
   }
   throw dynamic_get_failure(name);
@@ -294,8 +349,14 @@ Value get(const std::string& name, const dynamic_properties& dp, const Key& key,
 template <typename Key>
 std::string get(const std::string& name, const dynamic_properties& dp, const Key& key) {
   for (auto [i, i_end] = dp.equal_range(name); i != i_end; ++i) {
-    if (i->second->key() == typeid(key)) {
-      return i->second->get_string(key);
+    if constexpr (std::is_same_v<Key, std::any>) {
+      if (i->second->is_key_of_type(key.type())) {
+        return i->second->get_string(key);
+      }
+    } else {
+      if (i->second->is_key_of_type(typeid(key))) {
+        return i->second->get_string(key);
+      }
     }
   }
   throw dynamic_get_failure(name);

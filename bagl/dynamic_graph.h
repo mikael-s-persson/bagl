@@ -17,6 +17,7 @@
 #include "bagl/properties.h"
 #include "bagl/property.h"
 #include "bagl/property_map.h"
+#include "bagl/subgraph.h"
 
 namespace bagl {
 
@@ -131,13 +132,27 @@ class dynamic_graph_observer {
     unknown,
   };
   [[nodiscard]] virtual key_type classify_key(const std::type_info& key_info) const = 0;
-  [[nodiscard]] bool is_graph_key(const std::type_info& key_info) const { return classify_key(key_info) == key_type::graph; }
-  [[nodiscard]] bool is_vertex_key(const std::type_info& key_info) const { return classify_key(key_info) == key_type::vertex; }
-  [[nodiscard]] bool is_edge_key(const std::type_info& key_info) const { return classify_key(key_info) == key_type::edge; }
+  [[nodiscard]] bool is_graph_key(const std::type_info& key_info) const {
+    return classify_key(key_info) == key_type::graph;
+  }
+  [[nodiscard]] bool is_vertex_key(const std::type_info& key_info) const {
+    return classify_key(key_info) == key_type::vertex;
+  }
+  [[nodiscard]] bool is_edge_key(const std::type_info& key_info) const {
+    return classify_key(key_info) == key_type::edge;
+  }
 
   [[nodiscard]] virtual const dynamic_properties& get_properties() const = 0;
 
   [[nodiscard]] virtual std::any get_graph_key() const = 0;
+
+  // Subgraph
+  [[nodiscard]] virtual bool is_root() const { return true; }
+  [[nodiscard]] virtual const dynamic_graph_observer& get_root() const { return *this; }
+  [[nodiscard]] virtual std::size_t get_num_children() const { return 0; }
+  [[nodiscard]] virtual any_range<const dynamic_graph_observer&> get_children() const {
+    return make_any_range_to<const dynamic_graph_observer&>(std::ranges::empty_view<const dynamic_graph_observer>());
+  }
 
   // VertexListGraph
   [[nodiscard]] virtual std::size_t get_num_vertices() const = 0;
@@ -184,16 +199,14 @@ class dynamic_graph_observer_wrapper : public dynamic_graph_observer {
     }
   }
 
-  [[nodiscard]] bool is_directed() const override {
-    return is_directed_graph_v<Graph>;
-  }
+  [[nodiscard]] bool is_directed() const override { return is_directed_graph_v<Graph>; }
 
   using vertex_descriptor = graph_vertex_descriptor_t<Graph>;
   using edge_descriptor = graph_edge_descriptor_t<Graph>;
   using key_type = dynamic_graph_observer::key_type;
 
   [[nodiscard]] key_type classify_key(const std::type_info& key_info) const override {
-    if (key_info == typeid(const Graph*)) {
+    if (key_info == typeid(const Graph*) || key_info == typeid(Graph*)) {
       return key_type::graph;
     }
     if (key_info == typeid(vertex_descriptor)) {
@@ -308,6 +321,132 @@ class dynamic_graph_observer_wrapper : public dynamic_graph_observer {
   const dynamic_properties& dp_;
   std::unordered_map<vertex_descriptor, std::size_t> vindex_;
   std::unordered_map<edge_descriptor, std::size_t> eindex_;
+};
+
+template <concepts::Graph Graph>
+class dynamic_graph_observer_wrapper<subgraph<Graph>> : public dynamic_graph_observer_wrapper<Graph> {
+  using Base = dynamic_graph_observer_wrapper<Graph>;
+
+ public:
+  dynamic_graph_observer_wrapper(const subgraph<Graph>& sub_g, const dynamic_properties& dp)
+      : Base(sub_g.root().underlying(), dp), sub_g_(sub_g), parent_(*this) {
+    children_.reserve(sub_g.num_children());
+    for (const subgraph<Graph>& child : sub_g.children()) {
+      children_.emplace_back(std::make_unique<dynamic_graph_observer_wrapper<subgraph<Graph>>>(child, dp));
+    }
+  }
+  dynamic_graph_observer_wrapper(const subgraph<Graph>& sub_g, const dynamic_properties& dp,
+                                 const dynamic_graph_observer& parent)
+      : Base(sub_g.root().underlying(), dp), sub_g_(sub_g), parent_(parent) {
+    children_.reserve(sub_g.num_children());
+    for (const subgraph<Graph>& child : sub_g.children()) {
+      children_.emplace_back(std::make_unique<dynamic_graph_observer_wrapper<subgraph<Graph>>>(child, dp));
+    }
+  }
+
+  using vertex_descriptor = graph_vertex_descriptor_t<Graph>;
+  using edge_descriptor = graph_edge_descriptor_t<Graph>;
+  using key_type = dynamic_graph_observer::key_type;
+
+  // Subgraph
+  [[nodiscard]] bool is_root() const override { return sub_g_.is_root(); }
+  [[nodiscard]] const dynamic_graph_observer& get_root() const override {
+    if (parent_ == *this) {
+      return *this;
+    }
+    return parent_;
+  }
+  [[nodiscard]] any_range<const dynamic_graph_observer&> get_children() const override {
+    return make_any_range_to<const dynamic_graph_observer&>(std::ranges::ref_view(children_) | std::views::transform([](const auto& child_ptr) {
+                                   return std::as_const(*child_ptr);
+                                 }));
+  }
+
+  [[nodiscard]] key_type classify_key(const std::type_info& key_info) const override {
+    if (key_info == typeid(const subgraph<Graph>*) || key_info == typeid(subgraph<Graph>*)) {
+      return key_type::graph;
+    }
+    if (key_info == typeid(vertex_descriptor)) {
+      return key_type::vertex;
+    }
+    if (key_info == typeid(edge_descriptor)) {
+      return key_type::edge;
+    }
+    return key_type::unknown;
+  }
+
+  [[nodiscard]] std::any get_graph_key() const override { return &sub_g_; }
+
+  // VertexListGraph
+  [[nodiscard]] std::size_t get_num_vertices() const override {
+    if constexpr (concepts::VertexListGraph<Graph>) {
+      return num_vertices(sub_g_);
+    } else {
+      return 0;
+    }
+  }
+  [[nodiscard]] any_range<std::any> get_vertices() const override {
+    if constexpr (concepts::VertexListGraph<Graph>) {
+      return make_any_range_to_any(vertices(sub_g_) | std::views::transform([this](const vertex_descriptor& v) {
+                                     return sub_g_.local_to_global(v);
+                                   }));
+    } else {
+      return make_any_range_to_any(std::ranges::empty_view<vertex_descriptor>());
+    }
+  }
+
+  // EdgeListGraph
+  [[nodiscard]] std::size_t get_num_edges() const override {
+    if constexpr (concepts::EdgeListGraph<Graph>) {
+      return num_edges(sub_g_);
+    } else {
+      return 0;
+    }
+  }
+  [[nodiscard]] any_range<std::any> get_edges() const override {
+    if constexpr (concepts::EdgeListGraph<Graph>) {
+      return make_any_range_to_any(edges(sub_g_) | std::views::transform([this](const edge_descriptor& e) {
+                                     return sub_g_.local_to_global(e);
+                                   }));
+    } else {
+      return make_any_range_to_any(std::ranges::empty_view<edge_descriptor>());
+    }
+  }
+
+  // IncidenceGraph
+  [[nodiscard]] std::size_t get_out_degree(const std::any& u) const override {
+    if constexpr (concepts::IncidenceGraph<Graph>) {
+      return out_degree(sub_g_.global_to_local(std::any_cast<vertex_descriptor>(u)), sub_g_);
+    } else {
+      return 0;
+    }
+  }
+  [[nodiscard]] any_range<std::any> get_out_edges(const std::any& u) const override {
+    if constexpr (concepts::IncidenceGraph<Graph>) {
+      return make_any_range_to_any(
+          out_edges(sub_g_.global_to_local(std::any_cast<vertex_descriptor>(u)), sub_g_) |
+          std::views::transform([this](const edge_descriptor& e) { return sub_g_.local_to_global(e); }));
+    } else {
+      return make_any_range_to_any(std::ranges::empty_view<edge_descriptor>());
+    }
+  }
+
+  // AdjacencyMatrix
+  [[nodiscard]] std::pair<std::any, bool> get_edge(const std::any& u, const std::any& v) const override {
+    if constexpr (concepts::AdjacencyMatrix<Graph>) {
+      auto [e_global, e_found] =
+          edge(std::any_cast<vertex_descriptor>(u), std::any_cast<vertex_descriptor>(v), sub_g_.root().underlying());
+      if (e_found) {
+        return {e_global, sub_g_.find_edge(e_global).second};
+      }
+    }
+    return {edge_descriptor{}, false};
+  }
+
+ protected:
+  const subgraph<Graph>& sub_g_;
+  std::vector<std::unique_ptr<dynamic_graph_observer>> children_;
+  const dynamic_graph_observer& parent_;
 };
 
 }  // namespace bagl

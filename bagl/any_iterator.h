@@ -60,7 +60,7 @@ class any_iterator {
   any_iterator& operator=(any_iterator&&) noexcept = default;
   ~any_iterator() = default;
 
-  value_type operator*() const { return it_->dereference(); }
+  reference operator*() const { return it_->dereference(); }
   pointer operator->() const { return &it_->dereference(); }
 
   any_iterator& operator++() {
@@ -150,9 +150,9 @@ class any_iterator_wrapper : public any_iterator_interface<Reference> {
     }
   }
   void advance(std::ptrdiff_t d) override { std::advance(it_, d); }
-  [[nodiscard]] bool is_equal(const Base& rhs) const override { return static_cast<Self>(rhs).it_ == it_; }
+  [[nodiscard]] bool is_equal(const Base& rhs) const override { return static_cast<const Self&>(rhs).it_ == it_; }
   [[nodiscard]] std::ptrdiff_t distance_from(const Base& rhs) const override {
-    return std::distance(static_cast<Self>(rhs).it_, it_);
+    return std::distance(static_cast<const Self&>(rhs).it_, it_);
   }
 
  private:
