@@ -65,10 +65,8 @@ std::string escape_dot_string(const T& obj) {
   }
 }
 
-void write_graphviz_impl(std::ostream& out, const dynamic_graph_observer& g,
-                         const graphviz_attr_writer& vpw,
-                         const graphviz_attr_writer& epw,
-                         const graphviz_attr_writer& gpw,
+void write_graphviz_impl(std::ostream& out, const dynamic_graph_observer& g, const graphviz_attr_writer& vpw,
+                         const graphviz_attr_writer& epw, const graphviz_attr_writer& gpw,
                          const std::string& node_id_pmap, std::unordered_set<std::size_t>& vertex_printed,
                          std::unordered_set<std::size_t>& edge_printed) {
   if (g.is_root()) {
@@ -143,9 +141,8 @@ void dynamic_properties_graphviz_writer::operator()(std::ostream& out, const std
   }
 }
 
-void write_graphviz(std::ostream& out, const dynamic_graph_observer& g,
-                    graphviz_attr_writer vpw, graphviz_attr_writer epw,
-                    graphviz_attr_writer gpw, const std::string& node_id_pmap) {
+void write_graphviz(std::ostream& out, const dynamic_graph_observer& g, graphviz_attr_writer vpw,
+                    graphviz_attr_writer epw, graphviz_attr_writer gpw, const std::string& node_id_pmap) {
   std::unordered_set<std::size_t> vertex_printed;
   std::unordered_set<std::size_t> edge_printed;
   write_graphviz_impl(out, g, vpw, epw, gpw, node_id_pmap, vertex_printed, edge_printed);

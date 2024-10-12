@@ -46,10 +46,8 @@ class dynamic_properties_graphviz_writer {
 
 using graphviz_attr_writer = std::function<void(std::ostream&, const std::any&)>;
 
-void write_graphviz(std::ostream& out, const dynamic_graph_observer& g,
-                    graphviz_attr_writer vpw,
-                    graphviz_attr_writer epw,
-                    graphviz_attr_writer gpw, const std::string& node_id_pmap);
+void write_graphviz(std::ostream& out, const dynamic_graph_observer& g, graphviz_attr_writer vpw,
+                    graphviz_attr_writer epw, graphviz_attr_writer gpw, const std::string& node_id_pmap);
 
 template <concepts::VertexListGraph Graph, concepts::ReadableVertexPropertyMap<Graph> NodeIDMap>
 void write_graphviz(std::ostream& out, const Graph& g, const dynamic_properties& dp,
