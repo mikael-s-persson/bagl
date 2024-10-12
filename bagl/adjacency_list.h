@@ -13,6 +13,7 @@
 #include "bagl/detail/adjlist_ranges.h"
 #include "bagl/graph_concepts.h"
 #include "bagl/graph_mutability_traits.h"
+#include "bagl/graph_selectors.h"
 #include "bagl/graph_traits.h"
 #include "bagl/more_property_maps.h"
 #include "bagl/properties.h"
@@ -78,7 +79,7 @@ void do_graph_deep_copy(
     const adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperties, EdgeProperties, GraphProperties>& rhs);
 
 /**
- * This class implements an adjacency-list based on Boost.Containers that is tailored
+ * This class implements an adjacency-list based on containers that are tailored
  * to store elements of a graph.
  * \tparam OutEdgeListS A type tag to choose the storage policy for the out-edge lists.
  * \tparam VertexListS A type tag to choose the storage policy for the vertices.
@@ -270,12 +271,10 @@ class adjacency_list {
   }
 
   // Indexing operator. Returns a reference to the edge-bundle associated to the given edge descriptor.
-  auto& operator[](const edge_descriptor& e) {
-    return get_property_value(m_pack.get_stored_edge(bidir_edge_descriptor(e)).data, edge_bundle);
-  }
+  auto& operator[](const edge_descriptor& e) { return get_property_value(m_pack.get_stored_edge(e).data, edge_bundle); }
   // Indexing operator. Returns a const-reference to the edge-bundle associated to the given edge descriptor.
   const auto& operator[](const edge_descriptor& e) const {
-    return get_property_value(m_pack.get_stored_edge(bidir_edge_descriptor(e)).data, edge_bundle);
+    return get_property_value(m_pack.get_stored_edge(e).data, edge_bundle);
   }
 
   // Indexing operator. Returns a reference to the graph-bundle associated to the graph.
@@ -289,11 +288,9 @@ class adjacency_list {
   const auto& get_property(vertex_descriptor v) const { return m_pack.get_stored_vertex(v).data; }
 
   // Get a reference to the edge-property associated to the given edge descriptor.
-  auto& get_property(const edge_descriptor& e) { return m_pack.get_stored_edge(bidir_edge_descriptor(e)).data; }
+  auto& get_property(const edge_descriptor& e) { return m_pack.get_stored_edge(e).data; }
   // Get a const-reference to the edge-property associated to the given edge descriptor.
-  const auto& get_property(const edge_descriptor& e) const {
-    return m_pack.get_stored_edge(bidir_edge_descriptor(e)).data;
-  }
+  const auto& get_property(const edge_descriptor& e) const { return m_pack.get_stored_edge(e).data; }
 
   // Get a reference to the graph-property associated to the graph.
   auto& get_property(graph_all_t /*unused*/) { return m_graph_prop; }
@@ -364,17 +361,21 @@ std::size_t out_degree(typename BAGL_ADJACENCY_LIST::vertex_descriptor v, const 
  * ********************************************************************************************/
 
 template <BAGL_ADJACENCY_LIST_ARGS>
-auto in_edges(typename BAGL_ADJACENCY_LIST::vertex_descriptor v, const BAGL_ADJACENCY_LIST& g) {
+auto in_edges(
+    std::enable_if_t<!std::is_same_v<DirectedS, directed_s>, typename BAGL_ADJACENCY_LIST::vertex_descriptor> v,
+    const BAGL_ADJACENCY_LIST& g) {
   return g.m_pack.in_edges(v);
 }
 
 template <BAGL_ADJACENCY_LIST_ARGS>
-std::size_t in_degree(typename BAGL_ADJACENCY_LIST::vertex_descriptor v, const BAGL_ADJACENCY_LIST& g) {
+std::enable_if_t<!std::is_same_v<DirectedS, directed_s>, std::size_t> in_degree(
+    typename BAGL_ADJACENCY_LIST::vertex_descriptor v, const BAGL_ADJACENCY_LIST& g) {
   return g.m_pack.get_in_degree(v);
 }
 
 template <BAGL_ADJACENCY_LIST_ARGS>
-std::size_t degree(typename BAGL_ADJACENCY_LIST::vertex_descriptor v, const BAGL_ADJACENCY_LIST& g) {
+std::enable_if_t<!std::is_same_v<DirectedS, directed_s>, std::size_t> degree(
+    typename BAGL_ADJACENCY_LIST::vertex_descriptor v, const BAGL_ADJACENCY_LIST& g) {
   return g.m_pack.get_in_degree(v) + g.m_pack.get_out_degree(v);
 }
 
@@ -420,7 +421,8 @@ auto adjacent_vertices(typename BAGL_ADJACENCY_LIST::vertex_descriptor v, const 
  * ********************************************************************************************/
 
 template <BAGL_ADJACENCY_LIST_ARGS>
-auto inv_adjacent_vertices(typename BAGL_ADJACENCY_LIST::vertex_descriptor v, const BAGL_ADJACENCY_LIST& g) {
+std::enable_if_t<!std::is_same_v<DirectedS, directed_s>> inv_adjacent_vertices(
+    typename BAGL_ADJACENCY_LIST::vertex_descriptor v, const BAGL_ADJACENCY_LIST& g) {
   return inv_adjacency_range(in_edges(v, g), g);
 }
 
@@ -476,6 +478,34 @@ void remove_edge(const typename BAGL_ADJACENCY_LIST::edge_descriptor& e, BAGL_AD
 }
 
 /*******************************************************************************************
+ *                    MutableIncidenceGraph concept
+ ******************************************************************************************/
+
+template <BAGL_ADJACENCY_LIST_ARGS, typename EdgePred>
+void remove_out_edge_if(typename BAGL_ADJACENCY_LIST::vertex_descriptor u, EdgePred pred, BAGL_ADJACENCY_LIST& g) {
+  g.m_pack.remove_out_edge_if(u, pred);
+}
+
+/*******************************************************************************************
+ *                    MutableBidirectionalGraph concept
+ ******************************************************************************************/
+
+template <BAGL_ADJACENCY_LIST_ARGS, typename EdgePred>
+std::enable_if_t<!std::is_same_v<DirectedS, directed_s>> remove_in_edge_if(
+    typename BAGL_ADJACENCY_LIST::vertex_descriptor v, EdgePred pred, BAGL_ADJACENCY_LIST& g) {
+  g.m_pack.remove_in_edge_if(v, pred);
+}
+
+/*******************************************************************************************
+ *                    MutableEdgeListGraph concept
+ ******************************************************************************************/
+
+template <BAGL_ADJACENCY_LIST_ARGS, typename EdgePred>
+void remove_edge_if(EdgePred pred, BAGL_ADJACENCY_LIST& g) {
+  g.m_pack.remove_edge_if(pred);
+}
+
+/*******************************************************************************************
  *                  MutablePropertyGraph concept
  ******************************************************************************************/
 
@@ -485,8 +515,10 @@ auto add_vertex(VProp&& vp, BAGL_ADJACENCY_LIST& g) {
 }
 
 template <BAGL_ADJACENCY_LIST_ARGS, typename VProp>
-void remove_vertex(typename BAGL_ADJACENCY_LIST::vertex_descriptor v, VProp& vp, BAGL_ADJACENCY_LIST& g) {
-  vp = std::move(g.get_property(v));
+void remove_vertex(typename BAGL_ADJACENCY_LIST::vertex_descriptor v, VProp* vp, BAGL_ADJACENCY_LIST& g) {
+  if (vp != nullptr) {
+    *vp = std::move(g.get_property(v));
+  }
   g.m_pack.remove_vertex(v);
 }
 
@@ -498,18 +530,21 @@ auto add_edge(typename BAGL_ADJACENCY_LIST::vertex_descriptor u, typename BAGL_A
 
 template <BAGL_ADJACENCY_LIST_ARGS, typename EProp>
 void remove_edge(typename BAGL_ADJACENCY_LIST::vertex_descriptor u, typename BAGL_ADJACENCY_LIST::vertex_descriptor v,
-                 EProp& ep, BAGL_ADJACENCY_LIST& g) {
+                 EProp* ep, BAGL_ADJACENCY_LIST& g) {
   auto [e, e_found] = edge(u, v, g);
   if (e_found) {
-    ep = std::move(g.get_property(e));
+    if (ep != nullptr) {
+      *ep = std::move(g.get_property(e));
+    }
     g.m_pack.remove_edge(e);
   }
 }
 
 template <BAGL_ADJACENCY_LIST_ARGS, typename EProp>
-void remove_edge(const typename BAGL_ADJACENCY_LIST::edge_descriptor& e,
-                 EProp& ep, BAGL_ADJACENCY_LIST& g) {
-  ep = std::move(g.get_property(e));
+void remove_edge(const typename BAGL_ADJACENCY_LIST::edge_descriptor& e, EProp* ep, BAGL_ADJACENCY_LIST& g) {
+  if (ep != nullptr) {
+    *ep = std::move(g.get_property(e));
+  }
   g.m_pack.remove_edge(e);
 }
 
@@ -1115,22 +1150,46 @@ auto add_edge(typename BAGL_ADJACENCY_LIST_UNDIR::vertex_descriptor u,
  *                  MutablePropertyGraph concept
  ******************************************************************************************/
 
-template <BAGL_ADJACENCY_LIST_UNDIR_ARGS>
+template <BAGL_ADJACENCY_LIST_UNDIR_ARGS, typename EProp>
 auto add_edge(typename BAGL_ADJACENCY_LIST_UNDIR::vertex_descriptor u,
-              typename BAGL_ADJACENCY_LIST_UNDIR::vertex_descriptor v,
-              const typename BAGL_ADJACENCY_LIST_UNDIR::edge_property_type& ep, BAGL_ADJACENCY_LIST_UNDIR& g) {
+              typename BAGL_ADJACENCY_LIST_UNDIR::vertex_descriptor v, EProp&& ep, BAGL_ADJACENCY_LIST_UNDIR& g) {
   using Edge = typename BAGL_ADJACENCY_LIST_UNDIR::edge_descriptor;
-  auto [be, be_found] = g.m_pack.add_edge(u, v, ep);
+  auto [be, be_found] = g.m_pack.add_edge(u, v, std::forward<EProp>(ep));
   return std::pair(Edge(be), be_found);
 }
 
-template <BAGL_ADJACENCY_LIST_UNDIR_ARGS>
-auto add_edge(typename BAGL_ADJACENCY_LIST_UNDIR::vertex_descriptor u,
-              typename BAGL_ADJACENCY_LIST_UNDIR::vertex_descriptor v,
-              typename BAGL_ADJACENCY_LIST_UNDIR::edge_property_type&& ep, BAGL_ADJACENCY_LIST_UNDIR& g) {
+/*******************************************************************************************
+ *                    MutableIncidenceGraph concept
+ ******************************************************************************************/
+
+template <BAGL_ADJACENCY_LIST_UNDIR_ARGS, typename EdgePred>
+void remove_out_edge_if(typename BAGL_ADJACENCY_LIST_UNDIR::vertex_descriptor u, EdgePred pred,
+                        BAGL_ADJACENCY_LIST_UNDIR& g) {
   using Edge = typename BAGL_ADJACENCY_LIST_UNDIR::edge_descriptor;
-  auto [be, be_found] = g.m_pack.add_edge(u, v, std::move(ep));
-  return std::pair(Edge(be), be_found);
+  g.m_pack.remove_out_edge_if(u, [&pred](const auto& be) { return pred(Edge(be, /*reversed=*/false)); });
+  g.m_pack.remove_in_edge_if(u, [&pred](const auto& be) { return pred(Edge(be, /*reversed=*/true)); });
+}
+
+/*******************************************************************************************
+ *                    MutableBidirectionalGraph concept
+ ******************************************************************************************/
+
+template <BAGL_ADJACENCY_LIST_UNDIR_ARGS, typename EdgePred>
+void remove_in_edge_if(typename BAGL_ADJACENCY_LIST_UNDIR::vertex_descriptor v, EdgePred pred,
+                       BAGL_ADJACENCY_LIST_UNDIR& g) {
+  using Edge = typename BAGL_ADJACENCY_LIST_UNDIR::edge_descriptor;
+  g.m_pack.remove_out_edge_if(v, [&pred](const auto& be) { return pred(Edge(be, /*reversed=*/true)); });
+  g.m_pack.remove_in_edge_if(v, [&pred](const auto& be) { return pred(Edge(be, /*reversed=*/false)); });
+}
+
+/*******************************************************************************************
+ *                    MutableEdgeListGraph concept
+ ******************************************************************************************/
+
+template <BAGL_ADJACENCY_LIST_UNDIR_ARGS, typename EdgePred>
+void remove_edge_if(EdgePred pred, BAGL_ADJACENCY_LIST_UNDIR& g) {
+  using Edge = typename BAGL_ADJACENCY_LIST_UNDIR::edge_descriptor;
+  g.m_pack.remove_edge_if([&pred](const auto& be) { return pred(Edge(be)); });
 }
 
 #undef BAGL_ADJACENCY_LIST_UNDIR_ARGS

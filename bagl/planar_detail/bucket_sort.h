@@ -17,7 +17,6 @@ struct property_map_tuple_adaptor
   using reference = typename PropertyMapWrapper::reference;
   using value_type = typename PropertyMapWrapper::value_type;
   using key_type = TupleType;
-  using category = readable_property_map_tag;
 
   property_map_tuple_adaptor() = default;
 

@@ -19,9 +19,6 @@ class function_property_map : public put_get_helper<function_property_map<Func, 
   using reference = Ret;
   using value_type = std::decay_t<Ret>;
 
-  using category = std::conditional_t<std::is_reference_v<Ret> && !std::is_const_v<Ret>, lvalue_property_map_tag,
-                                      readable_property_map_tag>;
-
   explicit function_property_map(Func f = Func()) : f_(f) {}
 
   reference operator[](const Key& k) const { return f_(k); }

@@ -24,9 +24,9 @@ struct whole_bundle_property_map : public put_get_helper<whole_bundle_property_m
   using non_const_graph = std::remove_cv_t<Graph>;
   using value_type = std::conditional_t<is_vertex_bundle_v, vertex_bundle_type<non_const_graph>, std::conditional_t<is_edge_bundle_v, edge_bundle_type<non_const_graph>, graph_bundle_type<non_const_graph>>>;
   using reference = std::conditional_t<is_const_graph_v, const value_type&, value_type&>;
-  using key_type = std::conditional_t<is_vertex_bundle_v, graph_vertex_descriptor_t<non_const_graph>,
-                                      std::conditional_t<is_edge_bundle_v, graph_edge_descriptor_t<non_const_graph>, Graph&>>;
-  using category = std::conditional_t<is_const_graph_v, readable_property_map_tag, lvalue_property_map_tag>;
+  using key_type =
+      std::conditional_t<is_vertex_bundle_v, graph_vertex_descriptor_t<non_const_graph>,
+                         std::conditional_t<is_edge_bundle_v, graph_edge_descriptor_t<non_const_graph>, Graph&>>;
 
   explicit whole_bundle_property_map(Graph* pg) : pg_(pg) {}
   whole_bundle_property_map() = default;
@@ -60,8 +60,8 @@ struct tagged_in_property_property_map
   using value_type = T;
   using reference = T&;
   using key_type =
-      std::conditional_t<is_vertex_prop_v, graph_vertex_descriptor_t<non_const_graph>, std::conditional_t<is_edge_prop_v, graph_edge_descriptor_t<non_const_graph>, Graph&>>;
-  using category = std::conditional_t<std::is_const_v<T>, readable_property_map_tag, lvalue_property_map_tag>;
+      std::conditional_t<is_vertex_prop_v, graph_vertex_descriptor_t<non_const_graph>,
+                         std::conditional_t<is_edge_prop_v, graph_edge_descriptor_t<non_const_graph>, Graph&>>;
 
   explicit tagged_in_property_property_map(Graph* pg, PropertyMapTag /*tag*/ = {}) : pg_(pg) {}
   tagged_in_property_property_map() = default;
@@ -89,7 +89,6 @@ struct propgraph_property_map : public put_get_helper<propgraph_property_map<T, 
   using reference = T&;
   using key_type =
       std::conditional_t<is_vertex_prop_v, graph_vertex_descriptor_t<Graph>, graph_edge_descriptor_t<Graph>>;
-  using category = std::conditional_t<std::is_const_v<T>, readable_property_map_tag, lvalue_property_map_tag>;
 
   explicit propgraph_property_map(Graph* pg, PropertyMapTag /*tag*/ = {}) : pg_(pg) {}
   propgraph_property_map() = default;
@@ -124,9 +123,9 @@ class bundle_member_property_map : public put_get_helper<bundle_member_property_
  public:
   using value_type = T;
   using reference = T&;
-  using key_type = std::conditional_t<is_vertex_bundle_v, graph_vertex_descriptor_t<non_const_graph>,
-                                      std::conditional_t<is_edge_bundle_v, graph_edge_descriptor_t<non_const_graph>, Graph&>>;
-  using category = std::conditional_t<is_const_graph_v, readable_property_map_tag, lvalue_property_map_tag>;
+  using key_type =
+      std::conditional_t<is_vertex_bundle_v, graph_vertex_descriptor_t<non_const_graph>,
+                         std::conditional_t<is_edge_bundle_v, graph_edge_descriptor_t<non_const_graph>, Graph&>>;
 
   bundle_member_property_map(Graph* pg, member_ptr_type mem_ptr) : pg_(pg), mem_ptr_(mem_ptr) {}
   bundle_member_property_map() = default;
@@ -176,7 +175,6 @@ struct self_property_map : public subobject_put_get_helper<self_property_map<T>>
   using reference = T&;
   using const_reference = const T&;
   using key_type = T;
-  using category = std::conditional_t<std::is_const_v<T>, readable_property_map_tag, lvalue_property_map_tag>;
 
   self_property_map() = default;
   reference operator[](reference p) const { return p; }
@@ -201,7 +199,6 @@ class data_member_property_map : public subobject_put_get_helper<data_member_pro
   using reference = T&;
   using const_reference = const T&;
   using key_type = PropertyType;
-  using category = std::conditional_t<std::is_const_v<T>, readable_property_map_tag, lvalue_property_map_tag>;
 
   explicit data_member_property_map(member_ptr_type aMemPtr) : mem_ptr_(aMemPtr) {}
   data_member_property_map() = default;
@@ -228,8 +225,6 @@ class data_member_property_map<const T, const PropertyType>
   member_ptr_type mem_ptr_ = nullptr;
 
  public:
-  using category = std::conditional_t<std::is_const_v<T>, readable_property_map_tag, lvalue_property_map_tag>;
-
   explicit data_member_property_map(member_ptr_type aMemPtr) : mem_ptr_(aMemPtr) {}
   data_member_property_map() = default;
   reference operator[](key_type& p) const { return p.*mem_ptr_; }
@@ -248,7 +243,6 @@ class composite_property_map {
 
   using value_type = property_traits_value_t<OutputMap>;
   using key_type = std::remove_cv_t<property_traits_key_t<InputMap>>;
-  using category = property_traits_category_t<OutputMap>;
   using reference = property_traits_reference_t<OutputMap>;
   using const_reference = const reference;
 

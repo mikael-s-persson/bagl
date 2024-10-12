@@ -25,9 +25,6 @@ class transform_value_property_map : public put_get_helper<transform_value_prope
   using reference = decltype(std::declval<self>()[std::declval<key_type>()]);
   using value_type = std::remove_cv_t<std::remove_reference_t<reference>>;
 
-  using category = std::conditional_t<std::is_reference_v<reference> && !std::is_const_v<reference>,
-                                      lvalue_property_map_tag, readable_property_map_tag>;
-
  private:
   Func f_;
   PM pm_;

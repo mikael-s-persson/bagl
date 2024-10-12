@@ -94,8 +94,6 @@ class bst_inorder_iterator {
 
  private:
   using vertex_type = typename graph_traits<tree_type>::vertex_descriptor;
-  using child_vertex_iter = typename tree_traits<tree_type>::child_vertex_iterator;
-  using in_edge_iter = typename graph_traits<tree_type>::in_edge_iterator;
 
   tree_type* tree_;
   vertex_type u_;

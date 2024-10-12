@@ -41,7 +41,6 @@ struct csr_edge_index_map {
   using value_type = EdgeIndex;
   using reference = EdgeIndex;
   using key_type = csr_edge_descriptor<Vertex, EdgeIndex>;
-  using category = readable_property_map_tag;
 };
 
 template <typename Vertex, typename EdgeIndex>

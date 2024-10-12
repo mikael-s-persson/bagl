@@ -104,7 +104,6 @@ class el_edge_property_map : public put_get_helper<el_edge_property_map<D, E> > 
   using key_type = E;
   using value_type = D;
   using reference = D;
-  using category = readable_property_map_tag;
 
   value_type operator[](key_type e) const { return e._i; }
 };
@@ -173,7 +172,6 @@ class el_ra_edge_property_map : public put_get_helper<el_ra_edge_property_map<E>
   using key_type = E;
   using value_type = E;
   using reference = E;
-  using category = readable_property_map_tag;
 
   value_type operator[](key_type e) const { return e; }
 };

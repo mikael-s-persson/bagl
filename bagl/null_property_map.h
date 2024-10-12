@@ -16,7 +16,6 @@ struct null_property_map {
   using key_type = Key;
   using value_type = Value;
   using reference = void;
-  using category = writable_property_map_tag;
 };
 
 // The null_property_map<K,V> only has a put() function.

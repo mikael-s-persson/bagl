@@ -20,17 +20,15 @@ namespace bagl {
 BAGL_GRAPH_HAS_TRAIT_MEMBER(key_type, void)
 BAGL_GRAPH_HAS_TRAIT_MEMBER(value_type, void)
 BAGL_GRAPH_HAS_TRAIT_MEMBER(reference, void)
-BAGL_GRAPH_HAS_TRAIT_MEMBER(category, void)
 
 template <class PA>
-constexpr bool is_property_map_v = has_key_type_v<PA>&& has_value_type_v<PA>&& has_reference_v<PA>&& has_category_v<PA>;
+constexpr bool is_property_map_v = has_key_type_v<PA>&& has_value_type_v<PA>&& has_reference_v<PA>;
 
 template <typename PA>
 struct default_property_traits {
   using key_type = get_key_type_or_not<PA>;
   using value_type = get_value_type_or_not<PA>;
   using reference = get_reference_or_not<PA>;
-  using category = get_category_or_not<PA>;
 };
 
 struct null_property_traits {};
@@ -45,28 +43,6 @@ template <typename PA>
 using property_traits_value_t = typename property_traits<PA>::value_type;
 template <typename PA>
 using property_traits_reference_t = typename property_traits<PA>::reference;
-template <typename PA>
-using property_traits_category_t = typename property_traits<PA>::category;
-
-//=========================================================================
-// property_traits category tags
-
-namespace property_map_detail {
-enum e_property_map_id { readable_pa, writable_pa, read_write_pa, lvalue_pa, op_bracket_pa, rand_access_iter_pa, last_pa };
-}
-struct readable_property_map_tag {
-  static constexpr auto id = property_map_detail::readable_pa;
-};
-struct writable_property_map_tag {
-  static constexpr auto id = property_map_detail::writable_pa;
-};
-struct read_write_property_map_tag : public readable_property_map_tag, public writable_property_map_tag {
-  static constexpr auto id = property_map_detail::read_write_pa;
-};
-
-struct lvalue_property_map_tag : public read_write_property_map_tag {
-  static constexpr auto id = property_map_detail::lvalue_pa;
-};
 
 //=========================================================================
 // property_traits specialization for pointers
@@ -76,14 +52,12 @@ struct property_traits<T*> {
   using value_type = T;
   using reference = value_type&;
   using key_type = std::ptrdiff_t;
-  using category = lvalue_property_map_tag;
 };
 template <class T>
 struct property_traits<const T*> {
   using value_type = T;
   using reference = const value_type&;
   using key_type = std::ptrdiff_t;
-  using category = lvalue_property_map_tag;
 };
 
 // V must be convertible to T
@@ -103,30 +77,25 @@ const T& get(const T* pa, std::ptrdiff_t k) {
 namespace concepts {
 
 template <typename PMap, typename Key>
-concept ReadablePropertyMap = std::convertible_to<property_traits_category_t<PMap>, readable_property_map_tag> &&
-    requires(const PMap& pmap, const Key& k) {
+concept ReadablePropertyMap = requires(const PMap& pmap, const Key& k) {
   { get(pmap, k) } -> std::convertible_to<property_traits_value_t<PMap>>;
 };
 
 template <typename PMap, typename Key>
-concept WritablePropertyMap = std::convertible_to<property_traits_category_t<PMap>, writable_property_map_tag> &&
-    requires(PMap& pmap, const Key& k) {
+concept WritablePropertyMap = requires(PMap& pmap, const Key& k) {
   put(pmap, k, std::declval<property_traits_value_t<PMap>>());
 };
 
 template <typename PMap, typename Key>
-concept ReadWritePropertyMap = std::convertible_to<property_traits_category_t<PMap>, read_write_property_map_tag> &&
-    ReadablePropertyMap<PMap, Key> && WritablePropertyMap<PMap, Key>;
+concept ReadWritePropertyMap = ReadablePropertyMap<PMap, Key> && WritablePropertyMap<PMap, Key>;
 
 template <typename PMap, typename Key>
-concept LvaluePropertyMap = std::convertible_to<property_traits_category_t<PMap>, lvalue_property_map_tag> &&
-    ReadablePropertyMap<PMap, Key> && requires(PMap& pmap, const Key& k) {
+concept LvaluePropertyMap = ReadablePropertyMap<PMap, Key> && requires(PMap& pmap, const Key& k) {
   { pmap[k] } -> std::convertible_to<const property_traits_value_t<PMap>&>;
 };
 
 template <typename PMap, typename Key>
-concept MutableLvaluePropertyMap = std::convertible_to<property_traits_category_t<PMap>, lvalue_property_map_tag> &&
-    ReadWritePropertyMap<PMap, Key> && requires(PMap& pmap, const Key& k) {
+concept MutableLvaluePropertyMap = ReadWritePropertyMap<PMap, Key> && requires(PMap& pmap, const Key& k) {
   { pmap[k] } -> std::same_as<property_traits_value_t<PMap>&>;
 };
 
@@ -147,7 +116,6 @@ struct readable_property_map_archetype {
   using key_type = KeyArchetype;
   using value_type = ValueArchetype;
   using reference = const ValueArchetype&;
-  using category = readable_property_map_tag;
 };
 template <typename K, typename V>
 const V& get(const readable_property_map_archetype<K, V>& /*unused*/, const K& /*unused*/) {
@@ -159,7 +127,6 @@ struct writable_property_map_archetype {
   using key_type = KeyArchetype;
   using value_type = ValueArchetype;
   using reference = void;
-  using category = writable_property_map_tag;
 };
 template <typename K, typename V, std::convertible_to<V> U>
 void put(const writable_property_map_archetype<K, V>& /*unused*/, const K& /*unused*/, U&& /*unused*/) {}
@@ -170,7 +137,6 @@ struct read_write_property_map_archetype : readable_property_map_archetype<KeyAr
   using key_type = KeyArchetype;
   using value_type = ValueArchetype;
   using reference = const ValueArchetype&;
-  using category = read_write_property_map_tag;
 };
 
 template <typename KeyArchetype, typename ValueArchetype>
@@ -178,7 +144,6 @@ struct lvalue_property_map_archetype : readable_property_map_archetype<KeyArchet
   using key_type = KeyArchetype;
   using value_type = ValueArchetype;
   using reference = const ValueArchetype&;
-  using category = lvalue_property_map_tag;
   const value_type& operator[](const key_type& /*unused*/) const { return std::declval<value_type>(); }
 };
 
@@ -188,7 +153,6 @@ struct mutable_lvalue_property_map_archetype : readable_property_map_archetype<K
   using key_type = KeyArchetype;
   using value_type = ValueArchetype;
   using reference = ValueArchetype&;
-  using category = lvalue_property_map_tag;
   value_type& operator[](const key_type& /*unused*/) const { return std::declval<value_type>(); }
 };
 
@@ -220,7 +184,6 @@ class iterator_property_map : public put_get_helper<iterator_property_map<Random
   using key_type = property_traits_key_t<IndexMap>;
   using reference = decltype(*std::declval<RandomAccessIterator>());
   using value_type = std::decay_t<reference>;
-  using category = lvalue_property_map_tag;
 
   explicit iterator_property_map(RandomAccessIterator iter = RandomAccessIterator(), IndexMap index = IndexMap())
       : iter_(std::move(iter)), index_(std::move(index)) {}
@@ -244,7 +207,6 @@ class safe_iterator_property_map : public put_get_helper<safe_iterator_property_
   using key_type = property_traits_key_t<IndexMap>;
   using reference = decltype(*std::declval<RandomAccessIterator>());
   using value_type = std::decay_t<reference>;
-  using category = lvalue_property_map_tag;
 
   explicit safe_iterator_property_map(RandomAccessIterator first, property_traits_value_t<IndexMap> n = 0,
                              IndexMap index = IndexMap())
@@ -280,7 +242,6 @@ class associative_property_map : public put_get_helper<associative_property_map<
   using key_type = typename C::key_type;
   using reference = decltype(std::declval<C>()[std::declval<key_type>()]);
   using value_type = std::decay_t<reference>;
-  using category = lvalue_property_map_tag;
   associative_property_map() : c_(nullptr) {}
   explicit associative_property_map(C& c) : c_(&c) {}
   reference operator[](const key_type& k) const { return (*c_)[k]; }
@@ -303,7 +264,6 @@ class const_associative_property_map
   using key_type = typename C::key_type;
   using reference = decltype(std::declval<const C&>().find(std::declval<key_type>())->second);
   using value_type = std::decay_t<reference>;
-  using category = lvalue_property_map_tag;
   const_associative_property_map() : c_(nullptr) {}
   explicit const_associative_property_map(const C& c) : c_(&c) {}
   reference operator[](const key_type& k) const { return c_->find(k)->second; }
@@ -328,7 +288,6 @@ class static_property_map : public put_get_helper<static_property_map<ValueType>
   using key_type = KeyType;
   using value_type = ValueType;
   using reference = ValueType;
-  using category = readable_property_map_tag;
   explicit static_property_map(ValueType v) : value_(std::move(v)) {}
 
   template <typename T>
@@ -353,7 +312,6 @@ class ref_property_map : public put_get_helper<ref_property_map<KeyType, ValueTy
   using key_type = KeyType;
   using value_type = ValueType;
   using reference = ValueType&;
-  using category = lvalue_property_map_tag;
   explicit ref_property_map(ValueType& v) : value_(&v) {}
 
   template <typename T>
@@ -369,7 +327,6 @@ struct typed_identity_property_map : public put_get_helper<typed_identity_proper
   using key_type = T;
   using value_type = T;
   using reference = T;
-  using category = readable_property_map_tag;
 
   reference operator[](key_type v) const { return v; }
 };
@@ -396,7 +353,6 @@ class dummy_property_map : public put_get_helper<dummy_property_map> {
   using key_type = void;
   using value_type = int;
   using reference = property_map_detail::dummy_pmap_reference;
-  using category = read_write_property_map_tag;
   template <typename T>
   reference operator[](T&& /*unused*/) const {
     return {};

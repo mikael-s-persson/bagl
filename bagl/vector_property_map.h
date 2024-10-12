@@ -19,7 +19,6 @@ class vector_property_map : public put_get_helper<vector_property_map<T, IndexMa
   using key_type = property_traits_key_t<IndexMap>;
   using value_type = T;
   using reference = decltype(std::declval<std::vector<T>>()[std::declval<property_traits_value_t<IndexMap>>()]);
-  using category = lvalue_property_map_tag;
 
   explicit vector_property_map(IndexMap index = IndexMap(), T default_value = T{})
       : store_(std::make_shared<std::vector<T>>()), index_(std::move(index)), default_value_(std::move(default_value)) {}

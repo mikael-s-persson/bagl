@@ -483,8 +483,10 @@ void remove_vertex(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v, BAGL_UND
 }
 
 template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename VProp>
-void remove_vertex(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v, VProp& vp, BAGL_UNDIRECTED_GRAPH& g) {
-  vp = std::move(g.get_property(v));
+void remove_vertex(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v, VProp* vp, BAGL_UNDIRECTED_GRAPH& g) {
+  if (vp != nullptr) {
+    *vp = std::move(g.get_property(v));
+  }
   g.remove_vertex(v);
 }
 
@@ -507,12 +509,14 @@ void remove_edge(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor u, typename B
 }
 
 template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename EProp>
-void remove_edge(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor u, typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v,
-                 EProp& ep, BAGL_UNDIRECTED_GRAPH& g) {
+void remove_edge(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor u,
+                 typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v, EProp* ep, BAGL_UNDIRECTED_GRAPH& g) {
   auto [e, e_found] = edge(u, v, g);
   if (e_found) {
     // We can only get property of first edge found.
-    ep = std::move(g.get_property(e));
+    if (ep != nullptr) {
+      *ep = std::move(g.get_property(e));
+    }
     // Remove all (u,v) edges.
     g.remove_edge(u, v);
   }

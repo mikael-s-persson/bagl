@@ -33,10 +33,13 @@ struct adjlist_traversal_tag<bidirectional_s> : public virtual vertex_list_graph
                                                 public virtual edge_list_graph_tag,
                                                 public virtual bidirectional_graph_tag {};
 
-template <typename ListS, typename Container>
-struct adjlist_select_vertex_range {
-  static auto create_range(Container& cont) { return std::views::iota(cont.begin(), cont.end()); }
-};
+template <typename Container>
+auto iota_view_for_list_container(Container* cont) {
+  using Iter = decltype(cont->begin());
+  Iter beg = (cont != nullptr ? cont->begin() : Iter{});
+  Iter end = (cont != nullptr ? cont->end() : Iter{});
+  return std::views::iota(beg, end);
+}
 
 template <typename Container>
 auto iota_view_for_container(Container* cont) {
@@ -44,6 +47,11 @@ auto iota_view_for_container(Container* cont) {
   SizeT sz = (cont != nullptr ? cont->size() : SizeT{0});
   return std::views::iota(SizeT{0}, sz);
 }
+
+template <typename ListS, typename Container>
+struct adjlist_select_vertex_range {
+  static auto create_range(Container& cont) { return iota_view_for_list_container(&cont); }
+};
 
 template <typename Container>
 struct adjlist_select_vertex_range<vec_s, Container> {
@@ -68,8 +76,8 @@ template <typename EDesc, typename IERange, typename OERange>
 class adjlist_undir_ioerange : public std::ranges::view_interface<adjlist_undir_ioerange<EDesc, IERange, OERange>> {
  public:
   using self_range = adjlist_undir_ioerange<EDesc, IERange, OERange>;
-  using ie_iter = std::decay_t<decltype(std::declval<const IERange>().begin())>;
-  using oe_iter = std::decay_t<decltype(std::declval<const OERange>().begin())>;
+  using ie_iter = std::decay_t<decltype(std::declval<IERange>().begin())>;
+  using oe_iter = std::decay_t<decltype(std::declval<OERange>().begin())>;
 
   struct iterator {
     using value_type = EDesc;
@@ -125,9 +133,8 @@ class adjlist_undir_ioerange : public std::ranges::view_interface<adjlist_undir_
     const self_range* parent;
   };
 
-  iterator begin() const { return iterator{ie_range.begin(), oe_range.begin(), this}; }
-
-  iterator end() const { return iterator{ie_range.end(), oe_range.end(), this}; }
+  iterator begin() { return iterator{ie_range.begin(), oe_range.begin(), this}; }
+  iterator end() { return iterator{ie_range.end(), oe_range.end(), this}; }
 
   adjlist_undir_ioerange() = default;
   adjlist_undir_ioerange(bool a_as_out_edges, IERange a_ie_range, OERange a_oe_range)
@@ -146,13 +153,16 @@ auto make_adjlist_undir_ioerange(bool as_out_edges, IERange ie_range, OERange oe
 template <typename ListS, typename Container, typename EDesc>
 struct adjlist_select_out_edge_range {
   template <typename Vertex>
-  static auto create_range(Vertex u, Container& cont) {
-    return std::views::iota(cont.begin(), cont.end()) |
-           std::views::transform([u](const auto& e_it) { return EDesc(u, e_it); });
+  static auto create_range(Vertex u, Container* cont) {
+    return iota_view_for_list_container(cont) | std::views::transform([u](const auto& e_it) { return EDesc(u, e_it); });
   }
   template <typename Vertex>
-  static auto create_range(Vertex u, Container* cont) {
-    return create_range(u, *cont);
+  static auto create_range(Vertex u, Container& cont) {
+    return create_range(u, &cont);
+  }
+  template <typename Vertex>
+  static auto create_empty_range(Vertex u) {
+    return create_range(u, nullptr);
   }
 };
 
@@ -186,7 +196,7 @@ struct adjlist_select_out_edge_range<pool_s, Container, EDesc> {
   }
   template <typename Vertex>
   static auto create_range(Vertex u, Container& cont) {
-    return create_range_impl(u, &cont);
+    return create_range_impl(u, &cont.m_data);
   }
   template <typename Vertex>
   static auto create_empty_range(Vertex u) {

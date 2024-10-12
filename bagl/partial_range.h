@@ -4,9 +4,9 @@
 #define BAGL_BAGL_PARTIAL_RANGE_H_
 
 #include <iterator>
+#include <memory>
 #include <ranges>
 #include <utility>
-#include <memory>
 
 #include "bagl/has_trait_member.h"
 
@@ -14,7 +14,7 @@ namespace bagl {
 namespace partial_range_detail {
 // Working around missing std::ranges::sized_range.
 BAGL_GRAPH_HAS_MEMBER_FUNCTION(size);
-} // partial_range_detail
+}  // namespace partial_range_detail
 
 // This is a partial view over an underlying range which ensures that an iterator moving
 // within the range continues to be correctly tied to its parent range, i.e., not dangling.
@@ -26,10 +26,13 @@ class partial_view : public std::ranges::view_interface<partial_view<BaseRange>>
   using sentinel = std::ranges::sentinel_t<BaseRange>;
 
   template <typename... Args>
-  explicit partial_view(Args&&... args) : base_range_(make_base(std::forward<Args>(args)...)), current_begin_(get_base().begin()) {}
+  explicit partial_view(Args&&... args)
+      : base_range_(make_base(std::forward<Args>(args)...)), current_begin_(get_base().begin()) {}
 
-  explicit partial_view(BaseRange&& base_range) : base_range_(make_base(std::move(base_range))), current_begin_(get_base().begin()) {}
-  explicit partial_view(const BaseRange& base_range) : base_range_(make_base(base_range)), current_begin_(get_base().begin()) {}
+  explicit partial_view(BaseRange&& base_range)
+      : base_range_(make_base(std::move(base_range))), current_begin_(get_base().begin()) {}
+  explicit partial_view(const BaseRange& base_range)
+      : base_range_(make_base(base_range)), current_begin_(get_base().begin()) {}
 
   partial_view(partial_view&&) noexcept = default;
   partial_view& operator=(partial_view&&) noexcept = default;
@@ -53,10 +56,9 @@ class partial_view : public std::ranges::view_interface<partial_view<BaseRange>>
   }
 
   auto begin() const { return current_begin_; }
-  auto end() const { return get_base().end(); }
+  auto end() const requires std::ranges::input_range<const BaseRange> { return get_base().end(); }
   auto begin() { return current_begin_; }
   auto end() { return get_base().end(); }
-
 
   // Move the current begin iterator for this partial view.
   void move_begin_to(iterator new_begin) { current_begin_ = new_begin; }
@@ -64,7 +66,7 @@ class partial_view : public std::ranges::view_interface<partial_view<BaseRange>>
   void move_to_prev() { --current_begin_; }
 
   // Move the current begin iterator to the end, i.e., make it empty.
-  // This is needed in case 
+  // This is needed in case
   void move_begin_to_end() {
     if constexpr (std::is_same_v<iterator, sentinel>) {
       current_begin_ = end();
@@ -80,7 +82,8 @@ class partial_view : public std::ranges::view_interface<partial_view<BaseRange>>
   }
 
   // Get the actual begin iterator of the underlying range.
-  iterator base_begin() const { return get_base().begin(); }
+  iterator base_begin() const requires std::ranges::input_range<const BaseRange> { return get_base().begin(); }
+  iterator base_begin() { return get_base().begin(); }
 
  private:
   using Storage = std::conditional_t<is_base_borrowable, BaseRange, std::unique_ptr<BaseRange>>;

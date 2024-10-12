@@ -201,7 +201,6 @@ struct reverse_graph_edge_property_map {
   using key_type = reverse_graph_edge_descriptor<property_traits_key_t<PM>>;
   using value_type = property_traits_value_t<PM>;
   using reference = property_traits_reference_t<PM>;
-  using category = property_traits_category_t<PM>;
 
   explicit reverse_graph_edge_property_map(const PM& pm) : underlying_pm_(pm) {}
 
@@ -285,7 +284,6 @@ struct property_traits<reverse_graph_detail::underlying_edge_desc_map_type<E>> {
   using key_type = reverse_graph_detail::reverse_graph_edge_descriptor<E>;
   using value_type = E;
   using reference = const E&;
-  using category = readable_property_map_tag;
 };
 
 template <typename Graph, typename GRef>

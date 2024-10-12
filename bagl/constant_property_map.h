@@ -21,8 +21,7 @@ class constant_property_map : public put_get_helper<constant_property_map< Key, 
 public:
     using key_type = Key;
     using value_type = Value;
-    using reference = const Value &;
-    using category = readable_property_map_tag;
+    using reference = const Value&;
 
     constant_property_map() = default;
     explicit constant_property_map(value_type value) : value_(std::move(value)) {}
@@ -47,8 +46,7 @@ template < typename Key, typename Value > class constant_writable_property_map
 public:
     using key_type = Key;
     using value_type = Value;
-    using reference = Value &;
-    using category = read_write_property_map_tag;
+    using reference = Value&;
 
     constant_writable_property_map() = default;
     explicit constant_writable_property_map(value_type value) : value_(std::move(value)) {}

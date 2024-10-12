@@ -40,7 +40,7 @@ bool is_elem_valid(const ValueType& /*unused*/) {
 
 template <typename ValueType>
 bool is_elem_valid(const std::variant<ValueType, hole_desc>& vp) {
-  return (vp.which() == 0);
+  return (vp.index() == 0);
 }
 
 template <typename Container>
@@ -49,8 +49,8 @@ struct is_not_hole {
   explicit is_not_hole(const Container* cont) : p_cont(cont) {}
   is_not_hole() : is_not_hole(nullptr) {}
   template <typename Desc>
-  bool operator()(Desc d) {
-    return ((*p_cont)[d].which() == 0);
+  bool operator()(Desc d) const {
+    return ((*p_cont)[d].index() == 0);
   }
 };
 
@@ -60,8 +60,8 @@ struct edge_is_not_hole {
   explicit edge_is_not_hole(const Container* cont) : p_cont(cont) {}
   edge_is_not_hole() : edge_is_not_hole(nullptr) {}
   template <typename Desc>
-  bool operator()(Desc e) {
-    return ((*p_cont)[e.edge_id].which() == 0);
+  bool operator()(Desc e) const {
+    return ((*p_cont)[e.edge_id].index() == 0);
   }
 };
 

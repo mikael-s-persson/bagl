@@ -115,7 +115,6 @@ template <typename PropertyMap>
 class dynamic_property_map_adaptor : public dynamic_property_map {
   using key_type = property_traits_key_t<PropertyMap>;
   using value_type = property_traits_value_t<PropertyMap>;
-  using category = property_traits_category_t<PropertyMap>;
 
   // do_put - overloaded dispatches from the put() member function.
   //   Attempts to "put" to a property map that does not model
@@ -171,14 +170,14 @@ class dynamic_property_map_adaptor : public dynamic_property_map {
   }
 
   void put(const std::any& in_key, const std::any& in_value) override {
-    if constexpr (std::is_convertible_v<category*, writable_property_map_tag*>) {
+    if constexpr (!concepts::WritablePropertyMap<PropertyMap, key_type>) {
       throw dynamic_const_put_error();
     } else {
       do_put(in_key, in_value);
     }
   }
   void put(const std::any& in_key, const std::string& in_value) override {
-    if constexpr (std::is_convertible_v<category*, writable_property_map_tag*>) {
+    if constexpr (!concepts::WritablePropertyMap<PropertyMap, key_type>) {
       throw dynamic_const_put_error();
     } else {
       put(property_map_, std::any_cast<key_type>(in_key), dynamic_pmap_detail::read_value<value_type>(in_value));

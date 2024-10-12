@@ -1,0 +1,9 @@
+
+cc_test(
+    name = "adj_list_concepts_test",
+    srcs = [ "adj_list_concepts_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)

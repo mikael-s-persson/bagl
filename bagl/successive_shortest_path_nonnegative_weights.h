@@ -27,7 +27,6 @@ template <concepts::Graph G, concepts::ReadableEdgePropertyMap<G> Weight,
           concepts::ReadableVertexPropertyMap<G> Distance>
 class map_reduced_weight : public put_get_helper<map_reduced_weight<G, Weight, Distance> > {
  public:
-  using category = readable_property_map_tag;
   using value_type = property_traits_value_t<Weight>;
   using reference = value_type;
   using key_type = graph_edge_descriptor_t<G>;

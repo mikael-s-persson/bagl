@@ -268,7 +268,6 @@ class degree_property_map : public put_get_helper<degree_property_map<G>> {
   using key_type = graph_vertex_descriptor_t<G>;
   using value_type = std::size_t;
   using reference = value_type;
-  using category = readable_property_map_tag;
   explicit degree_property_map(const G& g) : g_(&g) {}
   value_type operator[](const key_type& v) const { return degree(v, *g_); }
 
@@ -282,7 +281,6 @@ class out_degree_property_map : public put_get_helper<out_degree_property_map<G>
   using key_type = graph_vertex_descriptor_t<G>;
   using value_type = std::size_t;
   using reference = value_type;
-  using category = readable_property_map_tag;
   explicit out_degree_property_map(const G& g) : g_(&g) {}
   value_type operator[](const key_type& v) const { return out_degree(v, *g_); }
 
@@ -296,7 +294,6 @@ class in_degree_property_map : public put_get_helper<in_degree_property_map<G>> 
   using key_type = graph_vertex_descriptor_t<G>;
   using value_type = std::size_t;
   using reference = value_type;
-  using category = readable_property_map_tag;
   explicit in_degree_property_map(const G& g) : g_(&g) {}
   value_type operator[](const key_type& v) const { return in_degree(v, *g_); }
 

@@ -30,7 +30,6 @@ struct matrix_property_map : put_get_helper<matrix_property_map<Graph, Key, Matr
   // the inner property map is actually an lvalue pmap.
   using value_type = map_type;
   using reference = map_type;
-  using category = readable_property_map_tag;
 
   matrix_property_map() = default;
 

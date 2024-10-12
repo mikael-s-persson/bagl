@@ -52,19 +52,29 @@ struct adjlist_edge_stored_type {
   adjlist_edge_stored_type(vertex_descriptor aTarget, EdgeProperties&& aData)
       : target(aTarget), data(std::move(aData)) {}
 
-  bool operator<(const self& rhs) const { return desc_less_than(this->target, rhs.target); }
-  bool operator<=(const self& rhs) const { return !desc_less_than(rhs.target, this->target); }
-  bool operator>(const self& rhs) const { return desc_less_than(rhs.target, this->target); }
-  bool operator>=(const self& rhs) const { return !desc_less_than(this->target, rhs.target); }
-  bool operator==(const self& rhs) const { return (this->target == rhs.target); }
-  bool operator!=(const self& rhs) const { return (this->target != rhs.target); }
+  bool operator==(const self& rhs) const {
+    if constexpr (std::integral<vertex_descriptor>) {
+      return target == rhs.target;
+    } else {
+      return &(*target) == &(*rhs.target);
+    }
+  }
+  bool operator!=(const self& rhs) const { return !(*this == rhs); }
+
+  auto operator<=>(const self& rhs) const {
+    if constexpr (std::integral<vertex_descriptor>) {
+      return target <=> rhs.target;
+    } else {
+      return &(*target) <=> &(*rhs.target);
+    }
+  }
 };
 
 template <typename VertexListS, typename OutEdgeListS, typename DirectedS, typename VertexProperties,
           typename EdgeProperties>
 std::size_t hash_value(
     const adjlist_edge_stored_type<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>& ep) {
-  return desc_get_hash(ep.target);
+  return container_detail::desc_get_hash(ep.target);
 }
 
 template <typename VertexListS, typename OutEdgeListS, typename DirectedS, typename VertexProperties,
@@ -163,7 +173,7 @@ struct adjlist_out_edges_factory<OutEdgeCont*> {
   template <typename VertexValue>
   static void destroy_all_out_edges(container_detail::pooled_vector<VertexValue>& vcont) {
     for (auto& v : vcont.m_data) {
-      if (v.which() == 0) {
+      if (v.index() == 0) {
         delete std::get<VertexValue>(v).out_edges;
         std::get<VertexValue>(v).out_edges = nullptr;
       }
@@ -214,7 +224,7 @@ void adjlist_erase_in_edge(
   vp.in_edges.erase(std::find(vp.in_edges.begin(), vp.in_edges.end(), e));
 }
 
-// for OutEdgeListS = listS, setS, ...
+// for OutEdgeListS = list_s, set_s, ...
 template <typename Container, typename EdgeDesc, typename VertexCont, typename VertexDesc>
 void adjlist_erase_edge(Container& cont, EdgeDesc e, VertexCont& /*unused*/, VertexDesc /*unused*/) {
   cont.erase(e.edge_id);
@@ -224,7 +234,7 @@ void adjlist_erase_edge(Container* cont, EdgeDesc e, VertexCont& vcont, VertexDe
   adjlist_erase_edge(*cont, e, vcont, v);
 }
 
-// for OutEdgeListS = vecS
+// for OutEdgeListS = vec_s
 template <typename ValueType, typename EdgeDesc, typename VertexCont, typename VertexDesc>
 void adjlist_erase_edge(std::vector<ValueType>& cont, EdgeDesc e, VertexCont& vertex_cont, VertexDesc v) {
   using std::swap;
@@ -241,7 +251,7 @@ void adjlist_erase_edge(std::vector<ValueType>& cont, EdgeDesc e, VertexCont& ve
   cont.erase(it_last, cont.end());
 }
 
-// for OutEdgeListS = poolS
+// for OutEdgeListS = pool_s
 template <typename ValueType, typename EdgeDesc, typename VertexCont, typename VertexDesc>
 void adjlist_erase_edge(container_detail::pooled_vector<ValueType>& cont, EdgeDesc e, VertexCont& /*unused*/,
                         VertexDesc /*unused*/) {
@@ -298,7 +308,7 @@ std::pair<std::size_t, bool> adjlist_add_edge(std::vector<ValueType>& cont, Edge
   return {cont.size() - 1, true};
 }
 
-// for OutEdgeListS = poolS
+// for OutEdgeListS = pool_s
 template <typename ValueType, typename EdgeProperties, typename VertexDesc>
 std::pair<std::size_t, bool> adjlist_add_edge(container_detail::pooled_vector<ValueType>& cont, EdgeProperties&& ep,
                                               VertexDesc v) {
@@ -362,7 +372,7 @@ std::pair<std::size_t, bool> adjlist_find_edge_to(std::vector<ValueType>& cont, 
 template <typename ValueType, typename VertexDesc>
 std::pair<std::size_t, bool> adjlist_find_edge_to(container_detail::pooled_vector<ValueType>& cont, VertexDesc v) {
   for (auto it = cont.m_data.begin(); it != cont.m_data.end(); ++it) {
-    if ((it->which() == 0) && (get<ValueType>(*it).target == v)) {
+    if ((it->index() == 0) && (get<ValueType>(*it).target == v)) {
       return {it - cont.m_data.begin(), true};
     }
   }
@@ -382,12 +392,12 @@ auto adjlist_find_edge_to(Container* cont, VertexDesc v) {
 // directed_s:  O(E/V)      O(E/V)      O(E/V)    O(log(E/V))       O(1)
 // bidir:     O((E/V)^2)    O(E/V)      O(E/V)    O(log(E/V))       O(1)
 
-// for OutEdgeListS = list_s
-template <typename ValueType, typename VertexCont, typename VertexDesc>
-void adjlist_erase_edges_to(std::list<ValueType>& cont, VertexCont& /*unused*/, VertexDesc /*unused*/, VertexDesc v,
-                            std::size_t& e_count) {
+// for OutEdgeListS = list_s, set_s, multiset_s, ...
+template <typename Container, typename VertexCont, typename VertexDesc, typename IterPred>
+void adjlist_erase_edges_if(Container& cont, VertexCont& /*vcont*/, VertexDesc /*u*/, std::size_t& e_count,
+                            IterPred pred) {
   for (auto it = cont.begin(); it != cont.end();) {
-    if (it->target == v) {
+    if (pred(it)) {
       it = cont.erase(it);
       --e_count;
     } else {
@@ -396,9 +406,18 @@ void adjlist_erase_edges_to(std::list<ValueType>& cont, VertexCont& /*unused*/, 
   }
 }
 
+// for OutEdgeListS = list_s
+// List container must scan for target.
+template <typename ValueType, typename VertexCont, typename VertexDesc>
+void adjlist_erase_edges_to(std::list<ValueType>& cont, VertexCont& vcont, VertexDesc u, VertexDesc v,
+                            std::size_t& e_count) {
+  adjlist_erase_edges_if(cont, vcont, u, e_count, [v](const auto& it) { return it->target == v; });
+}
+
 // for OutEdgeListS = set_s, multiset_s, ...
+// Associative container can directly look up target.
 template <typename Container, typename VertexCont, typename VertexDesc>
-void adjlist_erase_edges_to(Container& cont, VertexCont& /*unused*/, VertexDesc /*unused*/, VertexDesc v,
+void adjlist_erase_edges_to(Container& cont, VertexCont& /*vcont*/, VertexDesc /*u*/, VertexDesc v,
                             std::size_t& e_count) {
   using ValueType = typename Container::value_type;
   auto ep = ValueType(v);
@@ -425,21 +444,20 @@ void adjlist_update_in_edge_id(
 }
 
 // for OutEdgeListS = vec_s
-template <typename ValueType, typename VertexCont, typename VertexDesc>
-void adjlist_erase_edges_to(std::vector<ValueType>& cont, VertexCont& vertex_cont, VertexDesc u, VertexDesc v,
-                            std::size_t& e_count) {
+template <typename ValueType, typename VertexCont, typename VertexDesc, typename IterPred>
+void adjlist_erase_edges_if(std::vector<ValueType>& cont, VertexCont& vcont, VertexDesc u, std::size_t& e_count,
+                            IterPred pred) {
   using std::swap;
 
   auto it_last = cont.end();
   for (auto it = cont.begin(); it != it_last;) {
-    if (container_detail::get_value(*it).target == v) {
+    if (pred(it)) {
       --it_last;
       if (it != it_last) {
         swap(*it, *it_last);
         // If this graph has in-edge references, then they must be updated.
-        adjlist_update_in_edge_id(
-            container_detail::get_value(*container_detail::desc_to_iterator(vertex_cont, it->target)), u,
-            it_last - cont.begin(), it - cont.begin());
+        adjlist_update_in_edge_id(container_detail::get_value(*container_detail::desc_to_iterator(vcont, it->target)),
+                                  u, it_last - cont.begin(), it - cont.begin());
       }
       --e_count;
     } else {
@@ -449,18 +467,32 @@ void adjlist_erase_edges_to(std::vector<ValueType>& cont, VertexCont& vertex_con
   cont.erase(it_last, cont.end());
 }
 
-// for OutEdgeListS = pool_s
 template <typename ValueType, typename VertexCont, typename VertexDesc>
-void adjlist_erase_edges_to(container_detail::pooled_vector<ValueType>& cont, VertexCont& /*unused*/,
-                            VertexDesc /*unused*/, VertexDesc v, std::size_t& e_count) {
+void adjlist_erase_edges_to(std::vector<ValueType>& cont, VertexCont& vcont, VertexDesc u, VertexDesc v,
+                            std::size_t& e_count) {
+  adjlist_erase_edges_if(cont, vcont, u, e_count,
+                         [v](const auto& it) { return container_detail::get_value(*it).target == v; });
+}
+
+// for OutEdgeListS = pool_s
+template <typename ValueType, typename VertexCont, typename VertexDesc, typename IterPred>
+void adjlist_erase_edges_if(container_detail::pooled_vector<ValueType>& cont, VertexCont& /*vcont*/, VertexDesc /*u*/,
+                            std::size_t& e_count, IterPred pred) {
   for (auto it = cont.m_data.begin(); it != cont.m_data.end(); ++it) {
-    if ((it->which() == 0) && (container_detail::get_value(*it).target == v)) {
+    if ((it->index() == 0) && pred(it)) {
       *it = cont.m_first_hole;
       cont.m_first_hole = container_detail::hole_desc(it - cont.m_data.begin());
       --(cont.m_num_elements);
       --e_count;
     }
   }
+}
+
+template <typename ValueType, typename VertexCont, typename VertexDesc>
+void adjlist_erase_edges_to(container_detail::pooled_vector<ValueType>& cont, VertexCont& vcont, VertexDesc u,
+                            VertexDesc v, std::size_t& e_count) {
+  adjlist_erase_edges_if(cont, vcont, u, e_count,
+                         [v](const auto& it) { return container_detail::get_value(*it).target == v; });
 }
 
 template <typename Container, typename VertexCont, typename VertexDesc>
@@ -479,26 +511,26 @@ void adjlist_erase_edges_to(Container* cont, VertexCont& vcont, VertexDesc u, Ve
 // bidir:        O((E/V)^2)     O((E/V)^2)     O((E/V)^2)
 
 template <typename DirectedS, typename VertexCont, typename VertexValue, typename VertexDesc>
-std::enable_if_t<std::is_same_v<DirectedS, directed_s>> adjlist_clear_vertex(VertexCont& cont, VertexValue& vp,
+std::enable_if_t<std::is_same_v<DirectedS, directed_s>> adjlist_clear_vertex(VertexCont& vcont, VertexValue& vp,
                                                                              VertexDesc v, std::size_t& e_count) {
   // first, just clear the out-going edges. No need to synchronize in-edges (there are none).
   e_count -= container_detail::get_size(vp.out_edges);
   container_detail::clear_all(vp.out_edges);
-  auto vi = container_detail::desc_to_iterator(cont, v);
+  auto vi = container_detail::desc_to_iterator(vcont, v);
 
   // now, the stupid part... we have to traverse all other vertices (and their edges)
   // to look for in-edges that lead to "v", and erase them.
-  for (auto ui = cont.begin(); ui != cont.end(); ++ui) {
+  for (auto ui = vcont.begin(); ui != vcont.end(); ++ui) {
     if ((ui == vi) || !container_detail::is_elem_valid(*ui)) {
       continue;
     }
     VertexValue& up = container_detail::get_value(*ui);
-    adjlist_erase_edges_to(up.out_edges, cont, container_detail::iterator_to_desc(cont, ui), v, e_count);
+    adjlist_erase_edges_to(up.out_edges, vcont, container_detail::iterator_to_desc(vcont, ui), v, e_count);
   }
 }
 
 template <typename DirectedS, typename VertexCont, typename VertexValue, typename VertexDesc>
-std::enable_if_t<!std::is_same_v<DirectedS, directed_s>> adjlist_clear_vertex(VertexCont& cont, VertexValue& vp,
+std::enable_if_t<!std::is_same_v<DirectedS, directed_s>> adjlist_clear_vertex(VertexCont& vcont, VertexValue& vp,
                                                                               VertexDesc v, std::size_t& e_count) {
   // first, remove the in-edge references from the adjacent vertices of v.
   for (auto ei = container_detail::get_begin_iter(vp.out_edges); ei != container_detail::get_end_iter(vp.out_edges);
@@ -506,8 +538,8 @@ std::enable_if_t<!std::is_same_v<DirectedS, directed_s>> adjlist_clear_vertex(Ve
     if (!container_detail::is_elem_valid(*ei)) {
       continue;
     }
-    VertexValue& wp =
-        container_detail::get_value(*container_detail::desc_to_iterator(cont, container_detail::get_value(*ei).target));
+    VertexValue& wp = container_detail::get_value(
+        *container_detail::desc_to_iterator(vcont, container_detail::get_value(*ei).target));
     for (auto iei = wp.in_edges.begin(); iei != wp.in_edges.end(); ++iei) {
       if ((iei->source == v) && (container_detail::desc_to_iterator(vp.out_edges, iei->edge_id) == ei)) {
         wp.in_edges.erase(iei);
@@ -523,8 +555,8 @@ std::enable_if_t<!std::is_same_v<DirectedS, directed_s>> adjlist_clear_vertex(Ve
   // finally, remove the required out-edges of the "parent" vertices of v.
   for (const auto& ie : vp.in_edges) {
     VertexDesc u = ie.source;
-    VertexValue& up = container_detail::get_value(*container_detail::desc_to_iterator(cont, ie.source));
-    adjlist_erase_edges_to(up.out_edges, cont, u, v, e_count);
+    VertexValue& up = container_detail::get_value(*container_detail::desc_to_iterator(vcont, ie.source));
+    adjlist_erase_edges_to(up.out_edges, vcont, u, v, e_count);
   }
   vp.in_edges.clear();
 }
@@ -850,6 +882,40 @@ struct adjlist_vertex_container {
     --m_num_edges;
   }
 
+  // NOTE: this operation might invalidate other out-edge iterators/descriptors of the same source vertex.
+  // NOTE: This WORKS for ALL vertex container types.
+  template <typename EdgePred>
+  void remove_out_edge_if(vertex_descriptor u, const EdgePred& pred) {
+    auto& out_econt = get_stored_vertex(u).out_edges;
+    adjlist_erase_edges_if(out_econt, m_vertices, u, m_num_edges, [u, &pred, &out_econt](const auto& ei) {
+      return pred(edge_descriptor{u, container_detail::iterator_to_desc(out_econt, ei)});
+    });
+  }
+
+  // NOTE: this operation might invalidate other out-edge iterators/descriptors of the same source vertex.
+  // NOTE: This WORKS for ALL vertex container types.
+  template <typename EdgePred>
+  void remove_edge_if(const EdgePred& pred) {
+    for (auto u : VRangeSelect::create_range(m_vertices)) {
+      this->remove_out_edge_if(u, pred);
+    }
+  }
+
+  // NOTE: this operation might invalidate other out-edge iterators/descriptors of the same source vertex.
+  // NOTE: This WORKS for ALL vertex container types.
+  template <typename EdgePred>
+  void remove_in_edge_if(vertex_descriptor v, const EdgePred& pred) {
+    static_assert(!std::is_same_v<DirectedS, directed_s>);
+    auto& in_econt = get_stored_vertex(v).in_edges;
+    for (std::size_t i = 0; i < in_econt.size();) {
+      if (pred(in_econt[i])) {
+        this->remove_edge(in_econt[i]);
+      } else {
+        ++i;
+      }
+    }
+  }
+
   // NOTE: This WORKS for ALL vertex container types.
   void clear() {
     using OEFactory = adjlist_out_edges_factory<typename vertex_value_type::edge_container_ptr>;
@@ -892,7 +958,7 @@ struct adjlist_vertex_container {
   }
 
   // NOTE: This WORKS for ALL vertex container types.
-  auto edges() const { return edges_from_out_edges(*this); }
+  auto edges() const { return edges_from_out_edges{*this}; }
 };
 
 template <typename VertexListS, typename OutEdgeListS, typename DirectedS, typename VertexProperties,
@@ -934,5 +1000,15 @@ auto edges(const adjlist_vertex_container<VertexListS, OutEdgeListS, DirectedS, 
 }
 
 }  // namespace bagl::adjlist_detail
+
+template <typename VertexListS, typename OutEdgeListS, typename DirectedS, typename VertexProperties,
+          typename EdgeProperties>
+struct std::hash<bagl::adjlist_detail::adjlist_edge_stored_type<VertexListS, OutEdgeListS, DirectedS, VertexProperties,
+                                                                EdgeProperties>> {
+  std::size_t operator()(const bagl::adjlist_detail::adjlist_edge_stored_type<
+                         VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>& x) const {
+    return bagl::adjlist_detail::hash_value(x);
+  }
+};
 
 #endif  // BAGL_BAGL_DETAIL_ADJLIST_CONTAINERS_H_

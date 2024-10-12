@@ -17,7 +17,7 @@ namespace bagl {
 
 template <typename PropertyMap, std::ranges::input_range KeyRange>
 auto make_property_map_range(PropertyMap pmap, KeyRange&& k_range) {
-  if constexpr (std::is_same_v<property_traits_category_t<PropertyMap>, lvalue_property_map_tag>) {
+  if constexpr (concepts::LvaluePropertyMap<PropertyMap, std::ranges::range_value_t<KeyRange>>) {
     return std::forward<KeyRange>(k_range) | std::views::transform([pmap](const auto& k) { return pmap[k]; });
   } else {
     return std::forward<KeyRange>(k_range) | std::views::transform([pmap](const auto& k) { return get(pmap, k); });

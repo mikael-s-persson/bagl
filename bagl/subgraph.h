@@ -625,8 +625,6 @@ class subgraph_global_property_map : public put_get_helper<subgraph_global_prope
   using Traits = property_traits<PropertyMap>;
 
  public:
-  using category = std::conditional_t<std::is_const_v<std::remove_pointer_t<GraphPtr>>, readable_property_map_tag,
-                                      typename Traits::category>;
   using value_type = typename Traits::value_type;
   using key_type = typename Traits::key_type;
   using reference = typename Traits::reference;
@@ -650,8 +648,6 @@ class subgraph_local_property_map : public put_get_helper<subgraph_local_propert
   using Traits = property_traits<PropertyMap>;
 
  public:
-  using category = std::conditional_t<std::is_const_v<std::remove_pointer_t<GraphPtr>>, readable_property_map_tag,
-                                      typename Traits::category>;
   using value_type = typename Traits::value_type;
   using key_type = typename Traits::key_type;
   using reference = typename Traits::reference;

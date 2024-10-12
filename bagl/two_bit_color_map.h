@@ -39,7 +39,6 @@ struct two_bit_color_map {
   using key_type = property_traits_key_t<IndexMap>;
   using value_type = two_bit_color_type;
   using reference = void;
-  using category = read_write_property_map_tag;
 
   explicit two_bit_color_map(std::size_t a_n, const IndexMap& a_index = IndexMap())
       : n(a_n), index(a_index), data(new std::uint8_t[(n + elements_per_char - 1) / elements_per_char]()) {}

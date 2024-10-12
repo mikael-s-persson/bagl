@@ -474,8 +474,10 @@ void remove_vertex(typename BAGL_DIRECTED_GRAPH::vertex_descriptor v, BAGL_DIREC
 }
 
 template <BAGL_DIRECTED_GRAPH_PARAMS, typename VProp>
-void remove_vertex(typename BAGL_DIRECTED_GRAPH::vertex_descriptor v, VProp& vp, BAGL_DIRECTED_GRAPH& g) {
-  vp = std::move(g.get_property(v));
+void remove_vertex(typename BAGL_DIRECTED_GRAPH::vertex_descriptor v, VProp* vp, BAGL_DIRECTED_GRAPH& g) {
+  if (vp != nullptr) {
+    *vp = std::move(g.get_property(v));
+  }
   g.remove_vertex(v);
 }
 
@@ -498,12 +500,14 @@ void remove_edge(typename BAGL_DIRECTED_GRAPH::vertex_descriptor u, typename BAG
 }
 
 template <BAGL_DIRECTED_GRAPH_PARAMS, typename EProp>
-void remove_edge(typename BAGL_DIRECTED_GRAPH::vertex_descriptor u, typename BAGL_DIRECTED_GRAPH::vertex_descriptor v, EProp& ep,
-                 BAGL_DIRECTED_GRAPH& g) {
+void remove_edge(typename BAGL_DIRECTED_GRAPH::vertex_descriptor u, typename BAGL_DIRECTED_GRAPH::vertex_descriptor v,
+                 EProp* ep, BAGL_DIRECTED_GRAPH& g) {
   auto [e, e_found] = edge(u, v, g);
   if (e_found) {
     // We can only get property of first edge found.
-    ep = std::move(g.get_property(e));
+    if (ep != nullptr) {
+      *ep = std::move(g.get_property(e));
+    }
     // Remove all (u,v) edges.
     g.remove_edge(u, v);
   }
@@ -515,8 +519,10 @@ void remove_edge(typename BAGL_DIRECTED_GRAPH::edge_descriptor e, BAGL_DIRECTED_
 }
 
 template <BAGL_DIRECTED_GRAPH_PARAMS, typename EProp>
-void remove_edge(typename BAGL_DIRECTED_GRAPH::edge_descriptor e, EProp& ep, BAGL_DIRECTED_GRAPH& g) {
-  ep = std::move(g.get_property(e));
+void remove_edge(typename BAGL_DIRECTED_GRAPH::edge_descriptor e, EProp* ep, BAGL_DIRECTED_GRAPH& g) {
+  if (ep != nullptr) {
+    *ep = std::move(g.get_property(e));
+  }
   g.remove_edge(e);
 }
 

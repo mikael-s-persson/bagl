@@ -19,9 +19,9 @@ class edges_from_out_edges : public std::ranges::view_interface<edges_from_out_e
  public:
   using self_range = edges_from_out_edges<G>;
   using v_range_t = decltype(vertices(std::declval<G>()));
-  using v_iter_t = std::ranges::iterator_t<const v_range_t>;
+  using v_iter_t = std::ranges::iterator_t<v_range_t>;
   using oe_range_t = decltype(out_edges(*std::declval<v_iter_t>(), std::declval<G>()));
-  using oe_iter_t = std::ranges::iterator_t<const oe_range_t>;
+  using oe_iter_t = std::ranges::iterator_t<oe_range_t>;
   using e_desc_t = decltype(*std::declval<oe_iter_t>());
 
   explicit edges_from_out_edges(const G& g) : p_g(&g), v_range(vertices(*p_g)) {}
@@ -61,6 +61,12 @@ class edges_from_out_edges : public std::ranges::view_interface<edges_from_out_e
       --(*this);
       return tmp;
     }
+    [[nodiscard]] bool operator==(iterator& rhs) {
+      return (this->cur_vi == rhs.cur_vi) && ((this->oe_is_empty() && rhs.oe_is_empty()) ||
+                                              ((!this->oe_is_empty() && !rhs.oe_is_empty()) &&
+                                               std::get<0>(this->cur_oe).begin() == std::get<0>(rhs.cur_oe).begin()));
+    }
+    [[nodiscard]] bool operator!=(iterator& rhs) { return !(*this == rhs); }
     [[nodiscard]] bool operator==(const iterator& rhs) const {
       return (this->cur_vi == rhs.cur_vi) && ((this->oe_is_empty() && rhs.oe_is_empty()) ||
                                               ((!this->oe_is_empty() && !rhs.oe_is_empty()) &&
@@ -70,21 +76,25 @@ class edges_from_out_edges : public std::ranges::view_interface<edges_from_out_e
     e_desc_t operator*() const { return *std::get<0>(cur_oe).begin(); }
     const e_desc_t* operator->() const { return &*(*this); }
 
-    iterator(const self_range* p, std::true_type /*begin*/)
+    iterator(self_range* p, std::true_type /*begin*/)
         : cur_vi(p->v_range.begin()), cur_oe(p->get_fresh_eo_range(cur_vi)), parent(p) {
       // Seek first valid iterator, or end.
       while (oe_is_empty() && cur_vi != parent->v_range.end()) {
         cur_oe = parent->get_fresh_eo_range(++cur_vi);
       }
     }
-    iterator(const self_range* p, std::false_type /*not begin*/)
+    iterator(self_range* p, std::false_type /*not begin*/)
         : cur_vi(p->v_range.end()), cur_oe(std::ranges::empty_view<e_desc_t>()), parent(p) {}
 
     iterator() : cur_oe(std::ranges::empty_view<e_desc_t>()) {}
 
+    [[nodiscard]] bool oe_is_at_begin() {
+      return (cur_oe.index() == 0 ? (std::get<0>(cur_oe).begin() == std::get<0>(cur_oe).base_begin()) : true);
+    }
     [[nodiscard]] bool oe_is_at_begin() const {
       return (cur_oe.index() == 0 ? (std::get<0>(cur_oe).begin() == std::get<0>(cur_oe).base_begin()) : true);
     }
+    [[nodiscard]] bool oe_is_empty() { return (cur_oe.index() == 0 ? std::get<0>(cur_oe).empty() : true); }
     [[nodiscard]] bool oe_is_empty() const { return (cur_oe.index() == 0 ? std::get<0>(cur_oe).empty() : true); }
     void oe_move_to_end() {
       if (cur_oe.index() == 0) {
@@ -104,19 +114,18 @@ class edges_from_out_edges : public std::ranges::view_interface<edges_from_out_e
 
     v_iter_t cur_vi;
     std::variant<partial_view<oe_range_t>, std::ranges::empty_view<e_desc_t>> cur_oe;
-    const self_range* parent = nullptr;
+    self_range* parent = nullptr;
   };
 
-  std::variant<partial_view<oe_range_t>, std::ranges::empty_view<e_desc_t>> get_fresh_eo_range(v_iter_t vi) const {
+  std::variant<partial_view<oe_range_t>, std::ranges::empty_view<e_desc_t>> get_fresh_eo_range(v_iter_t vi) {
     if (vi == v_range.end()) {
       return std::ranges::empty_view<e_desc_t>();  // Empty range.
     }
     return partial_view<oe_range_t>{out_edges(*vi, *p_g)};
   }
 
-  iterator begin() const { return iterator{this, std::true_type{}}; }
+  // This has to be non-const because ranges and views are allowed to mutate.
   iterator begin() { return iterator{this, std::true_type{}}; }
-  iterator end() const { return iterator{this, std::false_type{}}; }
   iterator end() { return iterator{this, std::false_type{}}; }
 
   const G* p_g = nullptr;
