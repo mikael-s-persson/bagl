@@ -178,8 +178,8 @@ class adjacency_list {
   // Construct from a given number of vertices and an edge range.
   // Edges should be represented as pairs of vertex indices.
   template <std::ranges::input_range EdgeRange>
-  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> adjacency_list(
-      vertices_size_type num_vertices, const EdgeRange& e_range, graph_property_type graph_prop = {})
+  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::pair<std::size_t, std::size_t>>
+  adjacency_list(vertices_size_type num_vertices, const EdgeRange& e_range, graph_property_type graph_prop = {})
       : m_pack(), m_graph_prop(std::move(graph_prop)) {
     std::vector<vertex_descriptor> tmp_vs(num_vertices);
     for (auto& v : tmp_vs) {
@@ -194,7 +194,7 @@ class adjacency_list {
   // Construct from a given number of vertices and an edge and edge-property range.
   // Edges should be represented as pairs of vertex indices.
   template <std::ranges::input_range EdgeRange, std::ranges::input_range EdgePropRange>
-  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> &&
+  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::pair<std::size_t, std::size_t>> &&
       std::convertible_to<std::ranges::range_reference_t<EdgePropRange>, edge_property_type>
       adjacency_list(vertices_size_type num_vertices, const EdgeRange& e_range, const EdgePropRange& ep_range,
                      graph_property_type graph_prop = {})
@@ -213,7 +213,7 @@ class adjacency_list {
   // Construct from a given number of vertices and an edge and vertex-property range.
   // Edges should be represented as pairs of vertex indices.
   template <std::ranges::input_range VertexPropRange, std::ranges::input_range EdgeRange>
-  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> &&
+  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::pair<std::size_t, std::size_t>> &&
       std::convertible_to<std::ranges::range_reference_t<VertexPropRange>, vertex_property_type>
       adjacency_list(vertices_size_type num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
                      graph_property_type graph_prop = {})
@@ -232,7 +232,7 @@ class adjacency_list {
   // Edges should be represented as pairs of vertex indices.
   template <std::ranges::input_range VertexPropRange, std::ranges::input_range EdgeRange,
             std::ranges::input_range EdgePropRange>
-  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> &&
+  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::pair<std::size_t, std::size_t>> &&
       std::convertible_to<std::ranges::range_reference_t<VertexPropRange>, vertex_property_type> &&
       std::convertible_to<std::ranges::range_reference_t<EdgePropRange>, edge_property_type>
       adjacency_list(vertices_size_type num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
@@ -774,6 +774,13 @@ struct property_map<adjacency_list<OutEdgeListS, vec_s, DirectedS, VertexPropert
 
 template <typename OutEdgeListS, typename DirectedS, typename VertexProperties, typename EdgeProperties,
           typename GraphProperties>
+auto get(vertex_index_t /*unused*/,
+         adjacency_list<OutEdgeListS, vec_s, DirectedS, VertexProperties, EdgeProperties, GraphProperties>& /*g*/) {
+  return typed_identity_property_map<std::size_t>{};
+}
+
+template <typename OutEdgeListS, typename DirectedS, typename VertexProperties, typename EdgeProperties,
+          typename GraphProperties>
 auto get(
     vertex_index_t /*unused*/,
     const adjacency_list<OutEdgeListS, vec_s, DirectedS, VertexProperties, EdgeProperties, GraphProperties>& /*g*/) {
@@ -791,6 +798,15 @@ std::size_t get(
 
 template <typename OutEdgeListS, typename DirectedS, typename VertexProperties, typename EdgeProperties,
           typename GraphProperties>
+std::size_t get(
+    vertex_index_t /*unused*/,
+    adjacency_list<OutEdgeListS, vec_s, DirectedS, VertexProperties, EdgeProperties, GraphProperties>& /*g*/,
+    const std::size_t& k) {
+  return k;
+}
+
+template <typename OutEdgeListS, typename DirectedS, typename VertexProperties, typename EdgeProperties,
+          typename GraphProperties>
 struct property_map<adjacency_list<OutEdgeListS, pool_s, DirectedS, VertexProperties, EdgeProperties, GraphProperties>,
                     vertex_index_t> {
   using type = typed_identity_property_map<std::size_t>;
@@ -799,10 +815,26 @@ struct property_map<adjacency_list<OutEdgeListS, pool_s, DirectedS, VertexProper
 
 template <typename OutEdgeListS, typename DirectedS, typename VertexProperties, typename EdgeProperties,
           typename GraphProperties>
+auto get(vertex_index_t /*unused*/,
+         adjacency_list<OutEdgeListS, pool_s, DirectedS, VertexProperties, EdgeProperties, GraphProperties>& /*g*/) {
+  return typed_identity_property_map<std::size_t>{};
+}
+
+template <typename OutEdgeListS, typename DirectedS, typename VertexProperties, typename EdgeProperties,
+          typename GraphProperties>
 auto get(
     vertex_index_t /*unused*/,
     const adjacency_list<OutEdgeListS, pool_s, DirectedS, VertexProperties, EdgeProperties, GraphProperties>& /*g*/) {
   return typed_identity_property_map<std::size_t>{};
+}
+
+template <typename OutEdgeListS, typename DirectedS, typename VertexProperties, typename EdgeProperties,
+          typename GraphProperties>
+std::size_t get(
+    vertex_index_t /*unused*/,
+    adjacency_list<OutEdgeListS, pool_s, DirectedS, VertexProperties, EdgeProperties, GraphProperties>& /*g*/,
+    const std::size_t& k) {
+  return k;
 }
 
 template <typename OutEdgeListS, typename DirectedS, typename VertexProperties, typename EdgeProperties,

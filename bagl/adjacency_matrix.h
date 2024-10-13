@@ -201,8 +201,8 @@ class adjacency_matrix {
   // Construct from a given number of vertices and an edge range.
   // Edges should be represented as pairs of vertex indices.
   template <std::ranges::input_range EdgeRange>
-  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> adjacency_matrix(
-      vertices_size_type num_vertices, const EdgeRange& e_range, graph_property_type graph_prop = {})
+  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::pair<std::size_t, std::size_t>>
+  adjacency_matrix(vertices_size_type num_vertices, const EdgeRange& e_range, graph_property_type graph_prop = {})
       : matrix_(edge_descriptor{num_vertices, 0, num_vertices}.edge_index, std::nullopt),
         vertex_properties_(num_vertices),
         property_(std::move(graph_prop)) {
@@ -214,7 +214,7 @@ class adjacency_matrix {
   // Construct from a given number of vertices and an edge and edge-property range.
   // Edges should be represented as pairs of vertex indices.
   template <std::ranges::input_range EdgeRange, std::ranges::input_range EdgePropRange>
-  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> &&
+  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::pair<std::size_t, std::size_t>> &&
       std::convertible_to<std::ranges::range_reference_t<EdgePropRange>, edge_property_type>
       adjacency_matrix(vertices_size_type num_vertices, const EdgeRange& e_range, const EdgePropRange& ep_range,
                        graph_property_type graph_prop = {})
@@ -230,7 +230,7 @@ class adjacency_matrix {
   // Construct from a given number of vertices and an edge and vertex-property range.
   // Edges should be represented as pairs of vertex indices.
   template <std::ranges::input_range VertexPropRange, std::ranges::input_range EdgeRange>
-  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> &&
+  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::pair<std::size_t, std::size_t>> &&
       std::convertible_to<std::ranges::range_reference_t<VertexPropRange>, vertex_property_type>
       adjacency_matrix(vertices_size_type num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
                        graph_property_type graph_prop = {})
@@ -250,7 +250,7 @@ class adjacency_matrix {
   // Edges should be represented as pairs of vertex indices.
   template <std::ranges::input_range VertexPropRange, std::ranges::input_range EdgeRange,
             std::ranges::input_range EdgePropRange>
-  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> &&
+  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::pair<std::size_t, std::size_t>> &&
       std::convertible_to<std::ranges::range_reference_t<VertexPropRange>, vertex_property_type> &&
       std::convertible_to<std::ranges::range_reference_t<EdgePropRange>, edge_property_type>
       adjacency_matrix(vertices_size_type num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
@@ -444,7 +444,7 @@ auto num_edges(const BAGL_ADJACENCY_MATRIX& g) {
 // O(1)
 template <BAGL_ADJACENCY_MATRIX_PARAMS, typename EProp>
 auto add_edge(typename BAGL_ADJACENCY_MATRIX::vertex_descriptor u, typename BAGL_ADJACENCY_MATRIX::vertex_descriptor v,
-              EProp& ep, BAGL_ADJACENCY_MATRIX& g) {
+              EProp&& ep, BAGL_ADJACENCY_MATRIX& g) {
   auto e = g.make_edge_descriptor(u, v);
   if (g.edge_exists(e)) {
     return std::pair{e, false};
@@ -479,10 +479,12 @@ void remove_edge(typename BAGL_ADJACENCY_MATRIX::vertex_descriptor u,
 
 // O(1)
 template <BAGL_ADJACENCY_MATRIX_PARAMS, typename EProp>
-void remove_edge(typename BAGL_ADJACENCY_MATRIX::edge_descriptor e, EProp& ep, BAGL_ADJACENCY_MATRIX& g) {
+void remove_edge(typename BAGL_ADJACENCY_MATRIX::edge_descriptor e, EProp* ep, BAGL_ADJACENCY_MATRIX& g) {
   if (g.edge_exists(e)) {
     --(g.num_edges_);
-    ep = std::move(g.get_edge(e).value());
+    if (ep != nullptr) {
+      *ep = std::move(g.get_edge(e).value());
+    }
     g.get_edge(e) = std::nullopt;
   }
 }
@@ -490,7 +492,7 @@ void remove_edge(typename BAGL_ADJACENCY_MATRIX::edge_descriptor e, EProp& ep, B
 // O(1)
 template <BAGL_ADJACENCY_MATRIX_PARAMS, typename EProp>
 void remove_edge(typename BAGL_ADJACENCY_MATRIX::vertex_descriptor u,
-                 typename BAGL_ADJACENCY_MATRIX::vertex_descriptor v, EProp& ep, BAGL_ADJACENCY_MATRIX& g) {
+                 typename BAGL_ADJACENCY_MATRIX::vertex_descriptor v, EProp* ep, BAGL_ADJACENCY_MATRIX& g) {
   remove_edge(g.make_edge_descriptor(u, v), ep, g);
 }
 
@@ -502,7 +504,7 @@ auto add_vertex(BAGL_ADJACENCY_MATRIX& g) {
 }
 
 template <BAGL_ADJACENCY_MATRIX_PARAMS, typename VP2>
-auto add_vertex(const VP2& /*vp*/, BAGL_ADJACENCY_MATRIX& g) {
+auto add_vertex(const VP2&& /*vp*/, BAGL_ADJACENCY_MATRIX& g) {
   // UNDER CONSTRUCTION
   assert(false && "Not implemented.");
   return *vertices(g).begin();
@@ -724,8 +726,19 @@ struct property_map<BAGL_ADJACENCY_MATRIX, vertex_index_t> {
 };
 
 template <BAGL_ADJACENCY_MATRIX_PARAMS>
+auto get(vertex_index_t /*unused*/, BAGL_ADJACENCY_MATRIX& /*unused*/) {
+  return typed_identity_property_map<typename BAGL_ADJACENCY_MATRIX::vertex_descriptor>();
+}
+
+template <BAGL_ADJACENCY_MATRIX_PARAMS>
 auto get(vertex_index_t /*unused*/, const BAGL_ADJACENCY_MATRIX& /*unused*/) {
   return typed_identity_property_map<typename BAGL_ADJACENCY_MATRIX::vertex_descriptor>();
+}
+
+template <BAGL_ADJACENCY_MATRIX_PARAMS>
+auto get(vertex_index_t /*unused*/, BAGL_ADJACENCY_MATRIX& /*unused*/,
+         typename BAGL_ADJACENCY_MATRIX::vertex_descriptor v) {
+  return v;
 }
 
 template <BAGL_ADJACENCY_MATRIX_PARAMS>
@@ -745,9 +758,21 @@ struct property_map<BAGL_ADJACENCY_MATRIX, edge_index_t> {
 };
 
 template <BAGL_ADJACENCY_MATRIX_PARAMS>
+auto get(edge_index_t /*unused*/, BAGL_ADJACENCY_MATRIX& /*unused*/) {
+  using Edge = typename BAGL_ADJACENCY_MATRIX::edge_descriptor;
+  return data_member_property_map<const std::size_t, const Edge>(&Edge::edge_index);
+}
+
+template <BAGL_ADJACENCY_MATRIX_PARAMS>
 auto get(edge_index_t /*unused*/, const BAGL_ADJACENCY_MATRIX& /*unused*/) {
   using Edge = typename BAGL_ADJACENCY_MATRIX::edge_descriptor;
   return data_member_property_map<const std::size_t, const Edge>(&Edge::edge_index);
+}
+
+template <BAGL_ADJACENCY_MATRIX_PARAMS>
+auto get(edge_index_t /*unused*/, BAGL_ADJACENCY_MATRIX& /*unused*/,
+         typename BAGL_ADJACENCY_MATRIX::edge_descriptor e) {
+  return e.edge_index;
 }
 
 template <BAGL_ADJACENCY_MATRIX_PARAMS>

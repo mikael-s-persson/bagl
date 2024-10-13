@@ -92,14 +92,14 @@ class undirected_graph {
   // Construct from a given number of vertices and an edge range.
   // Edges should be represented as pairs of vertex indices.
   template <std::ranges::input_range EdgeRange>
-  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> undirected_graph(
-      vertices_size_type num_vertices, const EdgeRange& e_range, graph_property_type graph_prop = {})
+  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::pair<std::size_t, std::size_t>>
+  undirected_graph(vertices_size_type num_vertices, const EdgeRange& e_range, graph_property_type graph_prop = {})
       : undirected_graph(non_empty_graph_ctor_t{}, num_vertices, e_range, std::move(graph_prop)) {}
 
   // Construct from a given number of vertices and an edge and edge-property range.
   // Edges should be represented as pairs of vertex indices.
   template <std::ranges::input_range EdgeRange, std::ranges::input_range EdgePropRange>
-  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> &&
+  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::pair<std::size_t, std::size_t>> &&
       std::convertible_to<std::ranges::range_reference_t<EdgePropRange>, edge_property_type>
       undirected_graph(vertices_size_type num_vertices, const EdgeRange& e_range, const EdgePropRange& ep_range,
                        graph_property_type graph_prop = {})
@@ -110,7 +110,7 @@ class undirected_graph {
   // Construct from a given number of vertices and an edge and vertex-property range.
   // Edges should be represented as pairs of vertex indices.
   template <std::ranges::input_range VertexPropRange, std::ranges::input_range EdgeRange>
-  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> &&
+  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::pair<std::size_t, std::size_t>> &&
       std::convertible_to<std::ranges::range_reference_t<VertexPropRange>, vertex_property_type>
       undirected_graph(vertices_size_type num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
                        graph_property_type graph_prop = {})
@@ -122,7 +122,7 @@ class undirected_graph {
   // Edges should be represented as pairs of vertex indices.
   template <std::ranges::input_range VertexPropRange, std::ranges::input_range EdgeRange,
             std::ranges::input_range EdgePropRange>
-  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> &&
+  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::pair<std::size_t, std::size_t>> &&
       std::convertible_to<std::ranges::range_reference_t<VertexPropRange>, vertex_property_type> &&
       std::convertible_to<std::ranges::range_reference_t<EdgePropRange>, edge_property_type>
       undirected_graph(vertices_size_type num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,

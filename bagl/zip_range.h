@@ -280,9 +280,25 @@ class zipped_range
         },
         range_tuple);
   }
+  auto begin() {
+    return std::apply(
+        [](Ranges&... base_ranges) {
+          using std::begin;
+          return ZipIter(begin(base_ranges)...);
+        },
+        range_tuple);
+  }
   auto end() const {
     return std::apply(
         [](const Ranges&... base_ranges) {
+          using std::end;
+          return ZipIter(end(base_ranges)...);
+        },
+        range_tuple);
+  }
+  auto end() {
+    return std::apply(
+        [](Ranges&... base_ranges) {
           using std::end;
           return ZipIter(end(base_ranges)...);
         },
