@@ -13,7 +13,7 @@ namespace {
 TEST(AdjacencyMatrix, ConceptChecks) {
   // Check adjacency_matrix without properties
   {
-    typedef adjacency_matrix<directed_s> Graph;
+    using Graph = adjacency_matrix<directed_s>;
     static_assert(concepts::VertexListGraph<Graph>);
     static_assert(concepts::EdgeListGraph<Graph>);
     static_assert(concepts::IncidenceGraph<Graph>);
@@ -22,7 +22,7 @@ TEST(AdjacencyMatrix, ConceptChecks) {
     static_assert(concepts::AdjacencyMatrix<Graph>);
   }
   {
-    typedef adjacency_matrix<undirected_s> Graph;
+    using Graph = adjacency_matrix<undirected_s>;
     static_assert(concepts::VertexListGraph<Graph>);
     static_assert(concepts::EdgeListGraph<Graph>);
     static_assert(concepts::IncidenceGraph<Graph>);
@@ -32,9 +32,9 @@ TEST(AdjacencyMatrix, ConceptChecks) {
   }
   // Check adjacency_matrix with properties
   {
-    typedef adjacency_matrix<directed_s, property<vertex_color_t, int>, property<edge_weight_t, float> > Graph;
-    typedef graph_traits<Graph>::vertex_descriptor Vertex;
-    typedef graph_traits<Graph>::edge_descriptor Edge;
+    using Graph = adjacency_matrix<directed_s, property<vertex_color_t, int>, property<edge_weight_t, float> >;
+    using Vertex = graph_vertex_descriptor_t<Graph>;
+    using Edge = graph_edge_descriptor_t<Graph>;
     static_assert(concepts::VertexListGraph<Graph>);
     static_assert(concepts::EdgeListGraph<Graph>);
     static_assert(concepts::IncidenceGraph<Graph>);
@@ -47,9 +47,9 @@ TEST(AdjacencyMatrix, ConceptChecks) {
     static_assert(concepts::PropertyGraph<Graph, Edge, edge_weight_t>);
   }
   {
-    typedef adjacency_matrix<undirected_s, property<vertex_color_t, int>, property<edge_weight_t, float> > Graph;
-    typedef graph_traits<Graph>::vertex_descriptor Vertex;
-    typedef graph_traits<Graph>::edge_descriptor Edge;
+    using Graph = adjacency_matrix<undirected_s, property<vertex_color_t, int>, property<edge_weight_t, float> >;
+    using Vertex = graph_vertex_descriptor_t<Graph>;
+    using Edge = graph_edge_descriptor_t<Graph>;
     static_assert(concepts::VertexListGraph<Graph>);
     static_assert(concepts::EdgeListGraph<Graph>);
     static_assert(concepts::IncidenceGraph<Graph>);

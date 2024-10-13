@@ -1,7 +1,16 @@
 
 cc_test(
-    name = "adj_list_concepts_test",
-    srcs = [ "adj_list_concepts_test.cc", ],
+    name = "adjacency_list_concepts_test",
+    srcs = [ "adjacency_list_concepts_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "adjacency_list_test",
+    srcs = [ "adjacency_list_test.cc", ],
     deps = [
         "//bagl",
         "@com_google_googletest//:gtest_main",

@@ -467,8 +467,9 @@ template <BAGL_ADJACENCY_LIST_ARGS>
 void remove_edge(typename BAGL_ADJACENCY_LIST::vertex_descriptor u, typename BAGL_ADJACENCY_LIST::vertex_descriptor v,
                  BAGL_ADJACENCY_LIST& g) {
   auto [e, e_found] = edge(u, v, g);
-  if (e_found) {
+  while (e_found) {
     g.m_pack.remove_edge(e);
+    std::tie(e, e_found) = edge(u, v, g);
   }
 }
 
@@ -532,11 +533,12 @@ template <BAGL_ADJACENCY_LIST_ARGS, typename EProp>
 void remove_edge(typename BAGL_ADJACENCY_LIST::vertex_descriptor u, typename BAGL_ADJACENCY_LIST::vertex_descriptor v,
                  EProp* ep, BAGL_ADJACENCY_LIST& g) {
   auto [e, e_found] = edge(u, v, g);
-  if (e_found) {
+  while (e_found) {
     if (ep != nullptr) {
       *ep = std::move(g.get_property(e));
     }
     g.m_pack.remove_edge(e);
+    std::tie(e, e_found) = edge(u, v, g);
   }
 }
 
