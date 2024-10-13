@@ -56,9 +56,7 @@ class partial_view : public std::ranges::view_interface<partial_view<BaseRange>>
   }
 
   auto begin() const { return current_begin_; }
-  auto end() const requires std::ranges::input_range<const BaseRange> { return get_base().end(); }
-  auto begin() { return current_begin_; }
-  auto end() { return get_base().end(); }
+  auto end() const { return get_base().end(); }
 
   // Move the current begin iterator for this partial view.
   void move_begin_to(iterator new_begin) { current_begin_ = new_begin; }
@@ -82,22 +80,15 @@ class partial_view : public std::ranges::view_interface<partial_view<BaseRange>>
   }
 
   // Get the actual begin iterator of the underlying range.
-  iterator base_begin() const requires std::ranges::input_range<const BaseRange> { return get_base().begin(); }
-  iterator base_begin() { return get_base().begin(); }
+  iterator base_begin() const { return get_base().begin(); }
 
  private:
+  // This has to be mutable because standard ranges and views are allowed to mutate.
   using Storage = std::conditional_t<is_base_borrowable, BaseRange, std::unique_ptr<BaseRange>>;
-  Storage base_range_;
+  mutable Storage base_range_;
   iterator current_begin_;
 
-  const BaseRange& get_base() const {
-    if constexpr (is_base_borrowable) {
-      return base_range_;
-    } else {
-      return *base_range_;
-    }
-  }
-  BaseRange& get_base() {
+  BaseRange& get_base() const {
     if constexpr (is_base_borrowable) {
       return base_range_;
     } else {

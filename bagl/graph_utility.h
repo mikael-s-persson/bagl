@@ -126,20 +126,20 @@ void print_vertices(const VertexListGraph& G, Name name, std::ostream& os = std:
 
 template <concepts::AdjacencyGraph G, typename Vertex>
 bool is_adjacent(G& g, Vertex a, Vertex b) {
-  const auto adj_rg = adjacent_vertices(a, g);
+  auto adj_rg = adjacent_vertices(a, g);
   const auto adj_it = std::find(adj_rg.begin(), adj_rg.end(), b);
   if (adj_it == adj_rg.end()) {
     return false;
   }
 
-  const auto oe_rg = out_edges(a, g);
+  auto oe_rg = out_edges(a, g);
   const auto oe_it = std::find_if(oe_rg.begin(), oe_rg.end(), incident_to(b, g));
   if (oe_it == oe_rg.end()) {
     return false;
   }
 
   if constexpr (std::is_convertible_v<graph_directed_category_t<G>, bidirectional_tag>) {
-    const auto ie_rg = in_edges(b, g);
+    auto ie_rg = in_edges(b, g);
     const auto ie_it = std::find_if(ie_rg.begin(), ie_rg.end(), incident_from(a, g));
     if (ie_it == ie_rg.end()) {
       return false;
@@ -151,20 +151,20 @@ bool is_adjacent(G& g, Vertex a, Vertex b) {
 
 template <concepts::AdjacencyGraph G, typename Vertex>
 auto num_adjacent_vertices(G& g, Vertex a) {
-  const auto adj_rg = adjacent_vertices(a, g);
+  auto adj_rg = adjacent_vertices(a, g);
   return std::distance(adj_rg.begin(), adj_rg.end());
 }
 
 
 template <typename Graph, typename Edge>
 bool in_edge_set(Graph& g, Edge e) {
-  const auto e_rg = edges(g);
+  auto e_rg = edges(g);
   return std::find(e_rg.begin(), e_rg.end(), e) != e_rg.end();
 }
 
 template <typename Graph, typename Vertex>
 bool in_vertex_set(Graph& g, Vertex v) {
-  const auto v_rg = vertices(g);
+  auto v_rg = vertices(g);
   return std::find(v_rg.begin(), v_rg.end(), v) != v_rg.end();
 }
 

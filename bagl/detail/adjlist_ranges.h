@@ -133,16 +133,17 @@ class adjlist_undir_ioerange : public std::ranges::view_interface<adjlist_undir_
     const self_range* parent;
   };
 
-  iterator begin() { return iterator{ie_range.begin(), oe_range.begin(), this}; }
-  iterator end() { return iterator{ie_range.end(), oe_range.end(), this}; }
+  iterator begin() const { return iterator{ie_range.begin(), oe_range.begin(), this}; }
+  iterator end() const { return iterator{ie_range.end(), oe_range.end(), this}; }
 
   adjlist_undir_ioerange() = default;
   adjlist_undir_ioerange(bool a_as_out_edges, IERange a_ie_range, OERange a_oe_range)
       : as_out_edges(a_as_out_edges), ie_range(a_ie_range), oe_range(a_oe_range) {}
 
   bool as_out_edges = false;
-  IERange ie_range;
-  OERange oe_range;
+  // This has to be mutable because standard ranges and views are allowed to mutate.
+  mutable IERange ie_range;
+  mutable OERange oe_range;
 };
 
 template <typename EDesc, typename IERange, typename OERange>

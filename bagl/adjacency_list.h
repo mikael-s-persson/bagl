@@ -66,6 +66,16 @@ struct adjacency_list_disallowed_vertex_list<unordered_set_s> {};
 template <>
 struct adjacency_list_disallowed_vertex_list<unordered_multiset_s> {};
 
+template <typename OutEdgeListS>
+struct adjacency_list_disallowed_out_edge_list {
+  using type = void;
+};
+
+template <>
+struct adjacency_list_disallowed_out_edge_list<unordered_set_s> {};
+template <>
+struct adjacency_list_disallowed_out_edge_list<unordered_multiset_s> {};
+
 // forward-declare:
 template <typename OutEdgeListS = vec_s, typename VertexListS = vec_s, typename DirectedS = directed_s,
           typename VertexProperties = no_property, typename EdgeProperties = no_property,
@@ -92,6 +102,7 @@ template <typename OutEdgeListS, typename VertexListS, typename DirectedS, typen
 class adjacency_list {
  public:
   using check_allowed_vertex_list = typename adjacency_list_disallowed_vertex_list<VertexListS>::type;
+  using check_allowed_out_edge_list = typename adjacency_list_disallowed_out_edge_list<OutEdgeListS>::type;
 
   using self = adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperties, EdgeProperties, GraphProperties>;
 

@@ -22,10 +22,10 @@ struct property {
   using self = property<Tag, T, Base>;
 
   property() = default;
-  explicit property(T v) : m_value(std::move(v)), m_base() {}
 
-  template <typename U, typename BaseU>
-  property(U&& v, BaseU&& b) : m_value(std::forward<U>(v)), m_base(std::forward<BaseU>(b)) {}
+  template <typename U, typename... BaseUs>
+  requires std::constructible_from<T, U&&>
+  explicit property(U&& v, BaseUs&&... bs) : m_value(std::forward<U>(v)), m_base(std::forward<BaseUs>(bs)...) {}
 
   template <typename U, typename BaseU>
   // NOLINTNEXTLINE(google-explicit-constructor) Generic copy-constructor.

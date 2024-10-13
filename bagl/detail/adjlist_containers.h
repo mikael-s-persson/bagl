@@ -47,10 +47,10 @@ struct adjlist_edge_stored_type {
   mutable EdgeProperties data;
 
   explicit adjlist_edge_stored_type(vertex_descriptor aTarget) : target(aTarget), data() {}
-  adjlist_edge_stored_type(vertex_descriptor aTarget, const EdgeProperties& aData) : target(aTarget), data(aData) {}
+  template <typename EProp>
+  adjlist_edge_stored_type(vertex_descriptor aTarget, EProp&& aData)
+      : target(aTarget), data(std::forward<EProp>(aData)) {}
   adjlist_edge_stored_type() : adjlist_edge_stored_type(VConfig::null_vertex()) {}
-  adjlist_edge_stored_type(vertex_descriptor aTarget, EdgeProperties&& aData)
-      : target(aTarget), data(std::move(aData)) {}
 
   bool operator==(const self& rhs) const {
     if constexpr (std::integral<vertex_descriptor>) {
@@ -116,8 +116,9 @@ struct adjlist_vertex_stored_type {
   in_edge_container in_edges;
 
   adjlist_vertex_stored_type() : data(), out_edges(), in_edges() {}
-  explicit adjlist_vertex_stored_type(const VertexProperties& aData) : data(aData), out_edges(), in_edges() {}
-  explicit adjlist_vertex_stored_type(VertexProperties&& aData) : data(std::move(aData)), out_edges(), in_edges() {}
+  template <typename VProp>
+  requires std::constructible_from<VertexProperties, VProp&&>
+  explicit adjlist_vertex_stored_type(VProp&& aData) : data(std::forward<VProp>(aData)), out_edges(), in_edges() {}
 };
 
 template <typename VertexListS, typename OutEdgeListS, typename VertexProperties, typename EdgeProperties>
@@ -134,8 +135,9 @@ struct adjlist_vertex_stored_type<VertexListS, OutEdgeListS, directed_s, VertexP
   edge_container_ptr out_edges;
 
   adjlist_vertex_stored_type() : data(), out_edges() {}
-  explicit adjlist_vertex_stored_type(const VertexProperties& aData) : data(aData), out_edges() {}
-  explicit adjlist_vertex_stored_type(VertexProperties&& aData) : data(std::move(aData)), out_edges() {}
+  template <typename VProp>
+  requires std::constructible_from<VertexProperties, VProp&&>
+  explicit adjlist_vertex_stored_type(VProp&& aData) : data(std::forward<VProp>(aData)), out_edges() {}
 };
 
 /*************************************************************************
@@ -737,12 +739,12 @@ void adjlist_erase_vertex(container_detail::pooled_vector<ValueType>& cont, std:
 template <typename Container, typename VertexProperties>
 auto adjlist_add_vertex(Container& cont, VertexProperties&& vp) {
   using ValueType = typename Container::value_type;
-  return cont.insert(cont.end(), ValueType(std::forward<VertexProperties>(vp)));
+  return cont.insert(cont.end(), ValueType{std::forward<VertexProperties>(vp)});
 }
 
 template <typename ValueType, typename VertexProperties>
 std::size_t adjlist_add_vertex(std::vector<ValueType>& cont, VertexProperties&& vp) {
-  auto it = cont.insert(cont.end(), ValueType(std::forward<VertexProperties>(vp)));
+  auto it = cont.insert(cont.end(), ValueType{std::forward<VertexProperties>(vp)});
   using OEFactory = adjlist_out_edges_factory<typename ValueType::edge_container_ptr>;
   OEFactory::create_out_edges(*it);
   return it - cont.begin();
@@ -753,7 +755,7 @@ std::size_t adjlist_add_vertex(container_detail::pooled_vector<ValueType>& cont,
   using OEFactory = adjlist_out_edges_factory<typename ValueType::edge_container_ptr>;
 
   if (cont.m_first_hole == container_detail::hole_desc()) {
-    auto it = cont.m_data.insert(cont.m_data.end(), ValueType(std::forward<VertexProperties>(vp)));
+    auto it = cont.m_data.insert(cont.m_data.end(), ValueType{std::forward<VertexProperties>(vp)});
     ++(cont.m_num_elements);
     OEFactory::create_out_edges(get<ValueType>(*it));
     return it - cont.m_data.begin();

@@ -33,7 +33,9 @@ class edges_from_out_edges : public std::ranges::view_interface<edges_from_out_e
     using reference = const e_desc_t&;
     using pointer = const e_desc_t*;
     using difference_type = int;
-    using iterator_category = std::bidirectional_iterator_tag;
+    using iterator_category =
+        std::conditional_t<std::bidirectional_iterator<v_iter_t> && std::bidirectional_iterator<oe_iter_t>,
+                           std::bidirectional_iterator_tag, std::forward_iterator_tag>;
 
     iterator& operator++() {
       oe_move_to_next();
@@ -47,7 +49,7 @@ class edges_from_out_edges : public std::ranges::view_interface<edges_from_out_e
       ++(*this);
       return tmp;
     }
-    iterator& operator--() {
+    iterator& operator--() requires std::bidirectional_iterator<v_iter_t> && std::bidirectional_iterator<oe_iter_t> {
       while (oe_is_at_begin() && cur_vi != parent->v_range.begin()) {
         cur_oe = parent->get_fresh_eo_range(--cur_vi);
         oe_move_to_end();
@@ -56,17 +58,11 @@ class edges_from_out_edges : public std::ranges::view_interface<edges_from_out_e
       oe_move_to_prev();
       return *this;
     }
-    iterator operator--(int) {
+    iterator operator--(int) requires std::bidirectional_iterator<v_iter_t> && std::bidirectional_iterator<oe_iter_t> {
       iterator tmp = *this;
       --(*this);
       return tmp;
     }
-    [[nodiscard]] bool operator==(iterator& rhs) {
-      return (this->cur_vi == rhs.cur_vi) && ((this->oe_is_empty() && rhs.oe_is_empty()) ||
-                                              ((!this->oe_is_empty() && !rhs.oe_is_empty()) &&
-                                               std::get<0>(this->cur_oe).begin() == std::get<0>(rhs.cur_oe).begin()));
-    }
-    [[nodiscard]] bool operator!=(iterator& rhs) { return !(*this == rhs); }
     [[nodiscard]] bool operator==(const iterator& rhs) const {
       return (this->cur_vi == rhs.cur_vi) && ((this->oe_is_empty() && rhs.oe_is_empty()) ||
                                               ((!this->oe_is_empty() && !rhs.oe_is_empty()) &&
@@ -76,25 +72,21 @@ class edges_from_out_edges : public std::ranges::view_interface<edges_from_out_e
     e_desc_t operator*() const { return *std::get<0>(cur_oe).begin(); }
     const e_desc_t* operator->() const { return &*(*this); }
 
-    iterator(self_range* p, std::true_type /*begin*/)
+    iterator(const self_range* p, std::true_type /*begin*/)
         : cur_vi(p->v_range.begin()), cur_oe(p->get_fresh_eo_range(cur_vi)), parent(p) {
       // Seek first valid iterator, or end.
       while (oe_is_empty() && cur_vi != parent->v_range.end()) {
         cur_oe = parent->get_fresh_eo_range(++cur_vi);
       }
     }
-    iterator(self_range* p, std::false_type /*not begin*/)
+    iterator(const self_range* p, std::false_type /*not begin*/)
         : cur_vi(p->v_range.end()), cur_oe(std::ranges::empty_view<e_desc_t>()), parent(p) {}
 
     iterator() : cur_oe(std::ranges::empty_view<e_desc_t>()) {}
 
-    [[nodiscard]] bool oe_is_at_begin() {
-      return (cur_oe.index() == 0 ? (std::get<0>(cur_oe).begin() == std::get<0>(cur_oe).base_begin()) : true);
-    }
     [[nodiscard]] bool oe_is_at_begin() const {
       return (cur_oe.index() == 0 ? (std::get<0>(cur_oe).begin() == std::get<0>(cur_oe).base_begin()) : true);
     }
-    [[nodiscard]] bool oe_is_empty() { return (cur_oe.index() == 0 ? std::get<0>(cur_oe).empty() : true); }
     [[nodiscard]] bool oe_is_empty() const { return (cur_oe.index() == 0 ? std::get<0>(cur_oe).empty() : true); }
     void oe_move_to_end() {
       if (cur_oe.index() == 0) {
@@ -114,22 +106,22 @@ class edges_from_out_edges : public std::ranges::view_interface<edges_from_out_e
 
     v_iter_t cur_vi;
     std::variant<partial_view<oe_range_t>, std::ranges::empty_view<e_desc_t>> cur_oe;
-    self_range* parent = nullptr;
+    const self_range* parent = nullptr;
   };
 
-  std::variant<partial_view<oe_range_t>, std::ranges::empty_view<e_desc_t>> get_fresh_eo_range(v_iter_t vi) {
+  std::variant<partial_view<oe_range_t>, std::ranges::empty_view<e_desc_t>> get_fresh_eo_range(v_iter_t vi) const {
     if (vi == v_range.end()) {
       return std::ranges::empty_view<e_desc_t>();  // Empty range.
     }
     return partial_view<oe_range_t>{out_edges(*vi, *p_g)};
   }
 
-  // This has to be non-const because ranges and views are allowed to mutate.
-  iterator begin() { return iterator{this, std::true_type{}}; }
-  iterator end() { return iterator{this, std::false_type{}}; }
+  iterator begin() const { return iterator{this, std::true_type{}}; }
+  iterator end() const { return iterator{this, std::false_type{}}; }
 
   const G* p_g = nullptr;
-  v_range_t v_range;
+  // This has to be mutable because standard ranges and views are allowed to mutate.
+  mutable v_range_t v_range;
 };
 
 }  // namespace bagl
