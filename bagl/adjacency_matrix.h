@@ -102,6 +102,8 @@ struct adjacency_matrix_edge_descriptor {
   std::size_t target = 0;
   std::size_t edge_index = 0;
 
+  bool operator==(const adjacency_matrix_edge_descriptor& rhs) const { return edge_index == rhs.edge_index; }
+  bool operator!=(const adjacency_matrix_edge_descriptor& rhs) const { return edge_index != rhs.edge_index; }
   auto operator<=>(const adjacency_matrix_edge_descriptor& rhs) const { return edge_index <=> rhs.edge_index; }
 
   adjacency_matrix_edge_descriptor() = default;
@@ -504,7 +506,7 @@ auto add_vertex(BAGL_ADJACENCY_MATRIX& g) {
 }
 
 template <BAGL_ADJACENCY_MATRIX_PARAMS, typename VP2>
-auto add_vertex(const VP2&& /*vp*/, BAGL_ADJACENCY_MATRIX& g) {
+auto add_vertex(VP2&& /*vp*/, BAGL_ADJACENCY_MATRIX& g) {
   // UNDER CONSTRUCTION
   assert(false && "Not implemented.");
   return *vertices(g).begin();
@@ -514,6 +516,14 @@ template <BAGL_ADJACENCY_MATRIX_PARAMS>
 void remove_vertex(typename BAGL_ADJACENCY_MATRIX::vertex_descriptor /*u*/, BAGL_ADJACENCY_MATRIX& /*g*/) {
   // UNDER CONSTRUCTION
   assert(false && "Not implemented.");
+}
+
+template <BAGL_ADJACENCY_MATRIX_PARAMS, typename VProp>
+void remove_vertex(typename BAGL_ADJACENCY_MATRIX::vertex_descriptor v, VProp* vp, BAGL_ADJACENCY_MATRIX& g) {
+  if (vp != nullptr) {
+    *vp = std::move(g.get_property(v));
+  }
+  remove_vertex(v, g);
 }
 
 // O(V)
@@ -679,12 +689,12 @@ struct adj_matrix_property_selector {
 
 /* specializations used by graph/properties.hpp */
 template <>
-struct vertex_property_selector<adjacency_matrix_tag> {
+struct vertex_property_selector<adjacency_matrix_class_tag> {
   using type = adj_matrix_property_selector;
 };
 
 template <>
-struct edge_property_selector<adjacency_matrix_tag> {
+struct edge_property_selector<adjacency_matrix_class_tag> {
   using type = adj_matrix_property_selector;
 };
 

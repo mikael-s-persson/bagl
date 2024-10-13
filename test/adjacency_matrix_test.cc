@@ -1,4 +1,5 @@
 // Copyright Cromwell D. Enage 2004
+// Copyright 2024 Mikael Persson - Modernized to C++20
 
 #include "bagl/adjacency_matrix.h"
 
