@@ -155,7 +155,9 @@ template <typename ListS, typename Container, typename EDesc>
 struct adjlist_select_out_edge_range {
   template <typename Vertex>
   static auto create_range(Vertex u, Container* cont) {
-    return iota_view_for_list_container(cont) | std::views::transform([u](const auto& e_it) { return EDesc(u, e_it); });
+    return iota_view_for_list_container(cont) | std::views::transform([u, cont](const auto& e_it) {
+             return EDesc(u, container_detail::iterator_to_desc(*cont, e_it));
+           });
   }
   template <typename Vertex>
   static auto create_range(Vertex u, Container& cont) {

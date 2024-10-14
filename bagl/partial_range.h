@@ -3,6 +3,7 @@
 #ifndef BAGL_BAGL_PARTIAL_RANGE_H_
 #define BAGL_BAGL_PARTIAL_RANGE_H_
 
+#include <cassert>
 #include <iterator>
 #include <memory>
 #include <ranges>
@@ -60,8 +61,14 @@ class partial_view : public std::ranges::view_interface<partial_view<BaseRange>>
 
   // Move the current begin iterator for this partial view.
   void move_begin_to(iterator new_begin) { current_begin_ = new_begin; }
-  void move_to_next() { ++current_begin_; }
-  void move_to_prev() { --current_begin_; }
+  void move_to_next() {
+    assert(current_begin_ != end());
+    ++current_begin_;
+  }
+  void move_to_prev() {
+    assert(current_begin_ != base_begin());
+    --current_begin_;
+  }
 
   // Move the current begin iterator to the end, i.e., make it empty.
   // This is needed in case

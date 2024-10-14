@@ -4,6 +4,7 @@
 #define BAGL_BAGL_LTREE_CONTAINERS_H_
 
 #include <iterator>
+#include <memory>
 #include <queue>
 #include <stack>
 #include <type_traits>
@@ -40,47 +41,14 @@ struct ltree_vertex_config {
 
 template <typename VertexListS, typename OutEdgeListS, typename DirectedS, typename VertexProperties,
           typename EdgeProperties>
-struct ltree_edge_stored_type {
-  using self = ltree_edge_stored_type<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>;
-  using VConfig = ltree_vertex_config<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>;
-  using vertex_descriptor = typename VConfig::descriptor;
-
-  vertex_descriptor target = VConfig::null_vertex();
-  mutable EdgeProperties data = {};
-
-  ltree_edge_stored_type() = default;
-  explicit ltree_edge_stored_type(vertex_descriptor aTarget) : target(aTarget), data() {}
-  ltree_edge_stored_type(vertex_descriptor aTarget, const EdgeProperties& aData) : target(aTarget), data(aData) {}
-  ltree_edge_stored_type(vertex_descriptor aTarget, EdgeProperties&& aData) : target(aTarget), data(std::move(aData)) {}
-
-  bool operator<(const self& rhs) const { return container_detail::desc_less_than(this->target, rhs.target); }
-  bool operator<=(const self& rhs) const { return !container_detail::desc_less_than(rhs.target, this->target); }
-  bool operator>(const self& rhs) const { return container_detail::desc_less_than(rhs.target, this->target); }
-  bool operator>=(const self& rhs) const { return !container_detail::desc_less_than(this->target, rhs.target); }
-  bool operator==(const self& rhs) const { return (this->target == rhs.target); }
-  bool operator!=(const self& rhs) const { return (this->target != rhs.target); }
-};
-
-template <typename VertexListS, typename OutEdgeListS, typename DirectedS, typename VertexProperties,
-          typename EdgeProperties>
-std::size_t hash_value(
-    const ltree_edge_stored_type<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>& ep) {
-  return container_detail::desc_get_hash(ep.target);
-}
-
-template <typename VertexListS, typename OutEdgeListS, typename DirectedS, typename VertexProperties,
-          typename EdgeProperties>
 struct ltree_edge_config {
   using vertex_descriptor =
       typename ltree_vertex_config<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>::descriptor;
 
-  using stored_type = ltree_edge_stored_type<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>;
+  using stored_type = std::pair<vertex_descriptor, EdgeProperties>;
   using container = typename container_gen<OutEdgeListS, stored_type>::type;
   using value_type = typename container::value_type;
   using raw_descriptor = typename container_detail::select_descriptor<container>::type;
-  using container_ptr =
-      std::conditional_t<std::is_same_v<vertex_descriptor, std::size_t> && !std::is_same_v<raw_descriptor, std::size_t>,
-                         container*, container>;
   using descriptor = container_detail::edge_desc<vertex_descriptor, raw_descriptor>;
 
   static descriptor null_edge() { return container_detail::null_desc<descriptor>::value(); }
@@ -97,17 +65,26 @@ struct ltree_vertex_stored_type {
   using directed_tag = DirectedS;
   using Config = ltree_edge_config<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>;
   using edge_container = typename Config::container;
-  using edge_container_ptr = typename Config::container_ptr;
   using edge_descriptor = typename Config::descriptor;
   using in_edge_iterator = edge_descriptor*;
 
   VertexProperties data;
-  edge_container_ptr out_edges;
+  edge_container out_edges;
   edge_descriptor in_edge;
 
+  edge_container& get_out_edges() { return out_edges; }
+  const edge_container& get_out_edges() const { return out_edges; }
+
   ltree_vertex_stored_type() : data(), out_edges(), in_edge() {}
-  explicit ltree_vertex_stored_type(const VertexProperties& aData) : data(aData), out_edges(), in_edge() {}
-  explicit ltree_vertex_stored_type(VertexProperties&& aData) : data(std::move(aData)), out_edges(), in_edge() {}
+  template <typename VProp>
+  requires std::constructible_from<VertexProperties, VProp&&>
+  explicit ltree_vertex_stored_type(VProp&& aData) : data(std::forward<VProp>(aData)), out_edges(), in_edge() {}
+
+  ltree_vertex_stored_type(const ltree_vertex_stored_type&) = delete;
+  ltree_vertex_stored_type& operator=(const ltree_vertex_stored_type&) = delete;
+  ltree_vertex_stored_type(ltree_vertex_stored_type&&) noexcept = default;
+  ltree_vertex_stored_type& operator=(ltree_vertex_stored_type&&) noexcept = default;
+  ~ltree_vertex_stored_type() = default;
 };
 
 template <typename VertexListS, typename OutEdgeListS, typename VertexProperties, typename EdgeProperties>
@@ -116,19 +93,27 @@ struct ltree_vertex_stored_type<VertexListS, OutEdgeListS, directed_s, VertexPro
   using directed_tag = directed_s;
   using Config = ltree_edge_config<VertexListS, OutEdgeListS, directed_s, VertexProperties, EdgeProperties>;
   using edge_container = typename Config::container;
-  using edge_container_ptr = typename Config::container_ptr;
   using edge_descriptor = typename Config::descriptor;
   using in_edge_iterator = int*;
 
   VertexProperties data;
-  edge_container_ptr out_edges;
+  edge_container out_edges;
+
+  edge_container& get_out_edges() { return out_edges; }
+  const edge_container& get_out_edges() const { return out_edges; }
 
   ltree_vertex_stored_type() : data(), out_edges() {}
-  explicit ltree_vertex_stored_type(const VertexProperties& aData) : data(aData), out_edges() {}
-  explicit ltree_vertex_stored_type(VertexProperties&& aData) : data(std::move(aData)), out_edges() {}
+  template <typename VProp>
+  requires std::constructible_from<VertexProperties, VProp&&>
+  explicit ltree_vertex_stored_type(VProp&& aData) : data(std::forward<VProp>(aData)), out_edges() {}
+
+  ltree_vertex_stored_type(const ltree_vertex_stored_type&) = delete;
+  ltree_vertex_stored_type& operator=(const ltree_vertex_stored_type&) = delete;
+  ltree_vertex_stored_type(ltree_vertex_stored_type&&) noexcept = default;
+  ltree_vertex_stored_type& operator=(ltree_vertex_stored_type&&) noexcept = default;
+  ~ltree_vertex_stored_type() = default;
 };
 
-// NOTE: ltree_out_edges_factory == adjlist_out_edges_factory
 // NOTE: ltree_add_edge = adjlist_add_edge
 // NOTE: ltree_find_edge_to = adjlist_find_edge_to
 // NOTE: ltree_add_vertex = adjlist_add_vertex
@@ -179,24 +164,20 @@ template <typename Container, typename EdgeDesc, typename VertexCont, typename V
 void ltree_erase_edge(Container& cont, EdgeDesc e, VertexCont& vcont, VertexDesc v) {
   adjlist_erase_edge(cont, e, vcont, v);
 }
-template <typename Container, typename EdgeDesc, typename VertexCont, typename VertexDesc>
-void ltree_erase_edge(Container* cont, EdgeDesc e, VertexCont& vcont, VertexDesc v) {
-  adjlist_erase_edge(*cont, e, vcont, v);
-}
 
 // for OutEdgeListS = vecS
 template <typename ValueType, typename EdgeDesc, typename VertexCont, typename VertexDesc>
 void ltree_erase_edge(std::vector<ValueType>& cont, EdgeDesc e, VertexCont& vertex_cont, VertexDesc v) {
   using std::swap;
 
-  auto it = container_detail::desc_to_iterator(cont, e.edge_id);
+  auto it = cont.begin() + e.edge_id;
   auto it_last = cont.end();
   --it_last;
   if (it != it_last) {
     swap(*it, *it_last);
     // If this graph has in-edge references, then they must be updated.
-    adjlist_update_in_edge_id(container_detail::get_value(*container_detail::desc_to_iterator(vertex_cont, it->target)),
-                              v, it_last - cont.begin(), it - cont.begin());
+    adjlist_update_in_edge_id(container_detail::desc_to_value(vertex_cont, it->first), v, it_last - cont.begin(),
+                              it - cont.begin());
   }
   cont.erase(it_last, cont.end());
 }
@@ -258,20 +239,19 @@ std::enable_if_t<!std::is_same_v<DirectedS, directed_s>> ltree_update_out_edges(
   if (cont[new_v_id].in_edge != EdgeDesc::null_value()) {
     EdgeDesc& e_in = cont[new_v_id].in_edge;
     ValueType& up = cont[e_in.source];
-    adjlist_update_out_edges_impl(up.out_edges, old_v_id, new_v_id,
-                                  container_detail::desc_to_iterator(up.out_edges, e_in.edge_id));
+    adjlist_update_out_edges_impl(up.get_out_edges(), old_v_id, new_v_id, e_in.edge_id);
   }
   // second, update out-edge vertices
-  for (auto ei = container_detail::get_begin_iter(cont[new_v_id].out_edges);
-       ei != container_detail::get_end_iter(cont[new_v_id].out_edges); ++ei) {
+  for (auto ei = cont[new_v_id].get_out_edges().begin(); ei != cont[new_v_id].get_out_edges().end(); ++ei) {
     if (!container_detail::is_elem_valid(*ei)) {
       continue;
     }
-    ValueType& wp = cont[container_detail::get_value(*ei).target];
+    auto& [e_target, e_prop] = container_detail::get_value(*ei);
+    ValueType& wp = cont[e_target];
     EdgeDesc& e_in = wp.in_edge;
     if (e_in != EdgeDesc::null_value()) {
       if ((e_in.source == old_v_id) &&
-          (ei == container_detail::desc_to_iterator(cont[new_v_id].out_edges, e_in.edge_id))) {
+          (e_in.edge_id == container_detail::iterator_to_desc(cont[new_v_id].get_out_edges(), ei))) {
         e_in.source = new_v_id;
         break;
       }
@@ -290,25 +270,23 @@ std::enable_if_t<!std::is_same_v<DirectedS, directed_s>> ltree_invalidate_in_edg
                                                                                    std::size_t u) {
   using EdgeDesc = typename ValueType::edge_descriptor;
 
-  for (auto e : container_detail::get_range(cont[u].out_edges)) {
+  for (auto& e : cont[u].get_out_edges()) {
     if (!container_detail::is_elem_valid(e)) {
       continue;
     }
-    cont[container_detail::get_value(e).target].in_edge = EdgeDesc::null_value();
+    cont[container_detail::get_value(e).first].in_edge = EdgeDesc::null_value();
   }
 }
 
 template <typename ValueType>
 void ltree_erase_vertices(std::vector<ValueType>& cont, std::vector<std::size_t>& v_list) {
-  using OutEdgeFactory = adjlist_out_edges_factory<typename ValueType::edge_container_ptr>;
   using DirectedS = typename ValueType::directed_tag;
   using std::swap;
 
   for (auto v_it = v_list.begin(); v_it != v_list.end(); ++v_it) {
     // NOTE: First, invalidate the in-edge references of the children, then destroy out-edge list.
     ltree_invalidate_in_edges<DirectedS>(cont, *v_it);
-    auto it = container_detail::desc_to_iterator(cont, *v_it);
-    OutEdgeFactory::destroy_out_edges(*it);
+    auto it = cont.begin() + *v_it;
     auto it_last = cont.end();
     --it_last;
     if (it == it_last) {
@@ -344,11 +322,10 @@ typename std::enable_if_t<std::is_same_v<DirectedS, directed_s>, VertexValue>::e
   for (auto it = vcont.begin(); it != vcont.end(); ++it) {
     if (container_detail::is_elem_valid(*it)) {
       VertexValue& up = container_detail::get_value(*it);
-      for (auto ei = container_detail::get_begin_iter(up.out_edges); ei != container_detail::get_end_iter(up.out_edges);
-           ++ei) {
-        if (container_detail::is_elem_valid(*ei) && (container_detail::get_value(*ei).target == v)) {
+      for (auto ei = up.get_out_edges().begin(); ei != up.get_out_edges().end(); ++ei) {
+        if (container_detail::is_elem_valid(*ei) && (container_detail::get_value(*ei).first == v)) {
           return EdgeDesc(container_detail::iterator_to_desc(vcont, it),
-                          container_detail::iterator_to_desc(up.out_edges, ei));
+                          container_detail::iterator_to_desc(up.get_out_edges(), ei));
         }
       }
     }
@@ -418,21 +395,23 @@ struct ltree_vertex_container {
   std::size_t num_edges() const { return (m_vertices.size() == 0 ? 0 : m_vertices.size() - 1); }
 
   vertex_stored_type& get_stored_vertex(vertex_descriptor v) const {
-    return container_detail::get_value(*container_detail::desc_to_iterator(m_vertices, v));
+    return container_detail::desc_to_value(m_vertices, v);
   }
 
-  const edge_stored_type& get_stored_edge(edge_descriptor e) const {
-    return container_detail::get_value(
-        *container_detail::desc_to_iterator(get_stored_vertex(e.source).out_edges, e.edge_id));
+  const auto& get_stored_edge_property(edge_descriptor e) const {
+    return container_detail::desc_to_value(get_stored_vertex(e.source).get_out_edges(), e.edge_id).second;
+  }
+  auto& get_stored_edge_property(edge_descriptor e) {
+    return container_detail::desc_to_value(get_stored_vertex(e.source).get_out_edges(), e.edge_id).second;
+  }
+  vertex_descriptor get_stored_edge_target(edge_descriptor e) const {
+    return container_detail::desc_to_value(get_stored_vertex(e.source).get_out_edges(), e.edge_id).first;
   }
 
-  std::size_t get_out_degree(vertex_descriptor v) const {
-    return container_detail::get_size(get_stored_vertex(v).out_edges);
-  }
+  std::size_t get_out_degree(vertex_descriptor v) const { return get_stored_vertex(v).get_out_edges().size(); }
 
   std::size_t get_in_degree(vertex_descriptor v) const {
-    if ((v != container_detail::null_desc<vertex_descriptor>::value()) && (v != m_root) &&
-        (container_detail::is_elem_valid(*container_detail::desc_to_iterator(m_vertices, v)))) {
+    if ((v != container_detail::null_desc<vertex_descriptor>::value()) && (v != m_root)) {
       return 1;
     }
     return 0;
@@ -440,8 +419,6 @@ struct ltree_vertex_container {
 
   // NOTE: This WORKS for ALL vertex container types.
   void clear() {
-    using OEFactory = adjlist_out_edges_factory<typename vertex_value_type::edge_container_ptr>;
-    OEFactory::destroy_all_out_edges(m_vertices);
     m_vertices.clear();
     m_root = container_detail::null_desc<vertex_descriptor>::value();
   }
@@ -453,7 +430,9 @@ struct ltree_vertex_container {
   // NOTE: This WORKS for ALL vertex container types.
   // NOTE: This WORKS for ALL edge container types.
   using OERangeSelect = adjlist_select_out_edge_range<OutEdgeListS, edge_container, edge_descriptor>;
-  auto out_edges(vertex_descriptor u) const { return OERangeSelect::create_range(u, get_stored_vertex(u).out_edges); }
+  auto out_edges(vertex_descriptor u) const {
+    return OERangeSelect::create_range(u, get_stored_vertex(u).get_out_edges());
+  }
 
   // NOTE: This WORKS for ALL vertex container types.
   auto edges() const {
@@ -494,8 +473,8 @@ struct ltree_vertex_container {
         max_depth = cur.first;
       }
       vertex_stored_type& vp = get_stored_vertex(cur.second);
-      for (auto e : container_detail::get_range(vp.out_edges)) {
-        tasks.push(TaskType(cur.first, container_detail::get_value(e).target));
+      for (auto e : vp.get_out_edges()) {
+        tasks.push(TaskType(cur.first, container_detail::get_value(e).first));
       }
     }
     return max_depth;
@@ -506,7 +485,7 @@ struct ltree_vertex_container {
   std::pair<edge_descriptor, bool> get_edge(vertex_descriptor u, vertex_descriptor v) const {
     using RawEDesc = typename edge_descriptor::edge_id_type;
 
-    std::pair<RawEDesc, bool> raw_result = adjlist_find_edge_to(get_stored_vertex(u).out_edges, v);
+    std::pair<RawEDesc, bool> raw_result = adjlist_find_edge_to(get_stored_vertex(u).get_out_edges(), v);
 
     if (raw_result.second) {
       return {edge_descriptor(u, raw_result.first), true};
@@ -530,7 +509,8 @@ struct ltree_vertex_container {
   template <typename EP>
   std::pair<edge_descriptor, bool> add_new_edge(vertex_descriptor u, vertex_descriptor v, EP&& ep) {
     using RawEDesc = typename edge_descriptor::edge_id_type;
-    std::pair<RawEDesc, bool> raw_result = adjlist_add_edge(get_stored_vertex(u).out_edges, std::forward<EP>(ep), v);
+    std::pair<RawEDesc, bool> raw_result =
+        adjlist_add_edge(get_stored_vertex(u).get_out_edges(), std::forward<EP>(ep), v);
     if (raw_result.second) {
       ltree_add_in_edge(get_stored_vertex(v), edge_descriptor(u, raw_result.first));
       return {edge_descriptor(u, raw_result.first), true};
@@ -561,13 +541,13 @@ struct ltree_vertex_container {
     while (!bft_queue.empty()) {
       vertex_stored_type& v_value = get_stored_vertex(bft_queue.front());
       bft_queue.pop();
-      for (auto e : container_detail::get_range(v_value.out_edges)) {
+      for (auto e : v_value.get_out_edges()) {
         if (!container_detail::is_elem_valid(e)) {
           continue;
         }
-        death_row.push_back(container_detail::get_value(e).target);
-        bft_queue.push(container_detail::get_value(e).target);
-        vertex_stored_type& u_value = get_stored_vertex(container_detail::get_value(e).target);
+        death_row.push_back(container_detail::get_value(e).first);
+        bft_queue.push(container_detail::get_value(e).first);
+        vertex_stored_type& u_value = get_stored_vertex(container_detail::get_value(e).first);
         *(vit_out++) = std::move(u_value.data);
         *(eit_out++) = std::move(container_detail::get_value(e).data);
       }
@@ -578,7 +558,7 @@ struct ltree_vertex_container {
       clear();
     } else {
       // remove the out-edges.
-      container_detail::clear_all(get_stored_vertex(v).out_edges);
+      get_stored_vertex(v).get_out_edges().clear();
       // Execute the death-row vertices!
       ltree_erase_vertices(m_vertices, death_row);
     }
@@ -603,7 +583,7 @@ struct ltree_vertex_container {
     if (p_edge.source == VConfig::null_vertex()) {
       *(eit_out++) = edge_value_type();
     } else {
-      *(eit_out++) = std::move(get_stored_edge(p_edge).data);
+      *(eit_out++) = std::move(get_stored_edge_property(p_edge));
     }
 
     std::vector<vertex_descriptor> death_row;
@@ -615,12 +595,12 @@ struct ltree_vertex_container {
       vertex_stored_type& v_value = get_stored_vertex(bft_queue.front());
       *(vit_out++) = std::move(v_value.data);
       bft_queue.pop();
-      for (auto e : container_detail::get_range(v_value.out_edges)) {
+      for (auto e : v_value.get_out_edges()) {
         if (!container_detail::is_elem_valid(e)) {
           continue;
         }
-        death_row.push_back(container_detail::get_value(e).target);
-        bft_queue.push(container_detail::get_value(e).target);
+        death_row.push_back(container_detail::get_value(e).first);
+        bft_queue.push(container_detail::get_value(e).first);
         *(eit_out++) = std::move(container_detail::get_value(e).data);
       }
     }
@@ -631,7 +611,7 @@ struct ltree_vertex_container {
       clear();
       return {vit_out, eit_out};
     }  // remove the edge.
-    ltree_erase_edge(get_stored_vertex(p_edge.source).out_edges, p_edge, m_vertices, p_edge.source);
+    ltree_erase_edge(get_stored_vertex(p_edge.source).get_out_edges(), p_edge, m_vertices, p_edge.source);
 
     // Execute the death-row vertices!
     ltree_erase_vertices(m_vertices, death_row);

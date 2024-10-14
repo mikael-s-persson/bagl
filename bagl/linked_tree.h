@@ -241,11 +241,11 @@ class linked_tree {
   };
   // Indexing operator. Returns a reference to the edge-bundle associated to the given edge descriptor.
   edge_bundled& operator[](const edge_descriptor& e) {
-    return get_property_value(m_pack.get_stored_edge(e).data, edge_bundle);
+    return get_property_value(m_pack.get_stored_edge_property(e), edge_bundle);
   };
   // Indexing operator. Returns a const-reference to the edge-bundle associated to the given edge descriptor.
   const edge_bundled& operator[](const edge_descriptor& e) const {
-    return get_property_value(m_pack.get_stored_edge(e).data, edge_bundle);
+    return get_property_value(m_pack.get_stored_edge_property(e), edge_bundle);
   };
   // Indexing operator. Returns a reference to the graph-bundle associated to the graph.
   graph_bundled& operator[](graph_bundle_t /*unused*/) { return get_property_value(m_graph_prop, graph_bundle); };
@@ -260,9 +260,9 @@ class linked_tree {
   const auto& get_property(vertex_descriptor v) const { return m_pack.get_stored_vertex(v).data; }
 
   // Get a reference to the edge-property associated to the given edge descriptor.
-  auto& get_property(const edge_descriptor& e) { return m_pack.get_stored_edge(e).data; }
+  auto& get_property(const edge_descriptor& e) { return m_pack.get_stored_edge_property(e); }
   // Get a const-reference to the edge-property associated to the given edge descriptor.
-  const auto& get_property(const edge_descriptor& e) const { return m_pack.get_stored_edge(e).data; }
+  const auto& get_property(const edge_descriptor& e) const { return m_pack.get_stored_edge_property(e); }
 
   // Get a reference to the graph-property associated to the graph.
   auto& get_property(graph_all_t /*unused*/) { return m_graph_prop; }
@@ -325,7 +325,7 @@ auto source(typename BAGL_LINKED_TREE::edge_descriptor e, const BAGL_LINKED_TREE
  */
 template <BAGL_LINKED_TREE_ARGS>
 auto target(typename BAGL_LINKED_TREE::edge_descriptor e, const BAGL_LINKED_TREE& g) {
-  return g.m_pack.get_stored_edge(e).target;
+  return g.m_pack.get_stored_edge_target(e);
 };
 
 /**

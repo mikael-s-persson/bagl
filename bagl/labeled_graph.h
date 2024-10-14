@@ -45,22 +45,22 @@ struct generate_label_map<vec_s, Label, Vertex> {
 };
 
 template <typename Label, typename Vertex>
-struct generate_label_map<map_s, Label, Vertex> {
+struct generate_label_map<set_s, Label, Vertex> {
   using type = std::map<Label, Vertex>;
 };
 
 template <typename Label, typename Vertex>
-struct generate_label_map<multimap_s, Label, Vertex> {
+struct generate_label_map<multiset_s, Label, Vertex> {
   using type = std::multimap<Label, Vertex>;
 };
 
 template <typename Label, typename Vertex>
-struct generate_label_map<unordered_map_s, Label, Vertex> {
+struct generate_label_map<unordered_set_s, Label, Vertex> {
   using type = std::unordered_map<Label, Vertex>;
 };
 
 template <typename Label, typename Vertex>
-struct generate_label_map<unordered_multimap_s, Label, Vertex> {
+struct generate_label_map<unordered_multiset_s, Label, Vertex> {
   using type = std::unordered_multimap<Label, Vertex>;
 };
 

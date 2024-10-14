@@ -5,10 +5,10 @@
 
 #include <limits>
 #include <list>
-#include <set>
+#include <map>
 #include <ranges>
 #include <type_traits>
-#include <unordered_set>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -117,35 +117,101 @@ struct pooled_vector {
   const_iterator end() const { return m_data.end(); }
 };
 
-template <typename Container>
-std::size_t get_size(const Container& cont) {
-  return cont.size();
+template <typename DescType>
+struct null_desc {
+  static constexpr DescType value() { return DescType{}; }
+};
+
+template <typename DescType>
+struct null_desc<DescType*> {
+  static constexpr DescType* value() { return nullptr; }
+};
+
+template <>
+struct null_desc<std::size_t> {
+  static constexpr std::size_t value() { return (std::numeric_limits<std::size_t>::max)(); }
+};
+
+template <typename Key, typename Value>
+struct null_desc<std::pair<Key, Value*>> {
+  static constexpr std::pair<Key, Value*> value() { return {null_desc<Key>::value(), nullptr}; }
+};
+
+// vector/pool containers.
+inline bool desc_less_than(std::size_t lhs, std::size_t rhs) { return (lhs < rhs); }
+
+// node containers.
+template <typename Iter>
+bool desc_less_than(Iter lhs, Iter rhs) {
+  return (&(*lhs) < &(*rhs));
 }
 
-template <typename Container>
-std::size_t get_size(Container* cont) {
-  return cont->size();
+// hash containers.
+template <typename Key, typename Value>
+bool desc_less_than(std::pair<Key, Value*> lhs, std::pair<Key, Value*> rhs) {
+  return (desc_less_than(lhs.first, rhs.first) || ((lhs.first == rhs.first) && (lhs.second < rhs.second)));
 }
 
-template <typename Container>
-std::size_t get_capacity(const Container& cont) {
-  return cont.capacity();
+inline std::size_t desc_get_hash(std::size_t d) {
+  std::hash<std::size_t> hasher;
+  return hasher(d);
 }
 
-template <typename Container>
-std::size_t get_capacity(Container* cont) {
-  return cont->capacity();
+template <typename Iter>
+std::size_t desc_get_hash(Iter it) {
+  using ValueType = typename Iter::value_type;
+  std::hash<ValueType*> hasher;
+  return hasher(&(*it));
 }
 
-template <typename Container>
-void clear_all(Container& cont) {
-  cont.clear();
+// Not really needed.
+template <typename Key, typename Value>
+std::size_t desc_get_hash(std::pair<Key, Value*> p) {
+  std::hash<Key> hasher;
+  return hasher(p.first);
 }
 
-template <typename Container>
-void clear_all(Container* cont) {
-  cont->clear();
-}
+struct desc_hasher {
+  std::size_t operator()(std::size_t d) const {
+    std::hash<std::size_t> hasher;
+    return hasher(d);
+  }
+  template <typename Iter>
+  std::size_t operator()(Iter it) const {
+    using ValueType = typename Iter::value_type;
+    std::hash<ValueType*> hasher;
+    return hasher(&(*it));
+  }
+};
+
+/*************************************************************************
+ *                      indexable descriptor
+ * **********************************************************************/
+
+// This is just a simple wrappper for a descriptor that gives it ordering and hashing.
+// This is so they can be used as keys in the out-edge containers, we could provide
+// hash/compare functors, but this is just simpler since we don't have to have the hash/comp
+// template parameters everywhere, and we template on key types already.
+template <typename RawDesc>
+struct indexable_desc {
+  RawDesc value;
+
+  // Implicitly convertible.
+  template <typename... Args>
+  indexable_desc(Args&&... args) : value(std::forward<Args>(args)...) {}
+  operator RawDesc&() { return value; }
+  operator const RawDesc&() const { return value; }
+
+  bool operator==(const indexable_desc& rhs) const { return value == rhs.value; }
+  bool operator!=(const indexable_desc& rhs) const { return value != rhs.value; }
+  bool operator<(const indexable_desc& rhs) const { return desc_less_than(value, rhs.value); }
+  bool operator>(const indexable_desc& rhs) const { return desc_less_than(rhs.value, value); }
+  bool operator<=(const indexable_desc& rhs) const { return !desc_less_than(rhs.value, value); }
+  bool operator>=(const indexable_desc& rhs) const { return !desc_less_than(value, rhs.value); }
+};
+
+template <typename RawDesc>
+using indexable_desc_t = std::conditional_t<std::is_integral_v<RawDesc>, RawDesc, indexable_desc<RawDesc>>;
 
 }  // namespace container_detail
 
@@ -154,69 +220,45 @@ struct pool_s {};
 struct list_s {};
 struct set_s {};
 struct multiset_s {};
-struct map_s {};
-struct multimap_s {};
 struct unordered_set_s {};
 struct unordered_multiset_s {};
-struct unordered_map_s {};
-struct unordered_multimap_s {};
 
-template <class Selector, class ValueType>
+template <typename Selector, typename ValueType>
 struct container_gen {};
 
-template <class ValueType>
+template <typename ValueType>
 struct container_gen<vec_s, ValueType> {
   using type = std::vector<ValueType>;
 };
 
-template <class ValueType>
+template <typename ValueType>
 struct container_gen<pool_s, ValueType> {
   using type = container_detail::pooled_vector<ValueType>;
 };
 
-template <class ValueType>
+template <typename ValueType>
 struct container_gen<list_s, ValueType> {
   using type = std::list<ValueType>;
 };
 
-template <class ValueType>
-struct container_gen<set_s, ValueType> {
-  using type = std::set<ValueType>;
+template <typename Key, typename Value>
+struct container_gen<set_s, std::pair<Key, Value>> {
+  using type = std::map<container_detail::indexable_desc_t<Key>, Value>;
 };
 
-template <class ValueType>
-struct container_gen<multiset_s, ValueType> {
-  using type = std::multiset<ValueType>;
+template <typename Key, typename Value>
+struct container_gen<multiset_s, std::pair<Key, Value>> {
+  using type = std::multimap<container_detail::indexable_desc_t<Key>, Value>;
 };
 
-template <class ValueType>
-struct container_gen<map_s, ValueType> {
-  using type = std::set<ValueType>;
+template <typename Key, typename Value>
+struct container_gen<unordered_set_s, std::pair<Key, Value>> {
+  using type = std::unordered_map<container_detail::indexable_desc_t<Key>, Value>;
 };
 
-template <class ValueType>
-struct container_gen<multimap_s, ValueType> {
-  using type = std::multiset<ValueType>;
-};
-
-template <class ValueType>
-struct container_gen<unordered_set_s, ValueType> {
-  using type = std::unordered_set<ValueType>;
-};
-
-template <class ValueType>
-struct container_gen<unordered_multiset_s, ValueType> {
-  using type = std::unordered_multiset<ValueType>;
-};
-
-template <class ValueType>
-struct container_gen<unordered_map_s, ValueType> {
-  using type = std::unordered_set<ValueType>;
-};
-
-template <class ValueType>
-struct container_gen<unordered_multimap_s, ValueType> {
-  using type = std::unordered_multiset<ValueType>;
+template <typename Key, typename Value>
+struct container_gen<unordered_multiset_s, std::pair<Key, Value>> {
+  using type = std::unordered_multimap<container_detail::indexable_desc_t<Key>, Value>;
 };
 
 namespace container_detail {
@@ -236,69 +278,11 @@ struct parallel_edge_traits<unordered_set_s> {
   using type = disallow_parallel_edge_tag;
 };
 
-// map_s is obsolete, replaced with set_s
-template <>
-struct parallel_edge_traits<map_s> {
-  using type = disallow_parallel_edge_tag;
-};
-
-template <>
-struct parallel_edge_traits<unordered_map_s> {
-  using type = disallow_parallel_edge_tag;
-};
-
 template <typename Selector>
 struct is_random_access : std::false_type {};
 
 template <>
 struct is_random_access<vec_s> : std::true_type {};
-
-template <typename DescType>
-struct null_desc {
-  static DescType value() { return DescType{}; }
-};
-
-template <typename DescType>
-struct null_desc<DescType*> {
-  static DescType* value() { return nullptr; }
-};
-
-template <>
-struct null_desc<std::size_t> {
-  static std::size_t value() { return (std::numeric_limits<std::size_t>::max)(); }
-};
-
-inline bool desc_less_than(std::size_t lhs, std::size_t rhs) { return (lhs < rhs); }
-
-template <typename Iter>
-bool desc_less_than(Iter lhs, Iter rhs) {
-  return (&(*lhs) < &(*rhs));
-}
-
-inline std::size_t desc_get_hash(std::size_t d) {
-  std::hash<std::size_t> hasher;
-  return hasher(d);
-}
-
-template <typename Iter>
-std::size_t desc_get_hash(Iter it) {
-  using ValueType = typename Iter::value_type;
-  std::hash<ValueType*> hasher;
-  return hasher(&(*it));
-}
-
-struct desc_hasher {
-  std::size_t operator()(std::size_t d) const {
-    std::hash<std::size_t> hasher;
-    return hasher(d);
-  }
-  template <typename Iter>
-  std::size_t operator()(Iter it) const {
-    using ValueType = typename Iter::value_type;
-    std::hash<ValueType*> hasher;
-    return hasher(&(*it));
-  }
-};
 
 /*************************************************************************
  *                      edge descriptors
@@ -371,28 +355,8 @@ struct undir_edge_desc : EdgeDesc {
  *        iterator / descriptor translation functions for all container types
  * **********************************************************************/
 
-template <typename Container>
-auto desc_to_iterator(Container& c, std::size_t d) {
-  return c.begin() + d;
-}
-
-template <typename Container>
-auto desc_to_iterator(const Container& c, std::size_t d) {
-  return c.begin() + d;
-}
-
-template <typename Container, typename Iter>
-Iter desc_to_iterator(const Container& /*unused*/, Iter it) {
-  return it;
-}
-
 template <typename ValueType>
 std::size_t iterator_to_desc(const std::vector<ValueType>& c, typename std::vector<ValueType>::iterator it) {
-  return it - c.begin();
-}
-
-template <typename ValueType>
-std::size_t iterator_to_desc(const std::vector<ValueType>& c, typename std::vector<ValueType>::const_iterator it) {
   return it - c.begin();
 }
 
@@ -401,76 +365,22 @@ std::size_t iterator_to_desc(const pooled_vector<ValueType>& c, typename pooled_
   return it - c.begin();
 }
 
-template <typename ValueType>
-std::size_t iterator_to_desc(const pooled_vector<ValueType>& c, typename pooled_vector<ValueType>::const_iterator it) {
-  return it - c.begin();
+template <typename Key, typename Value>
+std::pair<Key, Value*> iterator_to_desc(const std::unordered_map<Key, Value>& c,
+                                        typename std::unordered_map<Key, Value>::iterator it) {
+  return {it->first, &it->second};
+}
+
+template <typename Key, typename Value>
+std::pair<Key, Value*> iterator_to_desc(const std::unordered_multimap<Key, Value>& c,
+                                        typename std::unordered_multimap<Key, Value>::iterator it) {
+  return {it->first, &it->second};
 }
 
 template <typename Container, typename Iter>
 Iter iterator_to_desc(const Container& /*unused*/, Iter it) {
   return it;
 }
-
-template <typename Container>
-auto get_begin_iter(Container& c) {
-  return c.begin();
-}
-template <typename Container>
-auto get_begin_iter(Container* c) {
-  return get_begin_iter(*c);
-}
-
-template <typename ValueType>
-std::size_t get_begin_desc(const std::vector<ValueType>& c) {
-  return 0;
-}
-template <typename ValueType>
-std::size_t get_begin_desc(const pooled_vector<ValueType>& c) {
-  return 0;
-}
-template <typename Container>
-auto get_begin_desc(Container& c) {
-  return c.begin();
-}
-template <typename Container>
-auto get_begin_desc(Container* c) {
-  return get_begin_desc(*c);
-}
-
-template <typename ValueType>
-std::size_t get_end_desc(const std::vector<ValueType>& c) {
-  return c.size();
-}
-template <typename ValueType>
-std::size_t get_end_desc(const pooled_vector<ValueType>& c) {
-  return c.m_data.size();
-}
-template <typename Container>
-auto get_end_desc(Container& c) {
-  return c.end();
-}
-template <typename Container>
-auto get_end_desc(Container* c) {
-  return get_end_desc(*c);
-}
-template <typename Container>
-auto get_end_iter(Container& c) {
-  return c.end();
-}
-template <typename Container>
-auto get_end_iter(Container* c) {
-  return get_end_iter(*c);
-}
-
-template <typename Container>
-auto get_range(Container& c) {
-  return std::views::all(c);
-}
-template <typename Container>
-auto get_range(Container* c) {
-  return get_range(*c);
-}
-
 
 /*************************************************************************
  *        descriptor / value translation functions for all container types
@@ -499,9 +409,23 @@ auto& desc_to_value(const Container& /*unused*/, typename Container::iterator it
   return *it;
 }
 
-template <typename Container, typename Desc>
-auto& desc_to_value(Container* p_c, Desc d) {
-  return desc_to_value(*p_c, d);
+template <typename Key, typename Value>
+std::pair<Key, Value&> desc_to_value(std::unordered_map<Key, Value>& /*unused*/, std::pair<Key, Value*> p) {
+  return {p.first, *p.second};
+}
+template <typename Key, typename Value>
+std::pair<Key, const Value&> desc_to_value(const std::unordered_map<Key, Value>& /*unused*/, std::pair<Key, Value*> p) {
+  return {p.first, *p.second};
+}
+
+template <typename Key, typename Value>
+std::pair<Key, Value&> desc_to_value(std::unordered_multimap<Key, Value>& /*unused*/, std::pair<Key, Value*> p) {
+  return {p.first, *p.second};
+}
+template <typename Key, typename Value>
+std::pair<Key, const Value&> desc_to_value(const std::unordered_multimap<Key, Value>& /*unused*/,
+                                           std::pair<Key, Value*> p) {
+  return {p.first, *p.second};
 }
 
 template <typename Container>
@@ -509,10 +433,18 @@ struct select_descriptor {
   using type = typename Container::iterator;
 };
 
-template <typename Container>
-struct select_descriptor<Container*> {
-  using type = typename Container::iterator;
+template <typename Key, typename Value>
+struct select_descriptor<std::unordered_map<Key, Value>> {
+  using type = std::pair<Key, Value*>;
 };
+
+template <typename Key, typename Value>
+struct select_descriptor<std::unordered_multimap<Key, Value>> {
+  using type = std::pair<Key, Value*>;
+};
+
+template <typename Container>
+struct select_descriptor<Container*> : select_descriptor<Container> {};
 
 template <typename ValueType>
 struct select_descriptor<std::vector<ValueType>> {
@@ -552,5 +484,12 @@ struct ignore_output_iter {
 }  // namespace container_detail
 
 }  // namespace bagl
+
+template <typename RawDesc>
+struct std::hash<bagl::container_detail::indexable_desc<RawDesc>> {
+  std::size_t operator()(const bagl::container_detail::indexable_desc<RawDesc>& x) const {
+    return bagl::container_detail::desc_get_hash(x.value);
+  }
+};
 
 #endif  // BAGL_BAGL_DETAIL_CONTAINER_GENERATORS_H_

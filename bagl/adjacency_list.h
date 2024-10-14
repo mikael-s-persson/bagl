@@ -66,16 +66,6 @@ struct adjacency_list_disallowed_vertex_list<unordered_set_s> {};
 template <>
 struct adjacency_list_disallowed_vertex_list<unordered_multiset_s> {};
 
-template <typename OutEdgeListS>
-struct adjacency_list_disallowed_out_edge_list {
-  using type = void;
-};
-
-template <>
-struct adjacency_list_disallowed_out_edge_list<unordered_set_s> {};
-template <>
-struct adjacency_list_disallowed_out_edge_list<unordered_multiset_s> {};
-
 // forward-declare:
 template <typename OutEdgeListS = vec_s, typename VertexListS = vec_s, typename DirectedS = directed_s,
           typename VertexProperties = no_property, typename EdgeProperties = no_property,
@@ -102,7 +92,6 @@ template <typename OutEdgeListS, typename VertexListS, typename DirectedS, typen
 class adjacency_list {
  public:
   using check_allowed_vertex_list = typename adjacency_list_disallowed_vertex_list<VertexListS>::type;
-  using check_allowed_out_edge_list = typename adjacency_list_disallowed_out_edge_list<OutEdgeListS>::type;
 
   using self = adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperties, EdgeProperties, GraphProperties>;
 
@@ -282,10 +271,12 @@ class adjacency_list {
   }
 
   // Indexing operator. Returns a reference to the edge-bundle associated to the given edge descriptor.
-  auto& operator[](const edge_descriptor& e) { return get_property_value(m_pack.get_stored_edge(e).data, edge_bundle); }
+  auto& operator[](const edge_descriptor& e) {
+    return get_property_value(m_pack.get_stored_edge_property(e), edge_bundle);
+  }
   // Indexing operator. Returns a const-reference to the edge-bundle associated to the given edge descriptor.
   const auto& operator[](const edge_descriptor& e) const {
-    return get_property_value(m_pack.get_stored_edge(e).data, edge_bundle);
+    return get_property_value(m_pack.get_stored_edge_property(e), edge_bundle);
   }
 
   // Indexing operator. Returns a reference to the graph-bundle associated to the graph.
@@ -299,9 +290,9 @@ class adjacency_list {
   const auto& get_property(vertex_descriptor v) const { return m_pack.get_stored_vertex(v).data; }
 
   // Get a reference to the edge-property associated to the given edge descriptor.
-  auto& get_property(const edge_descriptor& e) { return m_pack.get_stored_edge(e).data; }
+  auto& get_property(const edge_descriptor& e) { return m_pack.get_stored_edge_property(e); }
   // Get a const-reference to the edge-property associated to the given edge descriptor.
-  const auto& get_property(const edge_descriptor& e) const { return m_pack.get_stored_edge(e).data; }
+  const auto& get_property(const edge_descriptor& e) const { return m_pack.get_stored_edge_property(e); }
 
   // Get a reference to the graph-property associated to the graph.
   auto& get_property(graph_all_t /*unused*/) { return m_graph_prop; }
@@ -354,7 +345,7 @@ auto source(const typename BAGL_ADJACENCY_LIST::edge_descriptor& e, const BAGL_A
 
 template <BAGL_ADJACENCY_LIST_ARGS>
 auto target(const typename BAGL_ADJACENCY_LIST::edge_descriptor& e, const BAGL_ADJACENCY_LIST& g) {
-  return g.m_pack.get_stored_edge(e).target;
+  return g.m_pack.get_stored_edge_target(e);
 }
 
 template <BAGL_ADJACENCY_LIST_ARGS>
@@ -1056,11 +1047,11 @@ class adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, 
 
   // Indexing operator. Returns a reference to the edge-bundle associated to the given edge descriptor.
   edge_bundled& operator[](const edge_descriptor& e) {
-    return get_property_value(m_pack.get_stored_edge(bidir_edge_descriptor(e)).data, edge_bundle);
+    return get_property_value(m_pack.get_stored_edge_property(bidir_edge_descriptor(e)), edge_bundle);
   }
   // Indexing operator. Returns a const-reference to the edge-bundle associated to the given edge descriptor.
   const edge_bundled& operator[](const edge_descriptor& e) const {
-    return get_property_value(m_pack.get_stored_edge(bidir_edge_descriptor(e)).data, edge_bundle);
+    return get_property_value(m_pack.get_stored_edge_property(bidir_edge_descriptor(e)), edge_bundle);
   }
 
   // Indexing operator. Returns a reference to the graph-bundle associated to the graph.
@@ -1076,10 +1067,10 @@ class adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, 
   const auto& get_property(vertex_descriptor v) const { return m_pack.get_stored_vertex(v).data; }
 
   // Get a reference to the edge-property associated to the given edge descriptor.
-  auto& get_property(const edge_descriptor& e) { return m_pack.get_stored_edge(bidir_edge_descriptor(e)).data; }
+  auto& get_property(const edge_descriptor& e) { return m_pack.get_stored_edge_property(bidir_edge_descriptor(e)); }
   // Get a const-reference to the edge-property associated to the given edge descriptor.
   const auto& get_property(const edge_descriptor& e) const {
-    return m_pack.get_stored_edge(bidir_edge_descriptor(e)).data;
+    return m_pack.get_stored_edge_property(bidir_edge_descriptor(e));
   }
 
   // Get a reference to the graph-property associated to the graph.
@@ -1101,7 +1092,7 @@ class adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, 
 template <BAGL_ADJACENCY_LIST_UNDIR_ARGS>
 auto source(const typename BAGL_ADJACENCY_LIST_UNDIR::edge_descriptor& e, const BAGL_ADJACENCY_LIST_UNDIR& g) {
   if (e.is_reversed) {
-    return g.m_pack.get_stored_edge(e).target;
+    return g.m_pack.get_stored_edge_target(e);
   }
   return e.source;
 }
@@ -1111,7 +1102,7 @@ auto target(const typename BAGL_ADJACENCY_LIST_UNDIR::edge_descriptor& e, const 
   if (e.is_reversed) {
     return e.source;
   }
-  return g.m_pack.get_stored_edge(e).target;
+  return g.m_pack.get_stored_edge_target(e);
 }
 
 template <BAGL_ADJACENCY_LIST_UNDIR_ARGS>
