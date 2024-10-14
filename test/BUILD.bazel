@@ -34,3 +34,21 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_test(
+    name = "grid_graph_test",
+    srcs = [ "grid_graph_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "grid_graph_concepts_test",
+    srcs = [ "grid_graph_concepts_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)

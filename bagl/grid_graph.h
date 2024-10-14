@@ -6,6 +6,7 @@
 #define BAGL_BAGL_GRID_GRAPH_H_
 
 #include <array>
+#include <cassert>
 #include <cmath>
 #include <functional>
 #include <limits>
@@ -42,6 +43,8 @@ class grid_graph {
     vertex_descriptor source;
     vertex_descriptor target;
 
+    bool operator==(const edge_descriptor& rhs) const { return source == rhs.source && target == rhs.target; }
+    bool operator!=(const edge_descriptor& rhs) const { return source != rhs.source || target != rhs.target; }
     auto operator<=>(const edge_descriptor& rhs) const {
       return std::pair{source, target} <=> std::pair{rhs.source, rhs.target};
     }
@@ -390,6 +393,10 @@ class grid_graph {
 
   // IncidenceGraph
 
+  friend vertex_descriptor source(edge_descriptor e, const self& /*unused*/) { return e.source; }
+
+  friend vertex_descriptor target(edge_descriptor e, const self& /*unused*/) { return e.target; }
+
   friend auto out_edges(vertex_descriptor vertex, const self& graph) {
     return std::ranges::iota_view{std::size_t{0}, graph.out_degree(vertex)} |
            std::views::transform(
@@ -426,7 +433,7 @@ class grid_graph {
   friend auto in_edges(vertex_descriptor vertex, const self& graph) {
     return std::ranges::iota_view{std::size_t{0}, graph.in_degree(vertex)} |
            std::views::transform(
-               [vertex, &graph](std::size_t out_edge_id) { return graph.in_edge_at(vertex, out_edge_id).target; });
+               [vertex, &graph](std::size_t out_edge_id) { return graph.in_edge_at(vertex, out_edge_id); });
   }
 
   friend std::size_t in_degree(vertex_descriptor vertex, const self& graph) { return graph.in_degree(vertex); }
