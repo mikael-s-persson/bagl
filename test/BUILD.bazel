@@ -1,4 +1,14 @@
 
+cc_library(
+    name = "graph_mutation_test_suite",
+    hdrs = [ "graph_mutation_test_suite.h", ],
+    testonly = True,
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
 cc_test(
     name = "adjacency_list_concepts_test",
     srcs = [ "adjacency_list_concepts_test.cc", ],
@@ -12,6 +22,7 @@ cc_test(
     name = "adjacency_list_test",
     srcs = [ "adjacency_list_test.cc", ],
     deps = [
+        ":graph_mutation_test_suite",
         "//bagl",
         "@com_google_googletest//:gtest_main",
     ],
