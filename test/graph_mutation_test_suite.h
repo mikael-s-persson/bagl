@@ -67,6 +67,22 @@ void check_edge_added(Graph& g, graph_edge_descriptor_t<Graph> e, graph_vertex_d
   EXPECT_EQ(num_edges(g), count_edges(g));
 }
 
+template <typename Graph>
+bool allow_new_edge(Graph& g, graph_vertex_descriptor_t<Graph> a, graph_vertex_descriptor_t<Graph> b) {
+  if (a == b) {
+    // Don't add self edges.
+    return false;
+  }
+  if constexpr (!allows_parallel_edges_v<Graph>) {
+    // Search in out-edges to avoid requiring adjacency-matrix, we don't care about performance.
+    auto oe_rg = out_edges(a, g);
+    // Don't add parallel edges.
+    return std::find_if(oe_rg.begin(), oe_rg.end(), [b, &g](auto e) { return target(e, g) == b; }) == oe_rg.end();
+  } else {
+    return true;
+  }
+}
+
 // NOTE: Avoid using 'auto' in tests, if reasonable, to ensure functions match the expected types.
 
 template <typename T>
@@ -231,12 +247,9 @@ TYPED_TEST_P(GraphMutationTest, RandomMutations) {
   using Vertex = graph_vertex_descriptor_t<Graph>;
   using Edge = graph_edge_descriptor_t<Graph>;
 
-  // TODO Make this test compatible with unique edge graphs.
-  if constexpr (!allows_parallel_edges_v<Graph>) {
-    return;
-  }
-
-  std::size_t N = 5;
+  // N needs to be reasonable large to be able to add enough non-parallel edges.
+  // But, not too big, so we get good degrees.
+  std::size_t N = 10;
 
   Graph g;
 
@@ -257,11 +270,11 @@ TYPED_TEST_P(GraphMutationTest, RandomMutations) {
     // add_edge
     std::cout << "Adding edges..." << std::endl;
     for (std::size_t i = 0; i < 6; ++i) {
-      Vertex b = graph_traits<Graph>::null_vertex();
       Vertex a = random_vertex(g, gen);
-      do {
+      Vertex b = random_vertex(g, gen);
+      while (!allow_new_edge(g, a, b)) {
         b = random_vertex(g, gen);
-      } while (a == b);  // don't do self edges
+      }
 
       std::cout << "add_edge(" << vertex_id_map[a] << "," << vertex_id_map[b] << ")" << std::endl;
       auto [e, inserted] = add_edge(a, b, current_edge_id++, g);
@@ -350,11 +363,11 @@ TYPED_TEST_P(GraphMutationTest, RandomMutations) {
     std::cout << "Adding edges again..." << std::endl;
     for (std::size_t i = 0; i < 2; ++i) {
       Vertex a = random_vertex(g, gen);
-      Vertex b = random_vertex(g, gen);
-      while (a == vid) {
+      while (!allow_new_edge(g, vid, a)) {
         a = random_vertex(g, gen);
       }
-      while (b == vidp1) {
+      Vertex b = random_vertex(g, gen);
+      while (!allow_new_edge(g, b, vidp1)) {
         b = random_vertex(g, gen);
       }
       std::cout << "add_edge(" << vertex_id_map[vid] << "," << vertex_id_map[a] << ")" << std::endl;
