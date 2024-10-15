@@ -9,6 +9,8 @@
 #include <cassert>
 #include <cstdlib>
 #include <iostream>
+#include <sstream>
+#include <string>
 #include <type_traits>
 
 #include "bagl/depth_first_search.h"
@@ -73,72 +75,112 @@ auto connects(Vertex u, Vertex v, const Graph& g) {
   };
 }
 
-template <typename IncidenceGraph, typename Name>
-void print_in_edges(const IncidenceGraph& G, Name name, std::ostream& os = std::cout) {
-  for (auto u : vertices(G)) {
-    os << get(name, u) << " <-- ";
-    for (auto e : in_edges(u, G)) {
-      os << get(name, source(e, G)) << " ";
+// This property map is a best-effort to "stringify" a vertex or edge descriptor.
+// This is mostly meant to be used a default for `print_graph`.
+template <typename G, typename Desc>
+class printable_descriptor_property_map : public put_get_helper<printable_descriptor_property_map<G, Desc>> {
+ public:
+  using key_type = Desc;
+  using value_type = std::string;
+  using reference = value_type;
+
+  explicit printable_descriptor_property_map(const G& g) : g_(&g) {}
+  value_type operator[](const key_type& k) const {
+    // Try:
+    //  1) vertex/edge name maps
+    //  2) vertex/edge index maps
+    //  3) descriptor itself as an integral type
+    //  4) address of property
+    //  5) address of bundle
+    if constexpr (std::is_same_v<Desc, graph_vertex_descriptor_t<G>> && has_property_map_v<G, vertex_name_t>) {
+      const auto& vname = get(vertex_name, *g_, k);
+      if constexpr (std::is_convertible_v<decltype(vname), std::string>) {
+        return std::string{vname};
+      } else {
+        return std::to_string(vname);
+      }
+    } else if constexpr (std::is_same_v<Desc, graph_edge_descriptor_t<G>> && has_property_map_v<G, edge_name_t>) {
+      const auto& ename = get(edge_name, *g_, k);
+      if constexpr (std::is_convertible_v<decltype(ename), std::string>) {
+        return std::string{ename};
+      } else {
+        return std::to_string(ename);
+      }
+    } else if constexpr (std::is_same_v<Desc, graph_vertex_descriptor_t<G>> && has_property_map_v<G, vertex_index_t>) {
+      return std::to_string(get(vertex_index, *g_, k));
+    } else if constexpr (std::is_same_v<Desc, graph_edge_descriptor_t<G>> && has_property_map_v<G, edge_index_t>) {
+      return std::to_string(get(edge_index, *g_, k));
+    } else if constexpr (std::is_integral_v<Desc>) {
+      return std::to_string(k);
+    } else if constexpr (std::is_same_v<Desc, graph_vertex_descriptor_t<G>> && has_property_map_v<G, vertex_all_t>) {
+      return (std::stringstream{} << std::hex << reinterpret_cast<std::uintptr_t>(&get(vertex_all, *g_, k))).str();
+    } else if constexpr (std::is_same_v<Desc, graph_edge_descriptor_t<G>> && has_property_map_v<G, edge_all_t>) {
+      return (std::stringstream{} << std::hex << reinterpret_cast<std::uintptr_t>(&get(edge_all, *g_, k))).str();
+    } else {
+      return (std::stringstream{} << std::hex << reinterpret_cast<std::uintptr_t>(&(*g_)[k])).str();
     }
-    os << '\n';
   }
-}
 
-template <typename IncidenceGraph, typename Name>
-void print_graph(const IncidenceGraph& G, Name name, std::ostream& os = std::cout) {
-  const char* arrow = (is_directed_graph_v<IncidenceGraph> ? " --> " : " <--> ");
-  for (auto u : vertices(G)) {
-    os << get(name, u) << arrow;
-    for (auto e : out_edges(u, G)) {
-      os << get(name, target(e, G)) << " ";
+ private:
+  const G* g_;
+};
+
+template <concepts::IncidenceGraph G, concepts::ReadableVertexPropertyMap<G> VertexName,
+          concepts::ReadableEdgePropertyMap<G> EdgeName>
+void print_graph(const G& g, VertexName vname, EdgeName ename, std::ostream& os = std::cout) {
+  const char* arrow = (is_directed_graph_v<G> ? " --> " : " <-> ");
+  if constexpr (concepts::VertexListGraph<G>) {
+    // Print vertices as "u --> v1 v2 v3.." on each line.
+    os << "Vertices:\n";
+    for (auto u : vertices(g)) {
+      os << get(vname, u) << arrow;
+      for (auto e : out_edges(u, g)) {
+        os << get(vname, target(e, g)) << " ";
+      }
+      os << '\n';
     }
-    os << '\n';
+  }
+  if constexpr (concepts::EdgeListGraph<G>) {
+    // Print edges as "e ( u --> v )" on each line.
+    os << "Edges:\n";
+    for (auto e : edges(g)) {
+      os << get(ename, e) << " ( " << get(vname, source(e, g)) << arrow << get(vname, target(e, g)) << " )\n";
+    }
   }
 }
-template <typename IncidenceGraph>
-void print_graph(const IncidenceGraph& G, std::ostream& os = std::cout) {
-  print_graph(G, get(vertex_index, G), os);
+template <concepts::IncidenceGraph G, concepts::ReadableVertexPropertyMap<G> VertexName>
+void print_graph(const G& g, VertexName vname, std::ostream& os = std::cout) {
+  print_graph(g, vname, printable_descriptor_property_map<G, graph_edge_descriptor_t<G>>(g), os);
+}
+template <concepts::IncidenceGraph G, concepts::ReadableEdgePropertyMap<G> EdgeName>
+void print_graph(const G& g, EdgeName ename, std::ostream& os = std::cout) {
+  print_graph(g, printable_descriptor_property_map<G, graph_vertex_descriptor_t<G>>(g), ename, os);
+}
+template <concepts::IncidenceGraph G>
+void print_graph(const G& g, std::ostream& os = std::cout) {
+  print_graph(g, printable_descriptor_property_map<G, graph_vertex_descriptor_t<G>>(g),
+              printable_descriptor_property_map<G, graph_edge_descriptor_t<G>>(g), os);
 }
 
-template <typename EdgeListGraph, typename Name>
-void print_edges(const EdgeListGraph& G, Name name, std::ostream& os = std::cout) {
-  for (auto e : edges(G)) {
-    os << "(" << get(name, source(e, G)) << "," << get(name, target(e, G)) << ") ";
-  }
-  os << '\n';
-}
-
-template <typename EdgeListGraph, typename VertexName, typename EdgeName>
-void print_edges2(const EdgeListGraph& G, VertexName vname, EdgeName ename, std::ostream& os = std::cout) {
-  for (auto e : edges(G)) {
-    os << get(ename, e) << "(" << get(vname, source(e, G)) << "," << get(vname, target(e, G)) << ") ";
-  }
-  os << '\n';
-}
-
-template <typename VertexListGraph, typename Name>
-void print_vertices(const VertexListGraph& G, Name name, std::ostream& os = std::cout) {
-  for (auto u : vertices(G)) {
-    os << get(name, u) << " ";
-  }
-  os << '\n';
-}
-
-template <concepts::AdjacencyGraph G, typename Vertex>
+template <concepts::Graph G, typename Vertex>
 bool is_adjacent(G& g, Vertex a, Vertex b) {
-  auto adj_rg = adjacent_vertices(a, g);
-  const auto adj_it = std::find(adj_rg.begin(), adj_rg.end(), b);
-  if (adj_it == adj_rg.end()) {
-    return false;
+  if constexpr (concepts::AdjacencyGraph<G>) {
+    auto adj_rg = adjacent_vertices(a, g);
+    const auto adj_it = std::find(adj_rg.begin(), adj_rg.end(), b);
+    if (adj_it == adj_rg.end()) {
+      return false;
+    }
   }
 
-  auto oe_rg = out_edges(a, g);
-  const auto oe_it = std::find_if(oe_rg.begin(), oe_rg.end(), incident_to(b, g));
-  if (oe_it == oe_rg.end()) {
-    return false;
+  if constexpr (concepts::IncidenceGraph<G>) {
+    auto oe_rg = out_edges(a, g);
+    const auto oe_it = std::find_if(oe_rg.begin(), oe_rg.end(), incident_to(b, g));
+    if (oe_it == oe_rg.end()) {
+      return false;
+    }
   }
 
-  if constexpr (std::is_convertible_v<graph_directed_category_t<G>, bidirectional_tag>) {
+  if constexpr (is_bidirectional_graph_v<G>) {
     auto ie_rg = in_edges(b, g);
     const auto ie_it = std::find_if(ie_rg.begin(), ie_rg.end(), incident_from(a, g));
     if (ie_it == ie_rg.end()) {
@@ -149,33 +191,75 @@ bool is_adjacent(G& g, Vertex a, Vertex b) {
   return true;
 }
 
-template <concepts::AdjacencyGraph G, typename Vertex>
+template <concepts::Graph G, typename Vertex>
 auto num_adjacent_vertices(G& g, Vertex a) {
-  auto adj_rg = adjacent_vertices(a, g);
-  return std::distance(adj_rg.begin(), adj_rg.end());
-}
-
-
-template <typename Graph, typename Edge>
-bool in_edge_set(Graph& g, Edge e) {
-  auto e_rg = edges(g);
-  return std::find(e_rg.begin(), e_rg.end(), e) != e_rg.end();
-}
-
-template <typename Graph, typename Vertex>
-bool in_vertex_set(Graph& g, Vertex v) {
-  auto v_rg = vertices(g);
-  return std::find(v_rg.begin(), v_rg.end(), v) != v_rg.end();
-}
-
-template <typename Graph, typename Vertex>
-bool in_edge_set(Graph& g, Vertex u, Vertex v) {
-  for (auto e : edges(g)) {
-    if (source(e, g) == u && target(e, g) == v) {
-      return true;
-    }
+  if constexpr (concepts::AdjacencyGraph<G>) {
+    return std::ranges::distance(adjacent_vertices(a, g));
+  } else if constexpr (concepts::IncidenceGraph<G>) {
+    return std::ranges::distance(out_edges(a, g));
   }
-  return false;
+}
+
+template <concepts::Graph G, typename Edge>
+bool in_edge_set(G& g, Edge e) {
+  if constexpr (concepts::EdgeListGraph<G>) {
+    auto e_rg = edges(g);
+    return std::find(e_rg.begin(), e_rg.end(), e) != e_rg.end();
+  } else if constexpr (concepts::VertexListGraph<G> && concepts::IncidenceGraph<G>) {
+    for (auto u : vertices(g)) {
+      auto oe_rg = out_edges(u, g);
+      if (std::find(oe_rg.begin(), oe_rg.end(), e) != oe_rg.end()) {
+        return true;
+      }
+    }
+    return false;
+  } else {
+    // Not in edge set, because there is no edge set to inspect.
+    return false;
+  }
+}
+
+template <concepts::Graph G, typename Vertex>
+bool in_vertex_set(G& g, Vertex v) {
+  if constexpr (concepts::VertexListGraph<G>) {
+    auto v_rg = vertices(g);
+    return std::find(v_rg.begin(), v_rg.end(), v) != v_rg.end();
+  } else if constexpr (concepts::EdgeListGraph<G> && concepts::IncidenceGraph<G>) {
+    for (auto e : edges(g)) {
+      if (target(e, g) == v || source(e, g) == v) {
+        return true;
+      }
+    }
+    return false;
+  } else {
+    // Not in vertex set, because there is no vertex set to inspect.
+    return false;
+  }
+}
+
+template <concepts::IncidenceGraph G, typename Vertex>
+bool in_edge_set(G& g, Vertex u, Vertex v) {
+  if constexpr (concepts::EdgeListGraph<G>) {
+    for (auto e : edges(g)) {
+      if (connects(u, v, g)(e)) {
+        return true;
+      }
+    }
+    return false;
+  } else if constexpr (concepts::VertexListGraph<G>) {
+    // We don't just check out_edges(u,g) because this is used in
+    // tests to exhaustively check the graph.
+    for (auto a : vertices(g)) {
+      auto oe_rg = out_edges(a, g);
+      if (std::find_if(oe_rg.begin(), oe_rg.end(), connects(u, v, g)) != oe_rg.end()) {
+        return true;
+      }
+    }
+    return false;
+  } else {
+    // Not in edge set, because there is no edge set to inspect.
+    return false;
+  }
 }
 
 // is x a descendant of y?
@@ -194,8 +278,8 @@ bool is_descendant(property_traits_value_t<ParentMap> x, property_traits_value_t
 // is y reachable from x?
 template <typename IncidenceGraph, typename VertexColorMap>
 bool is_reachable(graph_vertex_descriptor_t<IncidenceGraph> x, graph_vertex_descriptor_t<IncidenceGraph> y,
-                         const IncidenceGraph& g,
-                         VertexColorMap color)  // should start out white for every vertex
+                  const IncidenceGraph& g,
+                  VertexColorMap color)  // should start out white for every vertex
 {
   using ColorValue = property_traits_value_t<VertexColorMap>;
   dfs_visitor<> vis;
@@ -244,8 +328,8 @@ struct add_removed_edge_property {
 
 // Same as above: edge property is capacity here
 template <typename Graph>
-struct add_removed_edge_capacity : add_removed_edge_property<property_map_t<Graph, edge_capacity_t> > {
-  using base = add_removed_edge_property<property_map_t<Graph, edge_capacity_t> >;
+struct add_removed_edge_capacity : add_removed_edge_property<property_map_t<Graph, edge_capacity_t>> {
+  using base = add_removed_edge_property<property_map_t<Graph, edge_capacity_t>>;
   explicit add_removed_edge_capacity(Graph& g) : base(get(edge_capacity, g)) {}
 };
 

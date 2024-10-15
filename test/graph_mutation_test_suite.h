@@ -34,23 +34,48 @@ constexpr edge_test_id_t edge_test_id = {};
 using test_vertex_property = property<vertex_test_id_t, std::size_t>;
 using test_edge_property = property<edge_test_id_t, std::size_t>;
 
-template <typename Graph>
+template <concepts::IncidenceGraph Graph>
+requires concepts::VertexListGraph<Graph>
 void check_vertex_cleared(const Graph& g, graph_vertex_descriptor_t<Graph> v) {
   const std::size_t v_id = get(vertex_test_id, g, v);
   for (auto u : vertices(g)) {
-    auto a_rg = adjacent_vertices(u, g);
-    auto a_it = std::find_if(a_rg.begin(), a_rg.end(), [&](auto a) { return get(vertex_test_id, g, a) == v_id; });
-    EXPECT_EQ(a_it, a_rg.end()) << "Should not have found vertex " << v_id << ". But found it adjacent to "
-                                << get(vertex_test_id, g, u);
+    auto oe_rg = out_edges(u, g);
+    auto oe_it =
+        std::find_if(oe_rg.begin(), oe_rg.end(), [&](auto e) { return get(vertex_test_id, g, target(e, g)) == v_id; });
+    EXPECT_EQ(oe_it, oe_rg.end()) << "Should not have found vertex " << v_id << ". But found it adjacent to "
+                                  << get(vertex_test_id, g, u);
   }
 }
 
-template <class Graph>
+template <concepts::Graph Graph>
 std::size_t count_edges(const Graph& g) {
-  return std::ranges::distance(edges(g));
+  if constexpr (concepts::EdgeListGraph<Graph>) {
+    return std::ranges::distance(edges(g));
+  } else if constexpr (concepts::VertexListGraph<Graph> && concepts::IncidenceGraph<Graph>) {
+    std::size_t e_count = 0;
+    for (auto u : vertices(g)) {
+      e_count += std::ranges::distance(out_edges(u, g));
+    }
+    if constexpr (is_undirected_graph_v<Graph>) {
+      e_count /= 2;
+    }
+    return e_count;
+  } else {
+    // Probably will fail on checks.
+    return 0;
+  }
 }
 
-template <typename Graph>
+template <concepts::Graph Graph>
+std::size_t num_edges_or_count(const Graph& g) {
+  if constexpr (concepts::EdgeListGraph<Graph>) {
+    return num_edges(g);
+  } else {
+    return count_edges(g);
+  }
+}
+
+template <concepts::IncidenceGraph Graph>
 void check_edge_added(Graph& g, graph_edge_descriptor_t<Graph> e, graph_vertex_descriptor_t<Graph> a,
                       graph_vertex_descriptor_t<Graph> b, std::size_t correct_id, bool inserted) {
   EXPECT_EQ(source(e, g), a) << "Expected vertex " << get(vertex_test_id, g, a) << " as source of "
@@ -64,7 +89,7 @@ void check_edge_added(Graph& g, graph_edge_descriptor_t<Graph> e, graph_vertex_d
   } else {
     EXPECT_EQ(get(edge_test_id, g, e), get(edge_test_id, g, edge(a, b, g).first));
   }
-  EXPECT_EQ(num_edges(g), count_edges(g));
+  EXPECT_EQ(num_edges_or_count(g), count_edges(g));
 }
 
 template <typename Graph>
@@ -86,7 +111,16 @@ bool allow_new_edge(Graph& g, graph_vertex_descriptor_t<Graph> a, graph_vertex_d
 // NOTE: Avoid using 'auto' in tests, if reasonable, to ensure functions match the expected types.
 
 template <typename T>
-class GraphMutationTest : public ::testing::Test {};
+class GraphMutationTest : public ::testing::Test {
+  // These requirements are pretty much the minimal for a basic mutable graph.
+  // A special-purpose test suite is more appropriate if these can't be met.
+  static_assert(concepts::IncidenceGraph<T>);
+  static_assert(concepts::VertexListGraph<T>);
+  static_assert(concepts::VertexMutableGraph<T>);
+  static_assert(concepts::EdgeMutableGraph<T>);
+  // Further capabilities, such as edge-list, adjacency, parallel edges, bidir/undir, etc.,
+  // enhance the test (e.g., edge lists are checked if possible, parallel edges are added if possible, etc.).
+};
 TYPED_TEST_SUITE_P(GraphMutationTest);
 
 TYPED_TEST_P(GraphMutationTest, SimpleEdge) {
@@ -95,17 +129,12 @@ TYPED_TEST_P(GraphMutationTest, SimpleEdge) {
 
   // Build a graph with 1 edge, maybe parallel.
   Graph g;
-  std::size_t expected_vertex_num = 0;
+
   Vertex u = add_vertex(g);
-  ++expected_vertex_num;
   add_vertex(g);
-  ++expected_vertex_num;
   Vertex v = add_vertex(g);
-  ++expected_vertex_num;
   add_vertex(g);
-  ++expected_vertex_num;
   add_vertex(g);
-  ++expected_vertex_num;
 
   std::size_t expected_edge_num = 0;
   add_edge(u, v, g);
@@ -114,11 +143,11 @@ TYPED_TEST_P(GraphMutationTest, SimpleEdge) {
     add_edge(u, v, g);
     ++expected_edge_num;
   }
-  EXPECT_EQ(num_vertices(g), expected_vertex_num);
-  EXPECT_EQ(num_edges(g), expected_edge_num);
+  EXPECT_EQ(num_vertices(g), 5);
+  EXPECT_EQ(num_edges_or_count(g), expected_edge_num);
   remove_edge(u, v, g);
   // Expect all parallel edges were removed.
-  EXPECT_EQ(num_edges(g), 0);
+  EXPECT_EQ(num_edges_or_count(g), 0);
 }
 
 TYPED_TEST_P(GraphMutationTest, SelfEdge) {
@@ -141,10 +170,10 @@ TYPED_TEST_P(GraphMutationTest, SelfEdge) {
     ++expected_edge_num;
   }
   EXPECT_EQ(num_vertices(g), 5);
-  EXPECT_EQ(num_edges(g), expected_edge_num);
+  EXPECT_EQ(num_edges_or_count(g), expected_edge_num);
   remove_edge(v, v, g);
   // Expect all parallel edges were removed.
-  EXPECT_EQ(num_edges(g), 0);
+  EXPECT_EQ(num_edges_or_count(g), 0);
 }
 
 TYPED_TEST_P(GraphMutationTest, RemoveEdge) {
@@ -159,10 +188,10 @@ TYPED_TEST_P(GraphMutationTest, RemoveEdge) {
 
   auto [e, b] = add_edge(u, v, 42, g);
   EXPECT_TRUE(b);
-  EXPECT_EQ(num_edges(g), 1);
+  EXPECT_EQ(num_edges_or_count(g), 1);
   EXPECT_EQ(get(edge_test_id, g, e), 42);
   remove_edge(e, g);
-  EXPECT_EQ(num_edges(g), 0);
+  EXPECT_EQ(num_edges_or_count(g), 0);
 }
 
 TYPED_TEST_P(GraphMutationTest, RemoveMiddleVertex) {
@@ -181,7 +210,7 @@ TYPED_TEST_P(GraphMutationTest, RemoveMiddleVertex) {
   put(edge_test_id, g, e1, 1234);
   remove_vertex(m, g);
   EXPECT_EQ(num_vertices(g), 2);
-  EXPECT_EQ(num_edges(g), 1);
+  EXPECT_EQ(num_edges_or_count(g), 1);
 
   // Find e1 again, vertices might have been invalidated.
   u = *vertices(g).begin();
@@ -204,7 +233,7 @@ TYPED_TEST_P(GraphMutationTest, RemoveEdgeTwoEdges) {
   EXPECT_TRUE(e1_added);
   auto [e2, e2_added] = add_edge(v, u, 17, g);
   EXPECT_TRUE(e2_added);
-  EXPECT_EQ(num_edges(g), 2);
+  EXPECT_EQ(num_edges_or_count(g), 2);
 
   if constexpr (concepts::AdjacencyMatrix<Graph>) {
     auto [e1_f, e1_found] = edge(u, v, g);
@@ -224,7 +253,7 @@ TYPED_TEST_P(GraphMutationTest, RemoveEdgeTwoEdges) {
     EXPECT_EQ(get(edge_test_id, g, e2), 17);
   }
   remove_edge(e1, g);
-  EXPECT_EQ(num_edges(g), 1);
+  EXPECT_EQ(num_edges_or_count(g), 1);
 
   // e2 might be invalidated, so find it again
   std::tie(e2, e2_added) = edge(v, u, g);
@@ -236,7 +265,7 @@ TYPED_TEST_P(GraphMutationTest, RemoveEdgeTwoEdges) {
   }
 
   remove_edge(e2, g);
-  EXPECT_EQ(num_edges(g), 0);
+  EXPECT_EQ(num_edges_or_count(g), 0);
 }
 
 // This is the real big test.
@@ -281,10 +310,8 @@ TYPED_TEST_P(GraphMutationTest, RandomMutations) {
       check_edge_added(g, e, a, b, current_edge_id - 1, inserted);
     }
     std::cout << "After adding edges:" << std::endl;
-    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>\nEdges:" << std::endl;
-    print_edges2(g, vertex_id_map, edge_id_map);
-    std::cout << "==========================\nGraph:" << std::endl;
-    print_graph(g, vertex_id_map);
+    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl;
+    print_graph(g, vertex_id_map, edge_id_map);
     std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 
     // remove_edge(u, v, g)
@@ -296,13 +323,11 @@ TYPED_TEST_P(GraphMutationTest, RandomMutations) {
       remove_edge(a, b, g);
       EXPECT_FALSE(is_adjacent(g, a, b));
       EXPECT_FALSE(in_edge_set(g, a, b));
-      EXPECT_EQ(num_edges(g), count_edges(g));
+      EXPECT_EQ(num_edges_or_count(g), count_edges(g));
     }
     std::cout << "After removing (u,v) edges:" << std::endl;
-    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>\nEdges:" << std::endl;
-    print_edges(g, vertex_id_map);
-    std::cout << "==========================\nGraph:" << std::endl;
-    print_graph(g, vertex_id_map);
+    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl;
+    print_graph(g, vertex_id_map, edge_id_map);
     std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 
     // remove_edge(e, g)
@@ -311,18 +336,14 @@ TYPED_TEST_P(GraphMutationTest, RandomMutations) {
       Edge e = random_edge(g, gen);
       auto [a, b] = incident(e, g);
       std::cout << "remove_edge(" << vertex_id_map[a] << "," << vertex_id_map[b] << ")" << std::endl;
-      std::size_t old_E = num_edges(g);
+      std::size_t old_E = num_edges_or_count(g);
       remove_edge(e, g);
-      EXPECT_EQ(old_E, num_edges(g) + 1);
-      EXPECT_EQ(num_edges(g), count_edges(g));
+      EXPECT_EQ(old_E, num_edges_or_count(g) + 1);
+      EXPECT_EQ(num_edges_or_count(g), count_edges(g));
     }
     std::cout << "After removing (e) edges:" << std::endl;
-    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>\nEdges:" << std::endl;
-    print_edges(g, vertex_id_map);
-    std::cout << "==========================\nVertices:" << std::endl;
-    print_vertices(g, vertex_id_map);
-    std::cout << "==========================\nGraph:" << std::endl;
-    print_graph(g, vertex_id_map);
+    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl;
+    print_graph(g, vertex_id_map, edge_id_map);
     std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 
     // add_vertex
@@ -334,8 +355,8 @@ TYPED_TEST_P(GraphMutationTest, RandomMutations) {
     vertex_id_map[vidp1] = current_vertex_id++;
 
     std::cout << "After adding vertices:" << std::endl;
-    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>\nVertices:" << std::endl;
-    print_vertices(g, vertex_id_map);
+    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl;
+    print_graph(g, vertex_id_map, edge_id_map);
     std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 
     // make sure the two added vertices are in the graph's vertex set
@@ -349,11 +370,15 @@ TYPED_TEST_P(GraphMutationTest, RandomMutations) {
     EXPECT_TRUE(out_edges(vidp1, g).empty()) << vertex_id_map[vidp1] << " has unexpected out edges";
 
     // make sure the vertices do not yet appear in any of the edges
-    for (auto e : edges(g)) {
-      EXPECT_NE(source(e, g), vid) << vertex_id_map[vid] << " is the unexpected source of edge " << edge_id_map[e];
-      EXPECT_NE(target(e, g), vid) << vertex_id_map[vid] << " is the unexpected target of edge " << edge_id_map[e];
-      EXPECT_NE(source(e, g), vidp1) << vertex_id_map[vidp1] << " is the unexpected source of edge " << edge_id_map[e];
-      EXPECT_NE(target(e, g), vidp1) << vertex_id_map[vidp1] << " is the unexpected target of edge " << edge_id_map[e];
+    if constexpr (concepts::EdgeListGraph<Graph>) {
+      for (auto e : edges(g)) {
+        EXPECT_NE(source(e, g), vid) << vertex_id_map[vid] << " is the unexpected source of edge " << edge_id_map[e];
+        EXPECT_NE(target(e, g), vid) << vertex_id_map[vid] << " is the unexpected target of edge " << edge_id_map[e];
+        EXPECT_NE(source(e, g), vidp1) << vertex_id_map[vidp1] << " is the unexpected source of edge "
+                                       << edge_id_map[e];
+        EXPECT_NE(target(e, g), vidp1) << vertex_id_map[vidp1] << " is the unexpected target of edge "
+                                       << edge_id_map[e];
+      }
     }
     // Make sure num_vertices(g) has been updated
     N = num_vertices(g);
@@ -384,10 +409,8 @@ TYPED_TEST_P(GraphMutationTest, RandomMutations) {
       check_edge_added(g, e, b, vidp1, current_edge_id - 1, inserted);
     }
     std::cout << "After adding edges:" << std::endl;
-    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>\nEdges:" << std::endl;
-    print_edges2(g, vertex_id_map, edge_id_map);
-    std::cout << "==========================\nGraph:" << std::endl;
-    print_graph(g, vertex_id_map);
+    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl;
+    print_graph(g, vertex_id_map, edge_id_map);
     std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 
     // clear_vertex
@@ -395,8 +418,8 @@ TYPED_TEST_P(GraphMutationTest, RandomMutations) {
     std::cout << "Clearing vertex " << vertex_id_map[c] << std::endl;
     clear_vertex(c, g);
     check_vertex_cleared(g, c);
-    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>\nEdges:" << std::endl;
-    print_edges2(g, vertex_id_map, edge_id_map);
+    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl;
+    print_graph(g, vertex_id_map, edge_id_map);
     std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 
     // remove_vertex
@@ -404,8 +427,8 @@ TYPED_TEST_P(GraphMutationTest, RandomMutations) {
     std::size_t old_c_id = vertex_id_map[c];
     old_N = num_vertices(g);
     remove_vertex(c, g);
-    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>\nEdges:" << std::endl;
-    print_graph(g, vertex_id_map);
+    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl;
+    print_graph(g, vertex_id_map, edge_id_map);
     std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 
     EXPECT_EQ(num_vertices(g), old_N - 1);
