@@ -19,8 +19,68 @@ cc_test(
 )
 
 cc_test(
+    name = "adjacency_vec_test",
+    srcs = [ "adjacency_vec_test.cc", ],
+    deps = [
+        ":graph_mutation_test_suite",
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "adjacency_pool_test",
+    srcs = [ "adjacency_pool_test.cc", ],
+    deps = [
+        ":graph_mutation_test_suite",
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "adjacency_list_test",
     srcs = [ "adjacency_list_test.cc", ],
+    deps = [
+        ":graph_mutation_test_suite",
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "adjacency_set_test",
+    srcs = [ "adjacency_set_test.cc", ],
+    deps = [
+        ":graph_mutation_test_suite",
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "adjacency_multiset_test",
+    srcs = [ "adjacency_multiset_test.cc", ],
+    deps = [
+        ":graph_mutation_test_suite",
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "adjacency_unordered_set_test",
+    srcs = [ "adjacency_unordered_set_test.cc", ],
+    deps = [
+        ":graph_mutation_test_suite",
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "adjacency_unordered_multiset_test",
+    srcs = [ "adjacency_unordered_multiset_test.cc", ],
     deps = [
         ":graph_mutation_test_suite",
         "//bagl",
@@ -59,6 +119,26 @@ cc_test(
     name = "grid_graph_concepts_test",
     srcs = [ "grid_graph_concepts_test.cc", ],
     deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "directed_graph_test",
+    srcs = [ "directed_graph_test.cc", ],
+    deps = [
+        ":graph_mutation_test_suite",
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "undirected_graph_test",
+    srcs = [ "undirected_graph_test.cc", ],
+    deps = [
+        ":graph_mutation_test_suite",
         "//bagl",
         "@com_google_googletest//:gtest_main",
     ],

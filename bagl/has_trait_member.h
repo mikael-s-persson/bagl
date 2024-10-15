@@ -13,9 +13,12 @@
   template <typename T>                                                          \
   struct has_##name<T, std::void_t<has_##name##_detect<T>>> : std::true_type {}; \
   template <typename T>                                                          \
-  constexpr bool has_##name##_v = has_##name<T>::value;                   \
+  constexpr bool has_##name##_v = has_##name<T>::value;                          \
+  struct default_##name##_type {                                                 \
+    using name = default_type;                                                   \
+  };                                                                             \
   template <typename T>                                                          \
-  using get_##name##_or_not = std::conditional_t<has_##name##_v<T>, typename T::name, default_type>;
+  using get_##name##_or_not = typename std::conditional_t<has_##name##_v<T>, T, default_##name##_type>::name;
 
 #define BAGL_GRAPH_HAS_NONTYPE_MEMBER(name)                          \
   template <typename T>                                                          \

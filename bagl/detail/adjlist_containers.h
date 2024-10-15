@@ -849,7 +849,7 @@ struct adjlist_vertex_container {
 
   // NOTE: this operation might invalidate other out-edge iterators/descriptors of the same source vertex.
   // NOTE: This WORKS for ALL vertex container types.
-  void remove_edge(const edge_descriptor& e) {
+  void remove_edge(edge_descriptor e) {
     adjlist_erase_in_edge(get_stored_vertex(get_stored_edge_target(e)), e);
     adjlist_erase_edge(get_stored_vertex(e.source).get_out_edges(), e, m_vertices, e.source);
     --m_num_edges;
@@ -860,8 +860,14 @@ struct adjlist_vertex_container {
   template <typename EdgePred>
   void remove_out_edge_if(vertex_descriptor u, const EdgePred& pred) {
     auto& out_econt = get_stored_vertex(u).get_out_edges();
-    adjlist_erase_edges_if(out_econt, m_vertices, u, m_num_edges, [u, &pred, &out_econt](const auto& ei) {
-      return pred(edge_descriptor{u, container_detail::iterator_to_desc(out_econt, ei)});
+    adjlist_erase_edges_if(out_econt, m_vertices, u, m_num_edges, [this, u, &pred, &out_econt](const auto& ei) {
+      auto e_id = container_detail::iterator_to_desc(out_econt, ei);
+      auto e = edge_descriptor{u, e_id};
+      const bool result = pred(e);
+      if (result) {
+        adjlist_erase_in_edge(get_stored_vertex(container_detail::desc_to_value(out_econt, e_id).first), e);
+      }
+      return result;
     });
   }
 
