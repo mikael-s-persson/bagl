@@ -125,18 +125,18 @@ concept MutableEdgeListGraph = EdgeMutableGraph<G> && requires(G& g) {
 
 template <typename G>
 concept VertexMutablePropertyGraph = VertexMutableGraph<G> && requires(G& g, graph_vertex_descriptor_t<G> v, const vertex_property_type<G>& vp) {
-  { add_vertex(vp, g) } -> std::convertible_to<graph_vertex_descriptor_t<G>>;
-  { add_vertex(std::move(vp), g) } -> std::convertible_to<graph_vertex_descriptor_t<G>>;
-  remove_vertex(v, &vp, g);
+  { add_vertex(g, vp) } -> std::convertible_to<graph_vertex_descriptor_t<G>>;
+  { add_vertex(g, std::move(vp)) } -> std::convertible_to<graph_vertex_descriptor_t<G>>;
+  remove_vertex(v, g, &vp);
 };
 
 template <typename G>
 concept EdgeMutablePropertyGraph = EdgeMutableGraph<G> &&
     requires(G& g, graph_vertex_descriptor_t<G> u, graph_edge_descriptor_t<G> e, const edge_property_type<G>& ep) {
-  { add_edge(u, u, ep, g) } -> std::convertible_to<std::pair<graph_edge_descriptor_t<G>, bool>>;
-  { add_edge(u, u, std::move(ep), g) } -> std::convertible_to<std::pair<graph_edge_descriptor_t<G>, bool>>;
-  remove_edge(u, u, &ep, g);
-  remove_edge(e, &ep, g);
+  { add_edge(u, u, g, ep) } -> std::convertible_to<std::pair<graph_edge_descriptor_t<G>, bool>>;
+  { add_edge(u, u, g, std::move(ep)) } -> std::convertible_to<std::pair<graph_edge_descriptor_t<G>, bool>>;
+  remove_edge(u, u, g, &ep);
+  remove_edge(e, g, &ep);
 };
 
 template <typename G>

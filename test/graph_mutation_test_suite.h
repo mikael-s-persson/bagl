@@ -12,6 +12,7 @@
 #include "bagl/graph_traits.h"
 #include "bagl/graph_utility.h"
 #include "bagl/properties.h"
+#include "bagl/property.h"
 #include "bagl/random.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -30,9 +31,17 @@ struct edge_test_id_t {
 };
 constexpr edge_test_id_t edge_test_id = {};
 
+struct vertex_test_bundle_t {
+  std::string str_value;
+};
+
+struct edge_test_bundle_t {
+  std::string str_value;
+};
+
 // Use the following vertex and edge properties in the graphs to be tested.
-using test_vertex_property = property<vertex_test_id_t, std::size_t>;
-using test_edge_property = property<edge_test_id_t, std::size_t>;
+using test_vertex_property = property<vertex_test_id_t, std::size_t, vertex_test_bundle_t>;
+using test_edge_property = property<edge_test_id_t, std::size_t, edge_test_bundle_t>;
 
 template <concepts::IncidenceGraph Graph>
 requires concepts::VertexListGraph<Graph>
@@ -186,8 +195,9 @@ TYPED_TEST_P(GraphMutationTest, RemoveEdge) {
   Vertex v = add_vertex(g);
   EXPECT_EQ(num_vertices(g), 2);
 
-  auto [e, b] = add_edge(u, v, 42, g);
+  auto [e, b] = add_edge(u, v, g);
   EXPECT_TRUE(b);
+  put(edge_test_id, g, e, 42);
   EXPECT_EQ(num_edges_or_count(g), 1);
   EXPECT_EQ(get(edge_test_id, g, e), 42);
   remove_edge(e, g);
@@ -226,13 +236,21 @@ TYPED_TEST_P(GraphMutationTest, RemoveEdgeTwoEdges) {
 
   Graph g;
 
+  property_map_t<Graph, edge_test_id_t> edge_id_map = get(edge_test_id, g);
+
   Vertex u = add_vertex(g);
   Vertex v = add_vertex(g);
 
-  auto [e1, e1_added] = add_edge(u, v, 42, g);
+  auto [e1, e1_added] = add_edge(u, v, g);
   EXPECT_TRUE(e1_added);
-  auto [e2, e2_added] = add_edge(v, u, 17, g);
+  if (e1_added) {
+    edge_id_map[e1] = 42;
+  }
+  auto [e2, e2_added] = add_edge(v, u, g);
   EXPECT_TRUE(e2_added);
+  if (e2_added) {
+    edge_id_map[e2] = 17;
+  }
   EXPECT_EQ(num_edges_or_count(g), 2);
 
   if constexpr (concepts::AdjacencyMatrix<Graph>) {
@@ -246,11 +264,11 @@ TYPED_TEST_P(GraphMutationTest, RemoveEdgeTwoEdges) {
     }
   }
   if constexpr (is_undirected_graph_v<Graph>) {
-    EXPECT_THAT(get(edge_test_id, g, e1), ::testing::AnyOf(42, 17));
-    EXPECT_THAT(get(edge_test_id, g, e2), ::testing::AnyOf(42, 17));
+    std::array eprops{edge_id_map[e1], edge_id_map[e2]};
+    EXPECT_THAT(eprops, ::testing::UnorderedElementsAre(42, 17));
   } else {
-    EXPECT_EQ(get(edge_test_id, g, e1), 42);
-    EXPECT_EQ(get(edge_test_id, g, e2), 17);
+    std::array eprops{edge_id_map[e1], edge_id_map[e2]};
+    EXPECT_THAT(eprops, ::testing::ElementsAre(42, 17));
   }
   remove_edge(e1, g);
   EXPECT_EQ(num_edges_or_count(g), 1);
@@ -259,9 +277,9 @@ TYPED_TEST_P(GraphMutationTest, RemoveEdgeTwoEdges) {
   std::tie(e2, e2_added) = edge(v, u, g);
   EXPECT_TRUE(e2_added);
   if constexpr (is_undirected_graph_v<Graph>) {
-    EXPECT_THAT(get(edge_test_id, g, e2), ::testing::AnyOf(42, 17));
+    EXPECT_THAT(edge_id_map[e2], ::testing::AnyOf(42, 17));
   } else {
-    EXPECT_EQ(get(edge_test_id, g, e2), 17);
+    EXPECT_EQ(edge_id_map[e2], 17);
   }
 
   remove_edge(e2, g);
@@ -289,7 +307,12 @@ TYPED_TEST_P(GraphMutationTest, RandomMutations) {
   property_map_t<Graph, edge_test_id_t> edge_id_map = get(edge_test_id, g);
 
   for (std::size_t k = 0; k < N; ++k) {
-    add_vertex(current_vertex_id++, g);
+    if constexpr (concepts::VertexMutablePropertyGraph<Graph>) {
+      add_vertex(g, current_vertex_id++);
+    } else {
+      auto v = add_vertex(g);
+      vertex_id_map[v] = current_vertex_id++;
+    }
   }
 
   // Generate random values from a fixed seed.
@@ -306,8 +329,14 @@ TYPED_TEST_P(GraphMutationTest, RandomMutations) {
       }
 
       std::cout << "add_edge(" << vertex_id_map[a] << "," << vertex_id_map[b] << ")" << std::endl;
-      auto [e, inserted] = add_edge(a, b, current_edge_id++, g);
-      check_edge_added(g, e, a, b, current_edge_id - 1, inserted);
+      if constexpr (concepts::EdgeMutablePropertyGraph<Graph>) {
+        auto [e, inserted] = add_edge(a, b, g, current_edge_id++);
+        check_edge_added(g, e, a, b, current_edge_id - 1, inserted);
+      } else {
+        auto [e, inserted] = add_edge(a, b, g);
+        edge_id_map[e] = current_edge_id++;
+        check_edge_added(g, e, a, b, current_edge_id - 1, inserted);
+      }
     }
     std::cout << "After adding edges:" << std::endl;
     std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl;
@@ -337,7 +366,14 @@ TYPED_TEST_P(GraphMutationTest, RandomMutations) {
       auto [a, b] = incident(e, g);
       std::cout << "remove_edge(" << vertex_id_map[a] << "," << vertex_id_map[b] << ")" << std::endl;
       std::size_t old_E = num_edges_or_count(g);
-      remove_edge(e, g);
+      if constexpr (concepts::EdgeMutablePropertyGraph<Graph>) {
+        std::size_t expected_ep = edge_id_map[e];
+        test_edge_property ep;
+        remove_edge(e, g, &ep);
+        EXPECT_EQ(get_property_value(ep, edge_test_id), expected_ep);
+      } else {
+        remove_edge(e, g);
+      }
       EXPECT_EQ(old_E, num_edges_or_count(g) + 1);
       EXPECT_EQ(num_edges_or_count(g), count_edges(g));
     }
@@ -396,16 +432,18 @@ TYPED_TEST_P(GraphMutationTest, RandomMutations) {
         b = random_vertex(g, gen);
       }
       std::cout << "add_edge(" << vertex_id_map[vid] << "," << vertex_id_map[a] << ")" << std::endl;
-      auto [e, inserted] = add_edge(vid, a, current_edge_id++, g);
+      auto [e, inserted] = add_edge(vid, a, g);
+      if (inserted) {
+        edge_id_map[e] = current_edge_id++;
+      }
       check_edge_added(g, e, vid, a, current_edge_id - 1, inserted);
 
       std::cout << "add_edge(" << vertex_id_map[b] << "," << vertex_id_map[vidp1] << ")" << std::endl;
       // add_edge without property
       std::tie(e, inserted) = add_edge(b, vidp1, g);
       if (inserted) {
-        edge_id_map[e] = current_edge_id;
+        edge_id_map[e] = current_edge_id++;
       }
-      ++current_edge_id;
       check_edge_added(g, e, b, vidp1, current_edge_id - 1, inserted);
     }
     std::cout << "After adding edges:" << std::endl;
@@ -426,7 +464,14 @@ TYPED_TEST_P(GraphMutationTest, RandomMutations) {
     std::cout << "Removing vertex " << vertex_id_map[c] << std::endl;
     std::size_t old_c_id = vertex_id_map[c];
     old_N = num_vertices(g);
-    remove_vertex(c, g);
+    if constexpr (concepts::VertexMutablePropertyGraph<Graph>) {
+      std::size_t expected_vp = vertex_id_map[c];
+      test_vertex_property vp;
+      remove_vertex(c, g, &vp);
+      EXPECT_EQ(get_property_value(vp, vertex_test_id), expected_vp);
+    } else {
+      remove_vertex(c, g);
+    }
     std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl;
     print_graph(g, vertex_id_map, edge_id_map);
     std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;

@@ -234,35 +234,34 @@ std::optional<Vertex> find_vertex(typename BGL_NAMED_GRAPH::vertex_name_type con
 //       the add_vertex() function that takes a vertex property.
 template <BGL_NAMED_GRAPH_PARAMS>
 std::enable_if_t<!std::is_same_v<typename BGL_NAMED_GRAPH::vertex_name_type, VertexProperty>, Vertex> add_vertex(
-    typename BGL_NAMED_GRAPH::vertex_name_type const& name, BGL_NAMED_GRAPH& g) {
+    BGL_NAMED_GRAPH& g, typename BGL_NAMED_GRAPH::vertex_name_type const& name) {
   if (std::optional<Vertex> vertex = find_vertex(name, g); vertex.has_value()) {
     // We found the vertex, so return it
     return vertex.value();
   }
   // There is no vertex with the given name, so create one
-  return add_vertex(g.vertex_constructor(name), g.derived());
- 
+  return add_vertex(g.derived(), g.vertex_constructor(name));
 }
 
 // Add an edge using vertex names to refer to the vertices
 template <BGL_NAMED_GRAPH_PARAMS>
 auto add_edge(typename BGL_NAMED_GRAPH::vertex_name_type const& u_name,
               typename BGL_NAMED_GRAPH::vertex_name_type const& v_name, BGL_NAMED_GRAPH& g) {
-  return add_edge(add_vertex(u_name, g.derived()), add_vertex(v_name, g.derived()), g.derived());
+  return add_edge(add_vertex(g.derived(), u_name), add_vertex(g.derived(), v_name), g.derived());
 }
 
 // Add an edge using vertex descriptors or names to refer to the vertices
 template <BGL_NAMED_GRAPH_PARAMS>
 auto add_edge(typename BGL_NAMED_GRAPH::vertex_descriptor const& u,
               typename BGL_NAMED_GRAPH::vertex_name_type const& v_name, BGL_NAMED_GRAPH& g) {
-  return add_edge(u, add_vertex(v_name, g.derived()), g.derived());
+  return add_edge(u, add_vertex(g.derived(), v_name), g.derived());
 }
 
 // Add an edge using vertex descriptors or names to refer to the vertices
 template <BGL_NAMED_GRAPH_PARAMS>
 auto add_edge(typename BGL_NAMED_GRAPH::vertex_name_type const& u_name,
               typename BGL_NAMED_GRAPH::vertex_descriptor const& v, BGL_NAMED_GRAPH& g) {
-  return add_edge(add_vertex(u_name, g.derived()), v, g.derived());
+  return add_edge(add_vertex(g.derived(), u_name), v, g.derived());
 }
 
 // Overloads to support EdgeMutablePropertyGraph graphs
@@ -270,21 +269,21 @@ template <BGL_NAMED_GRAPH_PARAMS>
 auto add_edge(typename BGL_NAMED_GRAPH::vertex_descriptor const& u,
               typename BGL_NAMED_GRAPH::vertex_name_type const& v_name,
               typename edge_property_type<Graph>::type const& p, BGL_NAMED_GRAPH& g) {
-  return add_edge(u, add_vertex(v_name, g.derived()), p, g.derived());
+  return add_edge(u, add_vertex(g.derived(), v_name), p, g.derived());
 }
 
 template <BGL_NAMED_GRAPH_PARAMS>
 auto add_edge(typename BGL_NAMED_GRAPH::vertex_name_type const& u_name,
               typename BGL_NAMED_GRAPH::vertex_descriptor const& v, typename edge_property_type<Graph>::type const& p,
               BGL_NAMED_GRAPH& g) {
-  return add_edge(add_vertex(u_name, g.derived()), v, p, g.derived());
+  return add_edge(add_vertex(g.derived(), u_name), v, p, g.derived());
 }
 
 template <BGL_NAMED_GRAPH_PARAMS>
 auto add_edge(typename BGL_NAMED_GRAPH::vertex_name_type const& u_name,
               typename BGL_NAMED_GRAPH::vertex_name_type const& v_name,
               typename edge_property_type<Graph>::type const& p, BGL_NAMED_GRAPH& g) {
-  return add_edge(add_vertex(u_name, g.derived()), add_vertex(v_name, g.derived()), p, g.derived());
+  return add_edge(add_vertex(g.derived(), u_name), add_vertex(g.derived(), v_name), p, g.derived());
 }
 
 #undef BGL_NAMED_GRAPH

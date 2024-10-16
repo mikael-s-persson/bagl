@@ -143,16 +143,14 @@ class undirected_graph {
   }
 
  public:
-  vertex_descriptor add_vertex_and_update_index() { return make_index(add_vertex(graph_)); }
-
-  template <typename VProp>
-  vertex_descriptor add_vertex_and_update_index(VProp&& p) {
-    return make_index(add_vertex(internal_vertex_property(0, std::forward<VProp>(p)), graph_));
+  template <typename... VPArgs>
+  vertex_descriptor add_vertex_and_update_index(VPArgs&&... vp_args) {
+    return make_index(add_vertex(graph_, 0, std::forward<VPArgs>(vp_args)...));
   }
 
  private:
   // A helper function for managing edge index attributes.
-  std::pair<edge_descriptor, bool> const& make_index(std::pair<edge_descriptor, bool> const& x) {
+  std::pair<edge_descriptor, bool> make_index(std::pair<edge_descriptor, bool> x) {
     if (x.second) {
       put(edge_index, graph_, x.first, max_edge_index_);
       ++max_edge_index_;
@@ -161,13 +159,10 @@ class undirected_graph {
   }
 
  public:
-  std::pair<edge_descriptor, bool> add_edge_and_update_index(vertex_descriptor u, vertex_descriptor v) {
-    return make_index(add_edge(u, v, graph_));
-  }
-
-  template <typename EProp>
-  std::pair<edge_descriptor, bool> add_edge_and_update_index(vertex_descriptor u, vertex_descriptor v, EProp&& p) {
-    return make_index(add_edge(u, v, internal_edge_property(0, std::forward<EProp>(p)), graph_));
+  template <typename... EPArgs>
+  std::pair<edge_descriptor, bool> add_edge_and_update_index(vertex_descriptor u, vertex_descriptor v,
+                                                             EPArgs&&... ep_args) {
+    return make_index(add_edge(u, v, graph_, 0, std::forward<EPArgs>(ep_args)...));
   }
 
   [[nodiscard]] vertex_index_type max_vertex_index() const { return max_vertex_index_; }
@@ -385,14 +380,9 @@ auto edges(BAGL_UNDIRECTED_GRAPH const& g) {
 }
 
 // MutableGraph concepts
-template <BAGL_UNDIRECTED_GRAPH_PARAMS>
-auto add_vertex(BAGL_UNDIRECTED_GRAPH& g) {
-  return g.add_vertex_and_update_index();
-}
-
-template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename VProp>
-auto add_vertex(VProp&& p, BAGL_UNDIRECTED_GRAPH& g) {
-  return g.add_vertex_and_update_index(std::forward<VProp>(p));
+template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename... VPArgs>
+auto add_vertex(BAGL_UNDIRECTED_GRAPH& g, VPArgs&&... vp_args) {
+  return g.add_vertex_and_update_index(std::forward<VPArgs>(vp_args)...);
 }
 
 template <BAGL_UNDIRECTED_GRAPH_PARAMS>
@@ -406,23 +396,17 @@ void remove_vertex(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v, BAGL_UND
 }
 
 template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename VProp>
-void remove_vertex(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v, VProp* vp, BAGL_UNDIRECTED_GRAPH& g) {
+void remove_vertex(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v, BAGL_UNDIRECTED_GRAPH& g, VProp* vp) {
   if (vp != nullptr) {
     *vp = std::move(g.get_property(v));
   }
   remove_vertex(v, g.impl());
 }
 
-template <BAGL_UNDIRECTED_GRAPH_PARAMS>
+template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename... EPArgs>
 auto add_edge(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor u, typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v,
-              BAGL_UNDIRECTED_GRAPH& g) {
-  return g.add_edge_and_update_index(u, v);
-}
-
-template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename EProp>
-auto add_edge(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor u, typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v,
-              EProp&& p, BAGL_UNDIRECTED_GRAPH& g) {
-  return g.add_edge_and_update_index(u, v, std::forward<EProp>(p));
+              BAGL_UNDIRECTED_GRAPH& g, EPArgs&&... ep_args) {
+  return g.add_edge_and_update_index(u, v, std::forward<EPArgs>(ep_args)...);
 }
 
 template <BAGL_UNDIRECTED_GRAPH_PARAMS>
@@ -434,7 +418,7 @@ void remove_edge(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor u,
 
 template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename EProp>
 void remove_edge(typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor u,
-                 typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v, EProp* ep, BAGL_UNDIRECTED_GRAPH& g) {
+                 typename BAGL_UNDIRECTED_GRAPH::vertex_descriptor v, BAGL_UNDIRECTED_GRAPH& g, EProp* ep) {
   auto [e, e_found] = edge(u, v, g);
   if (e_found) {
     // We can only get property of first edge found.
@@ -452,7 +436,7 @@ void remove_edge(typename BAGL_UNDIRECTED_GRAPH::edge_descriptor e, BAGL_UNDIREC
 }
 
 template <BAGL_UNDIRECTED_GRAPH_PARAMS, typename EProp>
-void remove_edge(typename BAGL_UNDIRECTED_GRAPH::edge_descriptor e, EProp* ep, BAGL_UNDIRECTED_GRAPH& g) {
+void remove_edge(typename BAGL_UNDIRECTED_GRAPH::edge_descriptor e, BAGL_UNDIRECTED_GRAPH& g, EProp* ep) {
   if (ep != nullptr) {
     *ep = std::move(g.get_property(e));
   }

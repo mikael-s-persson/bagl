@@ -209,7 +209,7 @@ class adjacency_matrix {
         vertex_properties_(num_vertices),
         property_(std::move(graph_prop)) {
     for (auto [u, v] : e_range) {
-      add_edge(u, v, edge_property_type{}, *this);
+      add_edge(u, v, *this, edge_property_type{});
     }
   }
 
@@ -225,7 +225,7 @@ class adjacency_matrix {
         property_(std::move(graph_prop)) {
     for (const auto& [e, ep] : zip_range(e_range, ep_range)) {
       auto [u, v] = e;
-      add_edge(u, v, ep, *this);
+      add_edge(u, v, *this, ep);
     }
   }
 
@@ -244,7 +244,7 @@ class adjacency_matrix {
     }
 
     for (auto [u, v] : e_range) {
-      add_edge(u, v, edge_property_type{}, *this);
+      add_edge(u, v, *this, edge_property_type{});
     }
   }
 
@@ -266,7 +266,7 @@ class adjacency_matrix {
 
     for (const auto& [e, ep] : zip_range(e_range, ep_range)) {
       auto [u, v] = e;
-      add_edge(u, v, ep, *this);
+      add_edge(u, v, *this, ep);
     }
   }
 
@@ -444,23 +444,16 @@ auto num_edges(const BAGL_ADJACENCY_MATRIX& g) {
 // Functions required by the MutableGraph concept
 
 // O(1)
-template <BAGL_ADJACENCY_MATRIX_PARAMS, typename EProp>
+template <BAGL_ADJACENCY_MATRIX_PARAMS, typename... EPArgs>
 auto add_edge(typename BAGL_ADJACENCY_MATRIX::vertex_descriptor u, typename BAGL_ADJACENCY_MATRIX::vertex_descriptor v,
-              EProp&& ep, BAGL_ADJACENCY_MATRIX& g) {
+              BAGL_ADJACENCY_MATRIX& g, EPArgs&&... ep_args) {
   auto e = g.make_edge_descriptor(u, v);
   if (g.edge_exists(e)) {
     return std::pair{e, false};
   }
-  g.get_edge(e) = std::forward<EProp>(ep);
+  g.get_edge(e) = EP{std::forward<EPArgs>(ep_args)...};
   ++(g.num_edges_);
   return std::pair{e, true};
-}
-
-// O(1)
-template <BAGL_ADJACENCY_MATRIX_PARAMS>
-auto add_edge(typename BAGL_ADJACENCY_MATRIX::vertex_descriptor u, typename BAGL_ADJACENCY_MATRIX::vertex_descriptor v,
-              BAGL_ADJACENCY_MATRIX& g) {
-  return add_edge(u, v, EP{}, g);
 }
 
 // O(1)
@@ -481,7 +474,7 @@ void remove_edge(typename BAGL_ADJACENCY_MATRIX::vertex_descriptor u,
 
 // O(1)
 template <BAGL_ADJACENCY_MATRIX_PARAMS, typename EProp>
-void remove_edge(typename BAGL_ADJACENCY_MATRIX::edge_descriptor e, EProp* ep, BAGL_ADJACENCY_MATRIX& g) {
+void remove_edge(typename BAGL_ADJACENCY_MATRIX::edge_descriptor e, BAGL_ADJACENCY_MATRIX& g, EProp* ep) {
   if (g.edge_exists(e)) {
     --(g.num_edges_);
     if (ep != nullptr) {
@@ -494,19 +487,12 @@ void remove_edge(typename BAGL_ADJACENCY_MATRIX::edge_descriptor e, EProp* ep, B
 // O(1)
 template <BAGL_ADJACENCY_MATRIX_PARAMS, typename EProp>
 void remove_edge(typename BAGL_ADJACENCY_MATRIX::vertex_descriptor u,
-                 typename BAGL_ADJACENCY_MATRIX::vertex_descriptor v, EProp* ep, BAGL_ADJACENCY_MATRIX& g) {
+                 typename BAGL_ADJACENCY_MATRIX::vertex_descriptor v, BAGL_ADJACENCY_MATRIX& g, EProp* ep) {
   remove_edge(g.make_edge_descriptor(u, v), ep, g);
 }
 
-template <BAGL_ADJACENCY_MATRIX_PARAMS>
-auto add_vertex(BAGL_ADJACENCY_MATRIX& g) {
-  // UNDER CONSTRUCTION
-  assert(false && "Not implemented.");
-  return *vertices(g).begin();
-}
-
-template <BAGL_ADJACENCY_MATRIX_PARAMS, typename VP2>
-auto add_vertex(VP2&& /*vp*/, BAGL_ADJACENCY_MATRIX& g) {
+template <BAGL_ADJACENCY_MATRIX_PARAMS, typename... VPArgs>
+auto add_vertex(BAGL_ADJACENCY_MATRIX& g, VPArgs&&... /*vp_args*/) {
   // UNDER CONSTRUCTION
   assert(false && "Not implemented.");
   return *vertices(g).begin();
@@ -519,7 +505,7 @@ void remove_vertex(typename BAGL_ADJACENCY_MATRIX::vertex_descriptor /*u*/, BAGL
 }
 
 template <BAGL_ADJACENCY_MATRIX_PARAMS, typename VProp>
-void remove_vertex(typename BAGL_ADJACENCY_MATRIX::vertex_descriptor v, VProp* vp, BAGL_ADJACENCY_MATRIX& g) {
+void remove_vertex(typename BAGL_ADJACENCY_MATRIX::vertex_descriptor v, BAGL_ADJACENCY_MATRIX& g, VProp* vp) {
   if (vp != nullptr) {
     *vp = std::move(g.get_property(v));
   }

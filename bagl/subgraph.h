@@ -583,10 +583,10 @@ void clear_vertex(graph_vertex_descriptor_t<G> v, subgraph<G>& g) {
 }
 
 namespace subgraph_detail {
-template <typename G>
-auto add_vertex_recur_up(subgraph<G>& g) {
+template <typename G, typename... VPArgs>
+auto add_vertex_recur_up(subgraph<G>& g, VPArgs&&... vp_args) {
   if (g.is_root()) {
-    auto u_global = add_vertex(g.m_graph);
+    auto u_global = add_vertex(g.m_graph, std::forward<VPArgs>(vp_args)...);
     g.m_global_vertex.push_back(u_global);
     return u_global;
   }
@@ -598,14 +598,14 @@ auto add_vertex_recur_up(subgraph<G>& g) {
 }
 }  // namespace subgraph_detail
 
-template <typename G>
-auto add_vertex(subgraph<G>& g) {
+template <typename G, typename... VPArgs>
+auto add_vertex(subgraph<G>& g, VPArgs&&... vp_args) {
   if (g.is_root()) {
-    auto u_global = add_vertex(g.m_graph);
+    auto u_global = add_vertex(g.m_graph, std::forward<VPArgs>(vp_args)...);
     g.m_global_vertex.push_back(u_global);
     return u_global;
   }
-  auto u_global = subgraph_detail::add_vertex_recur_up(g.parent());
+  auto u_global = subgraph_detail::add_vertex_recur_up(g.parent(), std::forward<VPArgs>(vp_args)...);
   auto u_local = add_vertex(g.m_graph);
   g.m_global_vertex.push_back(u_global);
   g.m_local_vertex[u_global] = u_local;

@@ -74,10 +74,10 @@ struct adjlist_vertex_stored_type {
   edge_container& get_out_edges() { return out_edges; }
   const edge_container& get_out_edges() const { return out_edges; }
 
-  adjlist_vertex_stored_type() : data(), out_edges(), in_edges() {}
-  template <typename VProp>
-  requires std::constructible_from<VertexProperties, VProp&&>
-  explicit adjlist_vertex_stored_type(VProp&& aData) : data(std::forward<VProp>(aData)), out_edges(), in_edges() {}
+  template <typename... VPArgs>
+  requires std::constructible_from<VertexProperties, VPArgs&&...>
+  explicit adjlist_vertex_stored_type(VPArgs&&... vp_args)
+      : data(std::forward<VPArgs>(vp_args)...), out_edges(), in_edges() {}
 
   adjlist_vertex_stored_type(const adjlist_vertex_stored_type&) = delete;
   adjlist_vertex_stored_type& operator=(const adjlist_vertex_stored_type&) = delete;
@@ -101,10 +101,9 @@ struct adjlist_vertex_stored_type<VertexListS, OutEdgeListS, directed_s, VertexP
   edge_container& get_out_edges() { return out_edges; }
   const edge_container& get_out_edges() const { return out_edges; }
 
-  adjlist_vertex_stored_type() : data(), out_edges() {}
-  template <typename VProp>
-  requires std::constructible_from<VertexProperties, VProp&&>
-  explicit adjlist_vertex_stored_type(VProp&& aData) : data(std::forward<VProp>(aData)), out_edges() {}
+  template <typename... VPArgs>
+  requires std::constructible_from<VertexProperties, VPArgs&&...>
+  explicit adjlist_vertex_stored_type(VPArgs&&... vp_args) : data(std::forward<VPArgs>(vp_args)...), out_edges() {}
 
   adjlist_vertex_stored_type(const adjlist_vertex_stored_type&) = delete;
   adjlist_vertex_stored_type& operator=(const adjlist_vertex_stored_type&) = delete;
@@ -707,35 +706,35 @@ void adjlist_erase_vertex(container_detail::pooled_vector<ValueType>& cont, std:
 // directed_s:    O(1)        O(1)        O(1)
 // bidir:         O(1)        O(1)        O(1)
 
-template <typename Container, typename VertexProperties>
-auto adjlist_add_vertex(Container& cont, VertexProperties&& vp) {
+template <typename Container, typename... VPArgs>
+auto adjlist_add_vertex(Container& cont, VPArgs&&... vp_args) {
   using ValueType = typename Container::value_type;
-  return cont.insert(cont.end(), ValueType{std::forward<VertexProperties>(vp)});
+  return cont.insert(cont.end(), ValueType{std::forward<VPArgs>(vp_args)...});
 }
 
-template <typename ValueType, typename VertexProperties>
-std::size_t adjlist_add_vertex(std::vector<ValueType>& cont, VertexProperties&& vp) {
-  auto it = cont.insert(cont.end(), ValueType{std::forward<VertexProperties>(vp)});
+template <typename ValueType, typename... VPArgs>
+std::size_t adjlist_add_vertex(std::vector<ValueType>& cont, VPArgs&&... vp_args) {
+  auto it = cont.insert(cont.end(), ValueType{std::forward<VPArgs>(vp_args)...});
   return it - cont.begin();
 }
 
-template <typename ValueType, typename VertexProperties>
-std::size_t adjlist_add_vertex(container_detail::pooled_vector<ValueType>& cont, VertexProperties&& vp) {
+template <typename ValueType, typename... VPArgs>
+std::size_t adjlist_add_vertex(container_detail::pooled_vector<ValueType>& cont, VPArgs&&... vp_args) {
   if (cont.m_first_hole == container_detail::hole_desc()) {
-    auto it = cont.m_data.insert(cont.m_data.end(), ValueType{std::forward<VertexProperties>(vp)});
+    auto it = cont.m_data.insert(cont.m_data.end(), ValueType{std::forward<VPArgs>(vp_args)...});
     ++(cont.m_num_elements);
     return it - cont.m_data.begin();
   }
   auto it = cont.m_data.begin() + cont.m_first_hole.value;
   cont.m_first_hole = std::get<container_detail::hole_desc>(cont.m_data[cont.m_first_hole.value]);
-  *it = ValueType(std::forward<VertexProperties>(vp));
+  *it = ValueType{std::forward<VPArgs>(vp_args)...};
   ++(cont.m_num_elements);
   return it - cont.m_data.begin();
 }
 
-template <typename Container, typename VertexProperties>
-auto adjlist_add_vertex(Container* cont, VertexProperties&& vp) {
-  return adjlist_add_vertex(*cont, std::forward<VertexProperties>(vp));
+template <typename Container, typename... VPArgs>
+auto adjlist_add_vertex(Container* cont, VPArgs&&... vp_args) {
+  return adjlist_add_vertex(*cont, std::forward<VPArgs>(vp_args)...);
 }
 
 template <typename VertexListS, typename OutEdgeListS, typename DirectedS, typename VertexProperties,
@@ -812,8 +811,10 @@ struct adjlist_vertex_container {
 
   // NOTE: this operation does not invalidate anything.
   // NOTE: This WORKS for ALL vertex container types.
-  template <typename VProp>
-  vertex_descriptor add_vertex(VProp&& vp) { return adjlist_add_vertex(m_vertices, std::forward<VProp>(vp)); }
+  template <typename... VPArgs>
+  vertex_descriptor add_vertex(VPArgs&&... vp_args) {
+    return adjlist_add_vertex(m_vertices, std::forward<VPArgs>(vp_args)...);
+  }
 
   // NOTE: this operation only invalidates existing vertex-iterators,
   // and possibly edge-descriptors linked to vertices adjacent to v (if edge-list is vec_s).
@@ -832,12 +833,12 @@ struct adjlist_vertex_container {
 
   // NOTE: this operation does not invalidate anything.
   // NOTE: This WORKS for ALL vertex container types.
-  template <typename EProp>
-  std::pair<edge_descriptor, bool> add_edge(vertex_descriptor u, vertex_descriptor v, EProp&& ep) {
+  template <typename... EPArgs>
+  std::pair<edge_descriptor, bool> add_edge(vertex_descriptor u, vertex_descriptor v, EPArgs&&... ep_args) {
     using RawEDesc = typename edge_descriptor::edge_id_type;
 
     std::pair<RawEDesc, bool> raw_result =
-        adjlist_add_edge(get_stored_vertex(u).get_out_edges(), std::forward<EProp>(ep), v);
+        adjlist_add_edge(get_stored_vertex(u).get_out_edges(), EdgeProperties{std::forward<EPArgs>(ep_args)...}, v);
 
     if (raw_result.second) {
       ++m_num_edges;

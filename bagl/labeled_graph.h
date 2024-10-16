@@ -89,7 +89,7 @@ auto insert_labeled_vertex(Container& c, Graph& g, Label const& l, Prop const& p
   if (l >= c.size()) {
     c.resize((l + 1) * 2);
   }
-  c[l] = add_vertex(p, g);
+  c[l] = add_vertex(g, p);
   return std::pair{c[l], true};
 }
 
@@ -99,7 +99,7 @@ auto insert_labeled_vertex(Container& c, Graph& g, Label const& l, Prop const& p
                            container_traits_detail::multiple_associative_container_tag) {
   // Note that insertion always succeeds so we can add the vertex first
   // and then the mapping to the label.
-  auto v = add_vertex(p, g);
+  auto v = add_vertex(g, p);
   c.insert(std::make_pair(l, v));
   return std::pair{v, true};
 }
@@ -609,8 +609,8 @@ auto add_edge(typename LABELED_GRAPH::vertex_descriptor const& u, typename LABEL
 
 template <LABELED_GRAPH_PARAMS>
 auto add_edge(typename LABELED_GRAPH::vertex_descriptor const& u, typename LABELED_GRAPH::vertex_descriptor const& v,
-              typename LABELED_GRAPH::edge_property_type const& p, LABELED_GRAPH& g) {
-  return add_edge(u, v, p, g.graph());
+              LABELED_GRAPH& g, typename LABELED_GRAPH::edge_property_type const& p) {
+  return add_edge(u, v, g.graph(), p);
 }
 
 template <LABELED_GRAPH_PARAMS>
@@ -638,8 +638,8 @@ auto add_edge_by_label(typename LABELED_GRAPH::label_type const& u, typename LAB
 
 template <LABELED_GRAPH_PARAMS>
 auto add_edge_by_label(typename LABELED_GRAPH::label_type const& u, typename LABELED_GRAPH::label_type const& v,
-                       typename LABELED_GRAPH::edge_property_type const& p, LABELED_GRAPH& g) {
-  return add_edge(g.vertex(u), g.vertex(v), p, g);
+                       LABELED_GRAPH& g, typename LABELED_GRAPH::edge_property_type const& p) {
+  return add_edge(g.vertex(u), g.vertex(v), g, p);
 }
 
 template <LABELED_GRAPH_PARAMS>
@@ -665,8 +665,8 @@ auto add_vertex(typename LABELED_GRAPH::label_type const& l, LABELED_GRAPH& g) {
 
 // MutableLabeledPropertyGraph::add_vertex(l, vp, g)
 template <LABELED_GRAPH_PARAMS>
-auto add_vertex(typename LABELED_GRAPH::label_type const& l, typename LABELED_GRAPH::vertex_property_type const& p,
-                LABELED_GRAPH& g) {
+auto add_vertex(typename LABELED_GRAPH::label_type const& l, LABELED_GRAPH& g,
+                typename LABELED_GRAPH::vertex_property_type const& p) {
   return g.add_vertex(l, p);
 }
 

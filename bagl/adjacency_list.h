@@ -442,11 +442,7 @@ auto edge(typename BAGL_ADJACENCY_LIST::vertex_descriptor u, typename BAGL_ADJAC
  *                  MutableGraph concept
  ******************************************************************************************/
 
-template <BAGL_ADJACENCY_LIST_ARGS>
-auto add_vertex(BAGL_ADJACENCY_LIST& g) {
-  using VertexProp = typename BAGL_ADJACENCY_LIST::vertex_property_type;
-  return g.m_pack.add_vertex(VertexProp{});
-}
+// auto add_vertex(BAGL_ADJACENCY_LIST& g); -> variadic overload
 
 template <BAGL_ADJACENCY_LIST_ARGS>
 void clear_vertex(typename BAGL_ADJACENCY_LIST::vertex_descriptor v, BAGL_ADJACENCY_LIST& g) {
@@ -458,12 +454,7 @@ void remove_vertex(typename BAGL_ADJACENCY_LIST::vertex_descriptor v, BAGL_ADJAC
   g.m_pack.remove_vertex(v);
 }
 
-template <BAGL_ADJACENCY_LIST_ARGS>
-auto add_edge(typename BAGL_ADJACENCY_LIST::vertex_descriptor u, typename BAGL_ADJACENCY_LIST::vertex_descriptor v,
-              BAGL_ADJACENCY_LIST& g) {
-  using EdgeProp = typename BAGL_ADJACENCY_LIST::edge_property_type;
-  return g.m_pack.add_edge(u, v, EdgeProp{});
-}
+// auto add_edge(u, v, BAGL_ADJACENCY_LIST& g); -> variadic overload
 
 template <BAGL_ADJACENCY_LIST_ARGS>
 void remove_edge(typename BAGL_ADJACENCY_LIST::vertex_descriptor u, typename BAGL_ADJACENCY_LIST::vertex_descriptor v,
@@ -512,28 +503,29 @@ void remove_edge_if(EdgePred pred, BAGL_ADJACENCY_LIST& g) {
  *                  MutablePropertyGraph concept
  ******************************************************************************************/
 
-template <BAGL_ADJACENCY_LIST_ARGS, typename VProp>
-auto add_vertex(VProp&& vp, BAGL_ADJACENCY_LIST& g) {
-  return g.m_pack.add_vertex(std::forward<VProp>(vp));
+template <BAGL_ADJACENCY_LIST_ARGS, typename... VPArgs>
+auto add_vertex(BAGL_ADJACENCY_LIST& g, VPArgs&&... vp_args) {
+  return g.m_pack.add_vertex(std::forward<VPArgs>(vp_args)...);
 }
 
 template <BAGL_ADJACENCY_LIST_ARGS, typename VProp>
-void remove_vertex(typename BAGL_ADJACENCY_LIST::vertex_descriptor v, VProp* vp, BAGL_ADJACENCY_LIST& g) {
+void remove_vertex(typename BAGL_ADJACENCY_LIST::vertex_descriptor v, BAGL_ADJACENCY_LIST& g, VProp* vp) {
   if (vp != nullptr) {
     *vp = std::move(g.get_property(v));
   }
   g.m_pack.remove_vertex(v);
 }
 
-template <BAGL_ADJACENCY_LIST_ARGS, typename EProp>
+template <BAGL_ADJACENCY_LIST_ARGS, typename... EPArgs>
 auto add_edge(typename BAGL_ADJACENCY_LIST::vertex_descriptor u, typename BAGL_ADJACENCY_LIST::vertex_descriptor v,
-              EProp&& ep, BAGL_ADJACENCY_LIST& g) {
-  return g.m_pack.add_edge(u, v, std::forward<EProp>(ep));
+              BAGL_ADJACENCY_LIST& g, EPArgs&&... ep_args) {
+  return std::pair<typename BAGL_ADJACENCY_LIST::edge_descriptor, bool>{
+      g.m_pack.add_edge(u, v, std::forward<EPArgs>(ep_args)...)};
 }
 
 template <BAGL_ADJACENCY_LIST_ARGS, typename EProp>
 void remove_edge(typename BAGL_ADJACENCY_LIST::vertex_descriptor u, typename BAGL_ADJACENCY_LIST::vertex_descriptor v,
-                 EProp* ep, BAGL_ADJACENCY_LIST& g) {
+                 BAGL_ADJACENCY_LIST& g, EProp* ep) {
   auto [e, e_found] = edge(u, v, g);
   while (e_found) {
     if (ep != nullptr) {
@@ -545,7 +537,7 @@ void remove_edge(typename BAGL_ADJACENCY_LIST::vertex_descriptor u, typename BAG
 }
 
 template <BAGL_ADJACENCY_LIST_ARGS, typename EProp>
-void remove_edge(const typename BAGL_ADJACENCY_LIST::edge_descriptor& e, EProp* ep, BAGL_ADJACENCY_LIST& g) {
+void remove_edge(const typename BAGL_ADJACENCY_LIST::edge_descriptor& e, BAGL_ADJACENCY_LIST& g, EProp* ep) {
   if (ep != nullptr) {
     *ep = std::move(g.get_property(e));
   }
@@ -748,13 +740,13 @@ void do_graph_deep_copy(BAGL_ADJACENCY_LIST& lhs, const BAGL_ADJACENCY_LIST& rhs
   // first, add all the vertices (keep unordered_map of correspondance).
   std::unordered_map<Vertex, Vertex, container_detail::desc_hasher> v_map;
   for (auto u : vertices(rhs)) {
-    Vertex v = add_vertex(rhs[u], lhs);
+    Vertex v = add_vertex(lhs, rhs.get_property(u));
     v_map[u] = v;
   }
 
   // then, go through all the edges and add them to the lhs:
   for (auto e : edges(rhs)) {
-    add_edge(v_map[source(e, rhs)], v_map[target(e, rhs)], rhs[e], lhs);
+    add_edge(v_map[source(e, rhs)], v_map[target(e, rhs)], lhs, rhs.get_property(e));
   }
 }
 
