@@ -236,17 +236,25 @@ struct has_property_map_check {
 
 template <typename Graph, typename Tag>
 struct has_property_map_check<Graph, Tag, graph_property_tag, std::void_t<decltype(get_property(std::declval<const Graph&>(), Tag{}))>> {
-  static constexpr bool value = true;
+  static constexpr bool value = !std::is_same_v<
+      std::remove_cv_t<property_traits_value_t<decltype(get_property(std::declval<const Graph&>(), Tag{}))>>,
+      no_property>;
 };
 
 template <typename Graph, typename Tag>
 struct has_property_map_check<Graph, Tag, vertex_property_tag, std::void_t<decltype(get(Tag{}, std::declval<const Graph&>()))>> {
-  static constexpr bool value = concepts::ReadableVertexPropertyMap<decltype(get(Tag{}, std::declval<const Graph&>())), Graph>;
+  static constexpr bool value =
+      concepts::ReadableVertexPropertyMap<decltype(get(Tag{}, std::declval<const Graph&>())), Graph> &&
+      !std::is_same_v<std::remove_cv_t<property_traits_value_t<decltype(get(Tag{}, std::declval<const Graph&>()))>>,
+                      no_property>;
 };
 
 template <typename Graph, typename Tag>
 struct has_property_map_check<Graph, Tag, edge_property_tag, std::void_t<decltype(get(Tag{}, std::declval<const Graph&>()))>> {
-  static constexpr bool value = concepts::ReadableEdgePropertyMap<decltype(get(Tag{}, std::declval<const Graph&>())), Graph>;
+  static constexpr bool value =
+      concepts::ReadableEdgePropertyMap<decltype(get(Tag{}, std::declval<const Graph&>())), Graph> &&
+      !std::is_same_v<std::remove_cv_t<property_traits_value_t<decltype(get(Tag{}, std::declval<const Graph&>()))>>,
+                      no_property>;
 };
 
 }  // namespace properties_detail

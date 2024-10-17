@@ -5,6 +5,7 @@
 
 #include "bagl/graph_traits.h"
 #include "bagl/properties.h"
+#include "bagl/property.h"
 #include "bagl/property_map.h"
 
 namespace bagl {
@@ -65,8 +66,10 @@ struct tagged_in_property_property_map
 
   explicit tagged_in_property_property_map(Graph* pg, PropertyMapTag /*tag*/ = {}) : pg_(pg) {}
   tagged_in_property_property_map() = default;
-  reference operator[](key_type k) const {
-    if constexpr (is_vertex_prop_v || is_edge_prop_v) {
+  decltype(auto) operator[](key_type k) const {
+    if constexpr (std::is_same_v<std::remove_cv_t<value_type>, no_property>) {
+      return no_property{};
+    } else if constexpr (is_vertex_prop_v || is_edge_prop_v) {
       return get_property_value(pg_->get_property(k), PropertyMapTag{});
     } else {
       return get_property_value(k.get_property(graph_all), PropertyMapTag{});

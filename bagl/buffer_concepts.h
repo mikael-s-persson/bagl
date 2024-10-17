@@ -4,12 +4,15 @@
 #ifndef BAGL_BAGL_BUFFER_CONCEPTS_H_
 #define BAGL_BAGL_BUFFER_CONCEPTS_H_
 
+#include <queue>
 #include <type_traits>
+#include <vector>
 
 #include "bagl/has_trait_member.h"
 #include "bagl/property_map.h"
 
-namespace bagl::concepts {
+namespace bagl {
+namespace concepts {
 
 namespace buffer_concepts_detail {
 
@@ -27,7 +30,6 @@ concept Buffer = requires(B& buf, const buffer_concepts_detail::get_value_type_o
 }
 &&requires(const B& buf) {
   { buf.top() } -> std::convertible_to<const buffer_concepts_detail::get_value_type_or_not<B>&>;
-  { buf.size() } -> std::integral;
   { buf.empty() } -> std::convertible_to<bool>;
 };
 
@@ -46,6 +48,25 @@ concept KeyedUpdatableQueue = UpdatableQueue<Q> &&
   { q.keys() } -> std::convertible_to<buffer_concepts_detail::get_key_map_or_not<Q>>;
 };
 
-}  // namespace bagl::concepts
+}  // namespace concepts
+
+template <typename T>
+class buffer_queue : public std::queue<T> {
+ public:
+  using std::queue<T>::queue;
+  decltype(auto) top() const { return this->front(); }
+  decltype(auto) top() { return this->front(); }
+};
+template <typename T>
+class buffer_vector : public std::vector<T> {
+ public:
+  using std::vector<T>::vector;
+  decltype(auto) top() const { return this->front(); }
+  decltype(auto) top() { return this->front(); }
+  void push(const T& t) { this->push_back(t); }
+  void pop() { this->erase(this->begin()); }
+};
+
+}  // namespace bagl
 
 #endif  // BAGL_BAGL_BUFFER_CONCEPTS_H_

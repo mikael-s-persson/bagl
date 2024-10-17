@@ -145,6 +145,15 @@ cc_test(
 )
 
 cc_test(
+    name = "breadth_first_search_test",
+    srcs = [ "breadth_first_search_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "depth_first_search_test",
     srcs = [ "depth_first_search_test.cc", ],
     deps = [

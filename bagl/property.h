@@ -155,7 +155,7 @@ constexpr graph_bundle_t graph_bundle = {};
 template <typename PList, typename PropName, typename Enable = void>
 struct lookup_one_property_internal {
   static constexpr bool found = false;
-  using type = void;
+  using type = no_property;
 };
 
 // Special-case properties (vertex_all, edge_all, graph_all)

@@ -208,6 +208,7 @@ struct color_traits<color_value_archetype> {
 template <typename T>
 class buffer_archetype {
  public:
+  using value_type = T;
   void push(const T& /*unused*/) {}
   void pop() {}
   [[nodiscard]] T& top() { return value; }

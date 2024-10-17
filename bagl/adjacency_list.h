@@ -706,13 +706,13 @@ struct edge_property_selector<adj_list_tag> {
 
 template <BAGL_ADJACENCY_LIST_ARGS, typename Property>
 auto get(Property p, BAGL_ADJACENCY_LIST& g) {
-  using Map = typename property_map<BAGL_ADJACENCY_LIST, Property>::type;
+  using Map = property_map_t<BAGL_ADJACENCY_LIST, Property>;
   return Map(&g, p);
 }
 
 template <BAGL_ADJACENCY_LIST_ARGS, typename Property>
 auto get(Property p, const BAGL_ADJACENCY_LIST& g) {
-  using Map = typename property_map<BAGL_ADJACENCY_LIST, Property>::const_type;
+  using Map = property_map_const_t<BAGL_ADJACENCY_LIST, Property>;
   return Map(&g, p);
 }
 
