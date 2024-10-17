@@ -14,25 +14,17 @@
 namespace bagl {
 
 namespace graph_archetypes_detail {
-class dummy_constructor {};
-template <class T = int>
-class null_archetype {
- private:
-  null_archetype() = default;
-  null_archetype(const null_archetype&) = default;
-  null_archetype& operator=(const null_archetype&) = default;
-  null_archetype(null_archetype&&) noexcept = default;
-  null_archetype& operator=(null_archetype&&) noexcept = default;
-  ~null_archetype() = default;
-
- public:
-  explicit null_archetype(dummy_constructor /*unused*/) {}
-};
-
-struct null_graph_archetype : public null_archetype<> {
+struct null_graph_archetype {
   struct traversal_category {};
 };
 }  // namespace graph_archetypes_detail
+
+// Integer parameter is only used to create multiple distinct types in tests.
+template <int I = 0>
+struct semiregular_archetype {
+  bool operator==(semiregular_archetype<I>) const { return true; }
+  bool operator!=(semiregular_archetype<I>) const { return false; }
+};
 
 //===========================================================================
 template <typename Vertex, typename Directed, typename ParallelCategory,
@@ -46,7 +38,7 @@ struct incidence_graph_archetype : public Base {
   using edges_size_type = std::size_t;
   struct edge_descriptor {
     edge_descriptor() = default;
-    explicit edge_descriptor(const graph_archetypes_detail::dummy_constructor& /*unused*/) {}
+    explicit edge_descriptor(const graph_archetypes_detail::null_graph_archetype& /*unused*/) {}
     bool operator==(const edge_descriptor& /*unused*/) const { return false; }
     bool operator!=(const edge_descriptor& /*unused*/) const { return false; }
   };
@@ -58,13 +50,13 @@ struct incidence_graph_archetype : public Base {
 };
 template <typename V, typename D, typename P, typename B>
 V source(const typename incidence_graph_archetype<V, D, P, B>::edge_descriptor& /*unused*/,
-         const incidence_graph_archetype<V, D, P, B>& /*unused*/) {
-  return V(graph_archetypes_detail::dummy_constructor{});
+         const incidence_graph_archetype<V, D, P, B>& g) {
+  return V{};
 }
 template <typename V, typename D, typename P, typename B>
 V target(const typename incidence_graph_archetype<V, D, P, B>::edge_descriptor& /*unused*/,
-         const incidence_graph_archetype<V, D, P, B>& /*unused*/) {
-  return V(graph_archetypes_detail::dummy_constructor{});
+         const incidence_graph_archetype<V, D, P, B>& g) {
+  return V{};
 }
 
 template <typename V, typename D, typename P, typename B>
@@ -203,15 +195,14 @@ void put(P p, property_graph_archetype<G, P, V>& g, const Key& key, const V& val
 
 struct color_value_archetype {
   color_value_archetype() = default;
-  explicit color_value_archetype(graph_archetypes_detail::dummy_constructor) {}
   bool operator==(const color_value_archetype& /*unused*/) const { return true; }
   bool operator!=(const color_value_archetype& /*unused*/) const { return true; }
 };
 template <>
 struct color_traits<color_value_archetype> {
-  static color_value_archetype white() { return color_value_archetype(graph_archetypes_detail::dummy_constructor{}); }
-  static color_value_archetype gray() { return color_value_archetype(graph_archetypes_detail::dummy_constructor{}); }
-  static color_value_archetype black() { return color_value_archetype(graph_archetypes_detail::dummy_constructor{}); }
+  static color_value_archetype white() { return color_value_archetype{}; }
+  static color_value_archetype gray() { return color_value_archetype{}; }
+  static color_value_archetype black() { return color_value_archetype{}; }
 };
 
 template <typename T>
@@ -219,9 +210,10 @@ class buffer_archetype {
  public:
   void push(const T& /*unused*/) {}
   void pop() {}
-  [[nodiscard]] T& top() { return std::declval<T>(); }
-  [[nodiscard]] const T& top() const { return std::declval<T>(); }
+  [[nodiscard]] T& top() { return value; }
+  [[nodiscard]] const T& top() const { return value; }
   [[nodiscard]] bool empty() const { return true; }
+  T value{};
 };
 
 }  // namespace bagl

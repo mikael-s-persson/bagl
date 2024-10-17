@@ -118,8 +118,8 @@ struct readable_property_map_archetype {
   using reference = const ValueArchetype&;
 };
 template <typename K, typename V>
-const V& get(const readable_property_map_archetype<K, V>& /*unused*/, const K& /*unused*/) {
-  return std::declval<V>();
+V get(const readable_property_map_archetype<K, V>& /*unused*/, const K& /*unused*/) {
+  return V{};
 }
 
 template <typename KeyArchetype, typename ValueArchetype>
@@ -144,7 +144,8 @@ struct lvalue_property_map_archetype : readable_property_map_archetype<KeyArchet
   using key_type = KeyArchetype;
   using value_type = ValueArchetype;
   using reference = const ValueArchetype&;
-  const value_type& operator[](const key_type& /*unused*/) const { return std::declval<value_type>(); }
+  const value_type& operator[](const key_type& /*unused*/) const { return value; }
+  value_type value{};
 };
 
 template <typename KeyArchetype, typename ValueArchetype>
@@ -153,7 +154,8 @@ struct mutable_lvalue_property_map_archetype : readable_property_map_archetype<K
   using key_type = KeyArchetype;
   using value_type = ValueArchetype;
   using reference = ValueArchetype&;
-  value_type& operator[](const key_type& /*unused*/) const { return std::declval<value_type>(); }
+  value_type& operator[](const key_type& /*unused*/) const { return value; }
+  mutable value_type value{};
 };
 
 template <typename T>

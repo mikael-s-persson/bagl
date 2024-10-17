@@ -104,7 +104,7 @@ void generate_random_graph(G& g, std::size_t v_count, std::size_t e_count, RandN
   if (!allow_parallel) {
     using select = std::conditional_t<is_directed_graph_v<G>, directed_s, undirected_s>;
     adjacency_list<unordered_set_s, vec_s, select> g2;
-    generate_random_graph1(g2, v_count, e_count, gen, true, self_edges);
+    generate_random_graph(g2, v_count, e_count, gen, true, self_edges);
     copy_graph(g2, g, random_detail::dummy_property_copier(), random_detail::dummy_property_copier());
   } else {
     for (std::size_t i = 0; i < v_count; ++i) {
