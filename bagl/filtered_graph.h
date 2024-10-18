@@ -63,7 +63,7 @@ struct is_not_in_subset {
 
 namespace filtered_detail {
 
-template <typename EdgePredicate, typename VertexPredicate, concepts::IncidenceGraph G>
+template <typename EdgePredicate, typename VertexPredicate, typename G>
 struct out_edge_predicate {
   out_edge_predicate() = default;
   out_edge_predicate(EdgePredicate ep, VertexPredicate vp, const G& g) : edge_pred_(ep), vertex_pred_(vp), g_(&g) {}
@@ -76,7 +76,7 @@ struct out_edge_predicate {
   const G* g_ = nullptr;
 };
 
-template <typename EdgePredicate, typename VertexPredicate, concepts::IncidenceGraph G>
+template <typename EdgePredicate, typename VertexPredicate, typename G>
 struct in_edge_predicate {
   in_edge_predicate() = default;
   in_edge_predicate(EdgePredicate ep, VertexPredicate vp, const G& g) : edge_pred_(ep), vertex_pred_(vp), g_(&g) {}
@@ -89,7 +89,7 @@ struct in_edge_predicate {
   const G* g_ = nullptr;
 };
 
-template <typename EdgePredicate, typename VertexPredicate, concepts::IncidenceGraph G>
+template <typename EdgePredicate, typename VertexPredicate, typename G>
 struct edge_predicate {
   edge_predicate() = default;
   edge_predicate(EdgePredicate ep, VertexPredicate vp, const G& g) : edge_pred_(ep), vertex_pred_(vp), g_(&g) {}

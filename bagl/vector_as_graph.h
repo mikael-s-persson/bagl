@@ -34,119 +34,126 @@ struct vector_as_graph_traversal_tag : public virtual vertex_list_graph_tag,
                                        public virtual incidence_graph_tag {};
 
 struct vector_as_graph_edge {
-  std::size_t m_source = std::numeric_limits<std::size_t>::max();
-  std::size_t m_target = std::numeric_limits<std::size_t>::max();
+  std::size_t u = std::numeric_limits<std::size_t>::max();
+  std::size_t v = std::numeric_limits<std::size_t>::max();
+
+  bool operator==(const vector_as_graph_edge& rhs) const { return u == rhs.u && v == rhs.v; }
+  bool operator!=(const vector_as_graph_edge& rhs) const { return !(*this == rhs); }
 };
 
-template <typename EdgeList, typename Alloc>
-struct graph_traits<std::vector<EdgeList, Alloc> > {
-  using V = typename EdgeList::value_type;
+template <std::ranges::random_access_range Vector>
+struct vector_as_graph {
+  Vector& data;
+  explicit vector_as_graph(Vector& a_data) : data(a_data) {}
+
   using vertex_descriptor = std::size_t;
   using edge_descriptor = vector_as_graph_edge;
   using directed_category = directed_tag;
   using edge_parallel_category = allow_parallel_edge_tag;
   using traversal_category = vector_as_graph_traversal_tag;
-  using vertices_size_type = std::size_t;
-  using edges_size_type = std::size_t;
-  using degree_size_type = std::size_t;
 
   static std::size_t null_vertex() { return std::numeric_limits<std::size_t>::max(); }
 };
 
-template <typename EdgeList, typename Alloc>
-auto out_edges(std::size_t u, const std::vector<EdgeList, Alloc>& g) {
-  return std::ranges::ref_view(g[u]) | std::views::transform([u](std::size_t v) { return vector_as_graph_edge{u, v}; });
+template <typename Vector>
+auto out_edges(std::size_t u, const vector_as_graph<Vector>& g) {
+  return std::ranges::ref_view(g.data[u]) | std::views::transform([u](std::size_t v) {
+           return vector_as_graph_edge{u, v};
+         });
 }
 
-template <typename EdgeList, typename Alloc>
-std::size_t out_degree(std::size_t u, const std::vector<EdgeList, Alloc>& g) {
-  return g[u].size();
+template <typename Vector>
+std::size_t out_degree(std::size_t u, const vector_as_graph<Vector>& g) {
+  return g.data[u].size();
 }
 
-template <typename EdgeList, typename Alloc>
-auto adjacent_vertices(std::size_t u, const std::vector<EdgeList, Alloc>& g) {
-  return std::ranges::ref_view(g[u]);
+template <typename Vector>
+auto adjacent_vertices(std::size_t u, const vector_as_graph<Vector>& g) {
+  return std::ranges::ref_view(g.data[u]);
 }
 
-template <typename EdgeList, typename Alloc>
-std::size_t source(vector_as_graph_edge e, const std::vector<EdgeList, Alloc>& /*g*/) {
-  return e.m_source;
+template <typename Vector>
+std::size_t source(vector_as_graph_edge e, const vector_as_graph<Vector>& /*g*/) {
+  return e.u;
 }
 
-template <typename EdgeList, typename Alloc>
-std::size_t target(vector_as_graph_edge e, const std::vector<EdgeList, Alloc>& /*g*/) {
-  return e.m_target;
+template <typename Vector>
+std::size_t target(vector_as_graph_edge e, const vector_as_graph<Vector>& /*g*/) {
+  return e.v;
 }
 
-template <typename EdgeList, typename Alloc>
-auto vertices(const std::vector<EdgeList, Alloc>& v) {
-  return std::ranges::iota_view<std::size_t, std::size_t>(0, v.size());
+template <typename Vector>
+auto vertices(const vector_as_graph<Vector>& g) {
+  return std::ranges::iota_view<std::size_t, std::size_t>(0, g.data.size());
 }
 
-template <typename EdgeList, typename Alloc>
-std::size_t num_vertices(const std::vector<EdgeList, Alloc>& v) {
-  return v.size();
+template <typename Vector>
+std::size_t num_vertices(const vector_as_graph<Vector>& g) {
+  return g.data.size();
 }
 
-template <typename EdgeList, typename Alloc>
-auto add_edge(std::size_t u, std::size_t v, std::vector<EdgeList, Alloc>& g) {
-  g[u].insert(g[u].end(), v);
+template <typename Vector>
+auto add_edge(std::size_t u, std::size_t v, vector_as_graph<Vector>& g) {
+  g.data[u].insert(g.data[u].end(), v);
   return std::pair{vector_as_graph_edge{u, v}, true};
 }
 
-template <typename EdgeList, typename Alloc>
-auto edge(std::size_t u, std::size_t v, std::vector<EdgeList, Alloc>& g) {
-  for (auto i : g[u]) {
-    if (*i == v) {
+template <typename Vector>
+auto edge(std::size_t u, std::size_t v, const vector_as_graph<Vector>& g) {
+  for (auto i : g.data[u]) {
+    if (i == v) {
       return std::pair{vector_as_graph_edge{u, v}, true};
     }
   }
   return std::pair{vector_as_graph_edge{}, false};
 }
 
-template <typename EdgeList, typename Alloc>
-void remove_edge(std::size_t u, std::size_t v, std::vector<EdgeList, Alloc>& g) {
-  auto i = std::remove(g[u].begin(), g[u].end(), v);
-  if (i != g[u].end()) {
-    g[u].erase(i, g[u].end());
+template <typename Vector>
+void remove_edge(std::size_t u, std::size_t v, vector_as_graph<Vector>& g) {
+  auto i = std::remove(g.data[u].begin(), g.data[u].end(), v);
+  if (i != g.data[u].end()) {
+    g.data[u].erase(i, g.data[u].end());
   }
 }
 
-template <typename EdgeList, typename Alloc>
-void remove_edge(vector_as_graph_edge e, std::vector<EdgeList, Alloc>& g) {
-  remove_edge(e.m_source, e.m_target, g);
+template <typename Vector>
+void remove_edge(vector_as_graph_edge e, vector_as_graph<Vector>& g) {
+  remove_edge(e.u, e.v, g);
 }
 
-template <typename EdgeList, typename Alloc, typename Predicate>
-void remove_edge_if(Predicate p, std::vector<EdgeList, Alloc>& g) {
-  for (std::size_t u = 0; u < g.size(); ++u) {
-    auto i = std::remove_if(g[u].begin(), g[u].end(), [u, &p](std::size_t v) { return p(vector_as_graph_edge{u, v}); });
-    if (i != g[u].end()) {
-      g[u].erase(i, g[u].end());
+template <typename Vector, typename Predicate>
+void remove_edge_if(Predicate p, vector_as_graph<Vector>& g) {
+  for (std::size_t u = 0; u < g.data.size(); ++u) {
+    auto& elist = g.data[u];
+    auto i = std::remove_if(elist.begin(), elist.end(), [u, &p](std::size_t v) {
+      return p(vector_as_graph_edge{u, v});
+    });
+    if (i != elist.end()) {
+      elist.erase(i, elist.end());
     }
   }
 }
 
-template <typename EdgeList, typename Alloc>
-std::size_t add_vertex(std::vector<EdgeList, Alloc>& g) {
-  g.resize(g.size() + 1);
-  return g.size() - 1;
+template <typename Vector>
+std::size_t add_vertex(vector_as_graph<Vector>& g) {
+  g.data.resize(g.data.size() + 1);
+  return g.data.size() - 1;
 }
 
-template <typename EdgeList, typename Alloc>
-void clear_vertex(std::size_t u, std::vector<EdgeList, Alloc>& g) {
-  g[u].clear();
-  for (std::size_t i = 0; i < g.size(); ++i) {
+template <typename Vector>
+void clear_vertex(std::size_t u, vector_as_graph<Vector>& g) {
+  g.data[u].clear();
+  for (std::size_t i = 0; i < g.data.size(); ++i) {
     remove_edge(i, u, g);
   }
 }
 
-template <typename EdgeList, typename Alloc>
-void remove_vertex(std::size_t u, std::vector<EdgeList, Alloc>& g) {
+template <typename Vector>
+void remove_vertex(std::size_t u, vector_as_graph<Vector>& g) {
   clear_vertex(u, g);
-  g.erase(g.begin() + u);
-  for (std::size_t i = 0; i < g.size(); ++i) {
-    for (auto& v : g[i]) {
+  g.data.erase(g.data.begin() + u);
+  for (auto& elist : g.data) {
+    for (auto& v : elist) {
       // after clear_vertex v is never equal to u
       if (v > u) {
         --v;
@@ -155,19 +162,19 @@ void remove_vertex(std::size_t u, std::vector<EdgeList, Alloc>& g) {
   }
 }
 
-template <typename EdgeList, typename Alloc>
-struct property_map<std::vector<EdgeList, Alloc>, vertex_index_t> {
+template <typename Vector>
+struct property_map<vector_as_graph<Vector>, vertex_index_t> {
   using type = identity_property_map;
   using const_type = type;
 };
 
-template <typename EdgeList, typename Alloc>
-identity_property_map get(vertex_index_t /*unused*/, const std::vector<EdgeList, Alloc>& /*unused*/) {
+template <typename Vector>
+identity_property_map get(vertex_index_t /*unused*/, const vector_as_graph<Vector>& /*unused*/) {
   return {};
 }
 
-template <typename EdgeList, typename Alloc>
-identity_property_map get(vertex_index_t /*unused*/, std::vector<EdgeList, Alloc>& /*unused*/) {
+template <typename Vector>
+identity_property_map get(vertex_index_t /*unused*/, vector_as_graph<Vector>& /*unused*/) {
   return {};
 }
 }  // namespace bagl

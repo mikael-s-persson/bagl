@@ -490,7 +490,7 @@ void remove_edge(typename BAGL_ADJACENCY_MATRIX::vertex_descriptor u,
                  typename BAGL_ADJACENCY_MATRIX::vertex_descriptor v, BAGL_ADJACENCY_MATRIX& g, EProp* ep) {
   remove_edge(g.make_edge_descriptor(u, v), ep, g);
 }
-
+#if 0
 template <BAGL_ADJACENCY_MATRIX_PARAMS, typename... VPArgs>
 auto add_vertex(BAGL_ADJACENCY_MATRIX& g, VPArgs&&... /*vp_args*/) {
   // UNDER CONSTRUCTION
@@ -511,6 +511,7 @@ void remove_vertex(typename BAGL_ADJACENCY_MATRIX::vertex_descriptor v, BAGL_ADJ
   }
   remove_vertex(v, g);
 }
+#endif
 
 // O(V)
 template <BAGL_ADJACENCY_MATRIX_PARAMS>

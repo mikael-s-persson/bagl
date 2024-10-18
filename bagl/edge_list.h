@@ -57,8 +57,8 @@ class edge_list_impl {
   struct edge_iterator {
     using self = edge_iterator;
     using value_type = E;
-    using reference = E &;
-    using pointer = E *;
+    using reference = E&;
+    using pointer = E*;
     using difference_type = std::ptrdiff_t;
     using iterator_category = std::input_iterator_tag;
     edge_iterator() = default;
@@ -88,13 +88,11 @@ auto edges(const edge_list_impl<G, EI, T, D>& g_) {
   return std::ranges::subrange(edge_iterator(g._first), edge_iterator(g._last));
 }
 template <class G, class EI, class T, class D>
-auto source(typename edge_list_impl<G, EI, T, D>::edge_descriptor e,
-            const edge_list_impl<G, EI, T, D>& /*unused*/) {
+auto source(typename edge_list_impl<G, EI, T, D>::edge_descriptor e, const edge_list_impl<G, EI, T, D>& /*unused*/) {
   return (*e._ptr).first;
 }
 template <class G, class EI, class T, class D>
-auto target(typename edge_list_impl<G, EI, T, D>::edge_descriptor e,
-            const edge_list_impl<G, EI, T, D>& /*unused*/) {
+auto target(typename edge_list_impl<G, EI, T, D>::edge_descriptor e, const edge_list_impl<G, EI, T, D>& /*unused*/) {
   return (*e._ptr).second;
 }
 
@@ -120,15 +118,14 @@ struct edge_property_selector<edge_list_tag> {
 };
 
 template <class G, class EI, class T, class D>
-auto get(edge_index_t /*unused*/,
-                                                                           const edge_list_impl<G, EI, T, D>& /*unused*/) {
+auto get(edge_index_t /*unused*/, const edge_list_impl<G, EI, T, D>& /*unused*/) {
   using EdgeIndexMap = property_map_t<edge_list_impl<G, EI, T, D>, edge_index_t>;
   return EdgeIndexMap();
 }
 
 template <class G, class EI, class T, class D>
 D get(edge_index_t /*unused*/, const edge_list_impl<G, EI, T, D>& /*unused*/,
-             typename edge_list_impl<G, EI, T, D>::edge_descriptor e) {
+      typename edge_list_impl<G, EI, T, D>::edge_descriptor e) {
   return e._i;
 }
 
@@ -147,14 +144,12 @@ class edge_list_impl_ra {
 
   using edge_descriptor = edge_id;
   using vertex_descriptor = V;
-  // typedef typename boost::integer_range< edge_id >::iterator edge_iterator;
 };
 
 template <class G, class EI, class T, class D>
 auto edges(const edge_list_impl_ra<G, EI, T, D>& g_) {
   const G& g = static_cast<const G&>(g_);
-  using edge_iterator = typename edge_list_impl_ra<G, EI, T, D>::edge_iterator;
-  return std::ranges::subrange(edge_iterator(0), edge_iterator(g._last - g._first));
+  return std::ranges::iota_view(D{0}, D{g._last - g._first});
 }
 template <class G, class EI, class T, class D>
 auto source(typename edge_list_impl_ra<G, EI, T, D>::edge_descriptor e, const edge_list_impl_ra<G, EI, T, D>& g_) {
@@ -194,7 +189,7 @@ auto get(edge_index_t /*unused*/, const edge_list_impl_ra<G, EI, T, D>& /*unused
 
 template <class G, class EI, class T, class D>
 D get(edge_index_t /*unused*/, const edge_list_impl_ra<G, EI, T, D>& /*unused*/,
-             typename edge_list_impl_ra<G, EI, T, D>::edge_descriptor e) {
+      typename edge_list_impl_ra<G, EI, T, D>::edge_descriptor e) {
   return e;
 }
 
@@ -214,7 +209,7 @@ class edge_list : public std::conditional_t<std::is_convertible_v<Cat, std::rand
   using edges_size_type = std::size_t;
   using vertices_size_type = std::size_t;
   using degree_size_type = std::size_t;
-  edge_list(EdgeIter first, EdgeIter last) : _first(first), _last(last), m_num_edges(std::distance(first, last)) {  }
+  edge_list(EdgeIter first, EdgeIter last) : _first(first), _last(last), m_num_edges(std::distance(first, last)) {}
   edge_list(EdgeIter first, EdgeIter last, edges_size_type E) : _first(first), _last(last), m_num_edges(E) {}
 
   EdgeIter _first, _last;

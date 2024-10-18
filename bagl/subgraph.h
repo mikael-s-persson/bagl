@@ -286,7 +286,7 @@ class subgraph {
 // Functions special to the Subgraph Class
 
 template <typename G>
-auto add_vertex(graph_vertex_descriptor_t<subgraph<G>> u_global, subgraph<G>& g) {
+graph_vertex_descriptor_t<subgraph<G>> add_vertex(graph_vertex_descriptor_t<subgraph<G>> u_global, subgraph<G>& g) {
   assert(!g.is_root());
   auto [u_local, exists_local] = g.find_vertex(u_global);
 
