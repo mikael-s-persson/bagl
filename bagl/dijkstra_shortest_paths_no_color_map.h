@@ -6,6 +6,8 @@
 #ifndef BAGL_BAGL_DIJKSTRA_SHORTEST_PATHS_NO_COLOR_MAP_H_
 #define BAGL_BAGL_DIJKSTRA_SHORTEST_PATHS_NO_COLOR_MAP_H_
 
+#include <ranges>
+
 #include "bagl/d_ary_heap.h"
 #include "bagl/dijkstra_shortest_paths.h"
 #include "bagl/graph_traits.h"
@@ -15,28 +17,30 @@
 namespace bagl {
 
 // No init version
-template <concepts::IncidenceGraph G, concepts::DijkstraVisitor<G> V,
+template <concepts::IncidenceGraph G, std::ranges::input_range Seeds, concepts::DijkstraVisitor<G> V,
           concepts::ReadWriteVertexPropertyMap<G> PredecessorMap, concepts::ReadWriteVertexPropertyMap<G> DistanceMap,
           concepts::ReadableEdgePropertyMap<G> WeightMap, concepts::ReadableVertexPropertyMap<G> VertexIndexMap,
           concepts::PropertyComparator<DistanceMap> Compare, concepts::PropertyCombinator<DistanceMap> Combine>
 requires std::same_as<graph_vertex_descriptor_t<G>, property_traits_value_t<PredecessorMap>> &&
     std::convertible_to<property_traits_value_t<WeightMap>, property_traits_value_t<DistanceMap>>
-void dijkstra_shortest_paths_no_color_map_no_init(const G& g, graph_vertex_descriptor_t<G> start,
+void dijkstra_shortest_paths_no_color_map_no_init(const G& g, Seeds seeds,
                                                   PredecessorMap predecessor_map,  // get(vertex_predecessor, g)
                                                   DistanceMap distance_map,        // get(vertex_distance, g)
                                                   WeightMap weight_map,            // get(edge_weight, g)
                                                   VertexIndexMap index_map,        // get(vertex_index, g)
                                                   Compare compare, Combine combine,
-                                                  property_traits_value_t<DistanceMap> d_infinity, V visitor) {
+                                                  property_traits_value_t<DistanceMap> d_infinity,
+                                                  property_traits_value_t<DistanceMap> d_zero, V visitor) {
   // Default - use d-ary heap (d = 4)
   auto vertex_queue = make_d_ary_heap_indirect<graph_vertex_descriptor_t<G>, 4>(
       distance_map, vector_property_map{num_vertices_or_zero(g), index_map, std::size_t{}}, compare);
 
   // Add vertex to the queue
-  vertex_queue.push(start);
-
   // Starting vertex will always be the first discovered vertex
-  visitor.discover_vertex(start, g);
+  for (auto s : seeds) {
+    visitor.discover_vertex(s, g);
+    vertex_queue.push(s);
+  }
 
   while (!vertex_queue.empty()) {
     auto min_vertex = vertex_queue.top();
@@ -47,7 +51,7 @@ void dijkstra_shortest_paths_no_color_map_no_init(const G& g, graph_vertex_descr
     // Check if any other vertices can be reached
     auto min_vertex_distance = get(distance_map, min_vertex);
 
-    if (!distance_compare(min_vertex_distance, d_infinity)) {
+    if (!compare(min_vertex_distance, d_infinity)) {
       // This is the minimum vertex, so all other vertices are unreachable
       return;
     }
@@ -57,7 +61,7 @@ void dijkstra_shortest_paths_no_color_map_no_init(const G& g, graph_vertex_descr
       visitor.examine_edge(current_edge, g);
 
       // Check if the edge has a negative weight
-      if (distance_compare(get(weight_map, current_edge), d_infinity)) {
+      if (compare(get(weight_map, current_edge), d_zero)) {
         throw negative_edge();
       }
 
@@ -88,75 +92,76 @@ void dijkstra_shortest_paths_no_color_map_no_init(const G& g, graph_vertex_descr
   }  // end while queue not empty
 }
 
-template <concepts::IncidenceGraph G, concepts::DijkstraVisitor<G> V,
+template <concepts::IncidenceGraph G, std::ranges::input_range Seeds, concepts::DijkstraVisitor<G> V,
           concepts::ReadWriteVertexPropertyMap<G> PredecessorMap, concepts::ReadWriteVertexPropertyMap<G> DistanceMap,
           concepts::ReadableEdgePropertyMap<G> WeightMap, concepts::ReadableVertexPropertyMap<G> VertexIndexMap>
 requires std::same_as<graph_vertex_descriptor_t<G>, property_traits_value_t<PredecessorMap>> &&
     std::convertible_to<property_traits_value_t<WeightMap>, property_traits_value_t<DistanceMap>>
-void dijkstra_shortest_paths_no_color_map_no_init(const G& g, graph_vertex_descriptor_t<G> start,
+void dijkstra_shortest_paths_no_color_map_no_init(const G& g, Seeds seeds,
                                                   PredecessorMap predecessor_map,  // get(vertex_predecessor, g)
                                                   DistanceMap distance_map,        // get(vertex_distance, g)
                                                   WeightMap weight_map,            // get(edge_weight, g)
                                                   VertexIndexMap index_map,        // get(vertex_index, g)
                                                   V vis) {
   using D = property_traits_value_t<WeightMap>;
-  dijkstra_shortest_paths_no_color_map_no_init(g, start, predecessor_map, distance_map, weight_map, index_map,
-                                               std::less<>(), closed_plus<>(), default_inf_v<D>, vis);
+  dijkstra_shortest_paths_no_color_map_no_init(g, seeds, predecessor_map, distance_map, weight_map, index_map,
+                                               std::less<>(), closed_plus<>(), default_inf_v<D>, default_zero_v<D>,
+                                               vis);
 }
 
-template <concepts::IncidenceGraph G, concepts::DijkstraVisitor<G> V,
+template <concepts::IncidenceGraph G, std::ranges::input_range Seeds, concepts::DijkstraVisitor<G> V,
           concepts::ReadWriteVertexPropertyMap<G> PredecessorMap, concepts::ReadableEdgePropertyMap<G> WeightMap,
           concepts::ReadableVertexPropertyMap<G> VertexIndexMap>
 requires std::same_as<graph_vertex_descriptor_t<G>, property_traits_value_t<PredecessorMap>>
-void dijkstra_shortest_paths_no_color_map_no_init(const G& g, graph_vertex_descriptor_t<G> start,
+void dijkstra_shortest_paths_no_color_map_no_init(const G& g, Seeds seeds,         // std::ranges::single_view{start}
                                                   PredecessorMap predecessor_map,  // get(vertex_predecessor, g)
                                                   WeightMap weight_map,            // get(edge_weight, g)
                                                   VertexIndexMap index_map,        // get(vertex_index, g)
                                                   V vis) {
   using D = property_traits_value_t<WeightMap>;
   dijkstra_shortest_paths_no_color_map_no_init(
-      g, start, predecessor_map, make_vector_property_map(num_vertices_or_zero(g), index_map, default_zero_v<D>),
-      weight_map, index_map, std::less<>(), closed_plus<>(), default_inf_v<D>, vis);
+      g, seeds, predecessor_map, make_vector_property_map(num_vertices_or_zero(g), index_map, default_zero_v<D>),
+      weight_map, index_map, std::less<>(), closed_plus<>(), default_inf_v<D>, default_zero_v<D>, vis);
 }
 
-template <concepts::IncidenceGraph G, concepts::DijkstraVisitor<G> V,
+template <concepts::IncidenceGraph G, std::ranges::input_range Seeds, concepts::DijkstraVisitor<G> V,
           concepts::ReadWriteVertexPropertyMap<G> PredecessorMap, concepts::ReadWriteVertexPropertyMap<G> DistanceMap,
           concepts::ReadableEdgePropertyMap<G> WeightMap>
 requires std::same_as<graph_vertex_descriptor_t<G>, property_traits_value_t<PredecessorMap>> &&
     std::convertible_to<property_traits_value_t<WeightMap>, property_traits_value_t<DistanceMap>>
-void dijkstra_shortest_paths_no_color_map_no_init(const G& g, graph_vertex_descriptor_t<G> start,
+void dijkstra_shortest_paths_no_color_map_no_init(const G& g, Seeds seeds,         // std::ranges::single_view{start}
                                                   PredecessorMap predecessor_map,  // get(vertex_predecessor, g)
                                                   DistanceMap distance_map,        // get(vertex_distance, g)
                                                   WeightMap weight_map,            // get(edge_weight, g)
                                                   V vis) {
   using D = property_traits_value_t<WeightMap>;
-  dijkstra_shortest_paths_no_color_map_no_init(g, start, predecessor_map, distance_map, weight_map,
+  dijkstra_shortest_paths_no_color_map_no_init(g, seeds, predecessor_map, distance_map, weight_map,
                                                get(vertex_index, g), std::less<>(), closed_plus<>(), default_inf_v<D>,
-                                               vis);
+                                               default_zero_v<D>, vis);
 }
 
-template <concepts::IncidenceGraph G, concepts::DijkstraVisitor<G> V,
+template <concepts::IncidenceGraph G, std::ranges::input_range Seeds, concepts::DijkstraVisitor<G> V,
           concepts::ReadWriteVertexPropertyMap<G> PredecessorMap, concepts::ReadableEdgePropertyMap<G> WeightMap>
 requires std::same_as<graph_vertex_descriptor_t<G>, property_traits_value_t<PredecessorMap>>
-void dijkstra_shortest_paths_no_color_map_no_init(const G& g, graph_vertex_descriptor_t<G> start,
+void dijkstra_shortest_paths_no_color_map_no_init(const G& g, Seeds seeds,         // std::ranges::single_view{start}
                                                   PredecessorMap predecessor_map,  // get(vertex_predecessor, g)
                                                   WeightMap weight_map,            // get(edge_weight, g)
                                                   V vis) {
   using D = property_traits_value_t<WeightMap>;
   dijkstra_shortest_paths_no_color_map_no_init(
-      g, start, predecessor_map,
+      g, seeds, predecessor_map,
       make_vector_property_map(num_vertices_or_zero(g), get(vertex_index, g), default_zero_v<D>), weight_map,
-      get(vertex_index, g), std::less<>(), closed_plus<>(), default_inf_v<D>, vis);
+      get(vertex_index, g), std::less<>(), closed_plus<>(), default_inf_v<D>, default_zero_v<D>, vis);
 }
 
 // Full init version
-template <concepts::VertexListGraph G, concepts::DijkstraVisitor<G> V,
+template <concepts::VertexListGraph G, std::ranges::input_range Seeds, concepts::DijkstraVisitor<G> V,
           concepts::ReadWriteVertexPropertyMap<G> PredecessorMap, concepts::ReadWriteVertexPropertyMap<G> DistanceMap,
           concepts::ReadableEdgePropertyMap<G> WeightMap, concepts::ReadableVertexPropertyMap<G> VertexIndexMap,
           concepts::PropertyComparator<DistanceMap> Compare, concepts::PropertyCombinator<DistanceMap> Combine>
 requires std::same_as<graph_vertex_descriptor_t<G>, property_traits_value_t<PredecessorMap>> &&
     std::convertible_to<property_traits_value_t<WeightMap>, property_traits_value_t<DistanceMap>>
-void dijkstra_shortest_paths_no_color_map(const G& g, graph_vertex_descriptor_t<G> start,
+void dijkstra_shortest_paths_no_color_map(const G& g, Seeds seeds,         // std::ranges::single_view{start}
                                           PredecessorMap predecessor_map,  // get(vertex_predecessor, g)
                                           DistanceMap distance_map,        // get(vertex_distance, g)
                                           WeightMap weight_map,            // get(edge_weight, g)
@@ -175,70 +180,72 @@ void dijkstra_shortest_paths_no_color_map(const G& g, graph_vertex_descriptor_t<
     put(predecessor_map, current_vertex, current_vertex);
   }
 
-  // Set distance for start to zero
-  put(distance_map, start, d_zero);
+  // Set distance for seeds to zero
+  for (auto s : seeds) {
+    put(distance_map, s, d_zero);
+  }
 
   // Pass everything on to the no_init version
-  dijkstra_shortest_paths_no_color_map_no_init(g, start, predecessor_map, distance_map, weight_map, index_map, combine,
-                                               compare, d_infinity, visitor);
+  dijkstra_shortest_paths_no_color_map_no_init(g, seeds, predecessor_map, distance_map, weight_map, index_map, compare,
+                                               combine, d_infinity, d_zero, visitor);
 }
 
-template <concepts::VertexListGraph G, concepts::DijkstraVisitor<G> V,
+template <concepts::VertexListGraph G, std::ranges::input_range Seeds, concepts::DijkstraVisitor<G> V,
           concepts::ReadWriteVertexPropertyMap<G> PredecessorMap, concepts::ReadWriteVertexPropertyMap<G> DistanceMap,
           concepts::ReadableEdgePropertyMap<G> WeightMap, concepts::ReadableVertexPropertyMap<G> VertexIndexMap>
 requires std::same_as<graph_vertex_descriptor_t<G>, property_traits_value_t<PredecessorMap>> &&
     std::convertible_to<property_traits_value_t<WeightMap>, property_traits_value_t<DistanceMap>>
-void dijkstra_shortest_paths_no_color_map(const G& g, graph_vertex_descriptor_t<G> start,
+void dijkstra_shortest_paths_no_color_map(const G& g, Seeds seeds,         // std::ranges::single_view{start}
                                           PredecessorMap predecessor_map,  // get(vertex_predecessor, g)
                                           DistanceMap distance_map,        // get(vertex_distance, g)
                                           WeightMap weight_map,            // get(edge_weight, g)
                                           VertexIndexMap index_map,        // get(vertex_index, g)
                                           V vis) {
   using D = property_traits_value_t<WeightMap>;
-  dijkstra_shortest_paths_no_color_map(g, start, predecessor_map, distance_map, weight_map, index_map, std::less<>(),
+  dijkstra_shortest_paths_no_color_map(g, seeds, predecessor_map, distance_map, weight_map, index_map, std::less<>(),
                                        closed_plus<>(), default_inf_v<D>, default_zero_v<D>, vis);
 }
 
-template <concepts::VertexListGraph G, concepts::DijkstraVisitor<G> V,
+template <concepts::VertexListGraph G, std::ranges::input_range Seeds, concepts::DijkstraVisitor<G> V,
           concepts::ReadWriteVertexPropertyMap<G> PredecessorMap, concepts::ReadableEdgePropertyMap<G> WeightMap,
           concepts::ReadableVertexPropertyMap<G> VertexIndexMap>
 requires std::same_as<graph_vertex_descriptor_t<G>, property_traits_value_t<PredecessorMap>>
-void dijkstra_shortest_paths_no_color_map(const G& g, graph_vertex_descriptor_t<G> start,
+void dijkstra_shortest_paths_no_color_map(const G& g, Seeds seeds,         // std::ranges::single_view{start}
                                           PredecessorMap predecessor_map,  // get(vertex_predecessor, g)
                                           WeightMap weight_map,            // get(edge_weight, g)
                                           VertexIndexMap index_map,        // get(vertex_index, g)
                                           V vis) {
   using D = property_traits_value_t<WeightMap>;
   dijkstra_shortest_paths_no_color_map(
-      g, start, predecessor_map, make_vector_property_map(num_vertices_or_zero(g), index_map, default_zero_v<D>),
+      g, seeds, predecessor_map, make_vector_property_map(num_vertices_or_zero(g), index_map, default_zero_v<D>),
       weight_map, index_map, std::less<>(), closed_plus<>(), default_inf_v<D>, default_zero_v<D>, vis);
 }
 
-template <concepts::VertexListGraph G, concepts::DijkstraVisitor<G> V,
+template <concepts::VertexListGraph G, std::ranges::input_range Seeds, concepts::DijkstraVisitor<G> V,
           concepts::ReadWriteVertexPropertyMap<G> PredecessorMap, concepts::ReadWriteVertexPropertyMap<G> DistanceMap,
           concepts::ReadableEdgePropertyMap<G> WeightMap>
 requires std::same_as<graph_vertex_descriptor_t<G>, property_traits_value_t<PredecessorMap>> &&
     std::convertible_to<property_traits_value_t<WeightMap>, property_traits_value_t<DistanceMap>>
-void dijkstra_shortest_paths_no_color_map(const G& g, graph_vertex_descriptor_t<G> start,
+void dijkstra_shortest_paths_no_color_map(const G& g, Seeds seeds,         // std::ranges::single_view{start}
                                           PredecessorMap predecessor_map,  // get(vertex_predecessor, g)
                                           DistanceMap distance_map,        // get(vertex_distance, g)
                                           WeightMap weight_map,            // get(edge_weight, g)
                                           V vis) {
   using D = property_traits_value_t<WeightMap>;
-  dijkstra_shortest_paths_no_color_map(g, start, predecessor_map, distance_map, weight_map, get(vertex_index, g),
+  dijkstra_shortest_paths_no_color_map(g, seeds, predecessor_map, distance_map, weight_map, get(vertex_index, g),
                                        std::less<>(), closed_plus<>(), default_inf_v<D>, default_zero_v<D>, vis);
 }
 
-template <concepts::VertexListGraph G, concepts::DijkstraVisitor<G> V,
+template <concepts::VertexListGraph G, std::ranges::input_range Seeds, concepts::DijkstraVisitor<G> V,
           concepts::ReadWriteVertexPropertyMap<G> PredecessorMap, concepts::ReadableEdgePropertyMap<G> WeightMap>
 requires std::same_as<graph_vertex_descriptor_t<G>, property_traits_value_t<PredecessorMap>>
-void dijkstra_shortest_paths_no_color_map(const G& g, graph_vertex_descriptor_t<G> start,
+void dijkstra_shortest_paths_no_color_map(const G& g, Seeds seeds,         // std::ranges::single_view{start}
                                           PredecessorMap predecessor_map,  // get(vertex_predecessor, g)
                                           WeightMap weight_map,            // get(edge_weight, g)
                                           V vis) {
   using D = property_traits_value_t<WeightMap>;
   dijkstra_shortest_paths_no_color_map(
-      g, start, predecessor_map,
+      g, seeds, predecessor_map,
       make_vector_property_map(num_vertices_or_zero(g), get(vertex_index, g), default_zero_v<D>), weight_map,
       get(vertex_index, g), std::less<>(), closed_plus<>(), default_inf_v<D>, default_zero_v<D>, vis);
 }

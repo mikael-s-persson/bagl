@@ -66,6 +66,14 @@ struct undirected_graph_error : graph_exception {
   }
 };
 
+struct search_result : std::exception {
+  [[nodiscard]] const char* what() const noexcept override = 0;
+};
+
+struct search_succeeded : std::exception {
+  [[nodiscard]] const char* what() const noexcept override { return ""; }
+};
+
 }  // namespace bagl
 
 #endif  // BAGL_BAGL_EXCEPTION_H_

@@ -271,13 +271,23 @@ void astar_search(const G& g, graph_vertex_descriptor_t<G> s, H h, V vis, Predec
   astar_search_no_init(g, s, h, vis, predecessor, cost, distance, weight, color, index_map, compare, combine, zero);
 }
 
+// Version with default cost arithmetic (float, double, int..)
+template <concepts::VertexListGraph G, concepts::AStarHeuristic<G> H, concepts::AStarVisitor<G> V,
+          concepts::ReadWriteVertexPropertyMap<G> PredecessorMap, concepts::ReadWriteVertexPropertyMap<G> CostMap,
+          concepts::ReadWriteVertexPropertyMap<G> DistanceMap, concepts::ReadableEdgePropertyMap<G> WeightMap,
+          concepts::ReadWriteVertexPropertyMap<G> ColorMap, concepts::ReadableVertexIndexMap<G> VertexIndexMap>
+void astar_search(const G& g, graph_vertex_descriptor_t<G> s, H h, V vis, PredecessorMap predecessor, CostMap cost,
+                  DistanceMap distance, WeightMap weight, VertexIndexMap index_map, ColorMap color) {
+  using CostValue = property_traits_value_t<WeightMap>;
+  astar_search(g, s, h, vis, predecessor, cost, distance, weight, index_map, color, std::less<>(), closed_plus<>(),
+               std::numeric_limits<CostValue>::max(), CostValue{});
+}
+
 // Non-named parameter interface
 template <concepts::VertexListGraph G, concepts::AStarHeuristic<G> H, concepts::AStarVisitor<G> V,
-          concepts::ReadWriteVertexPropertyMap<G> PredecessorMap,
-          concepts::ReadWriteVertexPropertyMap<G> CostMap,
-          concepts::ReadWriteVertexPropertyMap<G> DistanceMap,
-          concepts::ReadableEdgePropertyMap<G> WeightMap, typename CompareFunction,
-          typename CombineFunction>
+          concepts::ReadWriteVertexPropertyMap<G> PredecessorMap, concepts::ReadWriteVertexPropertyMap<G> CostMap,
+          concepts::ReadWriteVertexPropertyMap<G> DistanceMap, concepts::ReadableEdgePropertyMap<G> WeightMap,
+          typename CompareFunction, typename CombineFunction>
 void astar_search_tree(const G& g, graph_vertex_descriptor_t<G> s, H h, V vis, PredecessorMap predecessor, CostMap cost,
                        DistanceMap distance, WeightMap weight, CompareFunction compare, CombineFunction combine,
                        property_traits_value_t<CostMap> inf, property_traits_value_t<CostMap> zero) {
@@ -291,6 +301,16 @@ void astar_search_tree(const G& g, graph_vertex_descriptor_t<G> s, H h, V vis, P
   put(cost, s, h(s));
 
   astar_search_no_init_tree(g, s, h, vis, predecessor, cost, distance, weight, compare, combine, zero);
+}
+
+template <concepts::VertexListGraph G, concepts::AStarHeuristic<G> H, concepts::AStarVisitor<G> V,
+          concepts::ReadWriteVertexPropertyMap<G> PredecessorMap, concepts::ReadWriteVertexPropertyMap<G> CostMap,
+          concepts::ReadWriteVertexPropertyMap<G> DistanceMap, concepts::ReadableEdgePropertyMap<G> WeightMap>
+void astar_search_tree(const G& g, graph_vertex_descriptor_t<G> s, H h, V vis, PredecessorMap predecessor, CostMap cost,
+                       DistanceMap distance, WeightMap weight) {
+  using CostValue = property_traits_value_t<WeightMap>;
+  astar_search_tree(g, s, h, vis, predecessor, cost, distance, weight, std::less<>(), closed_plus<>(),
+                    std::numeric_limits<CostValue>::max(), CostValue{});
 }
 
 }  // namespace bagl

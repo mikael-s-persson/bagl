@@ -189,12 +189,32 @@ cc_test(
     ],
 )
 
+cc_library(
+    name = "new_york_state_map",
+    srcs = [ "new_york_state_map.cc", ],
+    hdrs = [ "new_york_state_map.h", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
 cc_test(
     name = "astar_search_test",
     srcs = [ "astar_search_test.cc", ],
     deps = [
+        ":new_york_state_map",
         "//bagl",
         "@com_google_googletest//:gtest_main",
     ],
 )
 
+cc_test(
+    name = "dijkstra_shortest_paths_test",
+    srcs = [ "dijkstra_shortest_paths_test.cc", ],
+    deps = [
+        ":new_york_state_map",
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)

@@ -334,7 +334,7 @@ struct add_removed_edge_capacity : add_removed_edge_property<property_map_t<Grap
 };
 
 template <typename G>
-auto num_vertices_or_zero(const G& g) {
+std::size_t num_vertices_or_zero(const G& g) {
   if constexpr (concepts::VertexListGraph<G>) {
     return num_vertices(g);
   } else {
@@ -343,7 +343,7 @@ auto num_vertices_or_zero(const G& g) {
 }
 
 template <typename G>
-auto num_edges_or_zero(const G& g) {
+std::size_t num_edges_or_zero(const G& g) {
   if constexpr (concepts::EdgeListGraph<G>) {
     return num_edges(g);
   } else {

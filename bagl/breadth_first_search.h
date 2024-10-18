@@ -12,6 +12,7 @@
 #include <tuple>
 #include <vector>
 
+#include "bagl/exception.h"
 #include "bagl/graph_concepts.h"
 #include "bagl/graph_traits.h"
 #include "bagl/two_bit_color_map.h"
@@ -172,6 +173,22 @@ class bfs_visitor {
 
  protected:
   Visitors vis_;
+};
+
+// Visitor that terminates when we find the goal.
+template <typename Vertex>
+class bfs_stop_at_goal {
+ public:
+  explicit bfs_stop_at_goal(Vertex goal) : goal_(goal) {}
+  template <typename Graph>
+  void examine_vertex(Vertex u, const Graph& g) {
+    if (u == goal_) {
+      throw search_succeeded();
+    }
+  }
+
+ private:
+  Vertex goal_;
 };
 
 template <typename... Visitors>

@@ -83,7 +83,11 @@ class dijkstra_visitor : public bfs_visitor<Visitors> {
 
 template <typename... Visitors>
 auto make_dijkstra_visitor(Visitors&&... vis) {
-  return dijkstra_visitor(std::tuple{std::forward<Visitors>(vis)...});
+  if constexpr (sizeof...(Visitors) == 0) {
+    return dijkstra_visitor<>();
+  } else {
+    return dijkstra_visitor(std::tuple{std::forward<Visitors>(vis)...});
+  }
 }
 using default_dijkstra_visitor = dijkstra_visitor<>;
 
@@ -195,16 +199,16 @@ struct dijkstra_bfs_visitor {
   D zero_;
 };
 
-template <concepts::IncidenceGraph G, class IndexMap, class Value>
+template <concepts::IncidenceGraph G, concepts::ReadableVertexIndexMap<G> IndexMap>
 auto make_default_index_map(const G& g, const IndexMap& index) {
   if constexpr (is_vertex_list_graph_v<G>) {
-    return make_vector_property_map<Value>(num_vertices(g), index);
+    return make_vector_property_map<std::size_t>(num_vertices(g), index);
   } else {
-    return make_vector_property_map<Value>(index);
+    return make_vector_property_map<std::size_t>(index);
   }
 }
 
-template <concepts::IncidenceGraph G, class IndexMap>
+template <concepts::IncidenceGraph G, concepts::ReadableVertexIndexMap<G> IndexMap>
 auto make_default_color_map(const G& g, const IndexMap& index) {
   if constexpr (is_vertex_list_graph_v<G>) {
     return two_bit_color_map(num_vertices(g), index);
@@ -321,6 +325,17 @@ void dijkstra_shortest_paths(const G& g, graph_vertex_descriptor_t<G> s, Predece
   using D = property_traits_value_t<DistanceMap>;
   dijkstra_shortest_paths(g, std::ranges::single_view(s), predecessor, distance, weight, index_map, std::less<>(),
                           closed_plus<>(), numeric_values<D>::infinity(), numeric_values<D>::zero(), vis);
+}
+
+// Initialize distances and call dijkstra search with default color map
+template <concepts::VertexListGraph G, std::ranges::input_range Seeds, concepts::DijkstraVisitor<G> V,
+          concepts::ReadWriteVertexPropertyMap<G> PredecessorMap, concepts::ReadWriteVertexPropertyMap<G> DistanceMap,
+          concepts::ReadableEdgePropertyMap<G> WeightMap, concepts::ReadableVertexPropertyMap<G> IndexMap>
+void dijkstra_shortest_paths(const G& g, Seeds seeds, PredecessorMap predecessor, DistanceMap distance,
+                             WeightMap weight, IndexMap index_map, V vis) {
+  using D = property_traits_value_t<DistanceMap>;
+  dijkstra_shortest_paths(g, seeds, predecessor, distance, weight, index_map, std::less<>(), closed_plus<>(),
+                          numeric_values<D>::infinity(), numeric_values<D>::zero(), vis);
 }
 
 // Initialize distances and call dijkstra search
