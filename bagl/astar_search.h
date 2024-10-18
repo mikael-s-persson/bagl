@@ -30,7 +30,7 @@ concept AStarHeuristic = std::copy_constructible<H> && requires(const H& h, grap
 
 template <typename V, typename G>
 concept AStarVisitor = std::copy_constructible<V> &&
-    requires(const V& vis, const G& g, graph_vertex_descriptor_t<G> u, graph_edge_descriptor_t<G> e) {
+    requires(V& vis, const G& g, graph_vertex_descriptor_t<G> u, graph_edge_descriptor_t<G> e) {
   vis.initialize_vertex(u, g);
   vis.discover_vertex(u, g);
   vis.examine_vertex(u, g);
@@ -49,19 +49,19 @@ class astar_heuristic {
   auto operator()(graph_vertex_descriptor_t<G> /*u*/) { return CostType{}; }
 };
 
-template <typename Visitors = null_visitor>
+template <typename Visitors = null_visitors>
 class astar_visitor : public bfs_visitor<Visitors> {
  public:
   astar_visitor() = default;
-  explicit astar_visitor(Visitors vis) : bfs_visitor<Visitors>(vis) {}
+  explicit astar_visitor(Visitors vis) : bfs_visitor<Visitors>(std::move(vis)) {}
 
   template <typename Edge, typename Graph>
   void edge_relaxed(Edge e, const Graph& g) {
-    visitors_detail::invoke_edge_relaxed_on_all(this->m_vis, e, g);
+    visitors_detail::invoke_edge_relaxed_on_all(this->vis_, e, g);
   }
   template <typename Edge, typename Graph>
   void edge_not_relaxed(Edge e, const Graph& g) {
-    visitors_detail::invoke_edge_not_relaxed_on_all(this->m_vis, e, g);
+    visitors_detail::invoke_edge_not_relaxed_on_all(this->vis_, e, g);
   }
 
   template <typename Edge, typename Graph>
@@ -69,9 +69,13 @@ class astar_visitor : public bfs_visitor<Visitors> {
   template <typename Edge, typename Graph>
   void non_tree_edge(Edge e, const Graph& g) = delete;
 };
-template <typename Visitors>
-auto make_astar_visitor(Visitors vis) {
-  return astar_visitor<Visitors>(vis);
+template <typename... Visitors>
+auto make_astar_visitor(Visitors&&... vis) {
+  if constexpr (sizeof...(Visitors) == 0) {
+    return astar_visitor<>();
+  } else {
+    return astar_visitor<std::tuple<std::decay_t<Visitors>...>>(std::forward<Visitors>(vis)...);
+  }
 }
 using default_astar_visitor = astar_visitor<>;
 
@@ -181,16 +185,14 @@ struct astar_bfs_visitor {
 }  // namespace astar_detail
 
 template <concepts::IncidenceGraph G, concepts::AStarHeuristic<G> H, concepts::AStarVisitor<G> V,
-          concepts::ReadWriteVertexPropertyMap<G> PredecessorMap,
-          concepts::ReadWriteVertexPropertyMap<G> CostMap,
-          concepts::ReadWriteVertexPropertyMap<G> DistanceMap,
-          concepts::ReadableEdgePropertyMap<G> WeightMap,
-          concepts::ReadWriteVertexPropertyMap<G> ColorMap, typename VertexIndexMap,
-          typename CompareFunction, typename CombineFunction>
+          concepts::ReadWriteVertexPropertyMap<G> PredecessorMap, concepts::ReadWriteVertexPropertyMap<G> CostMap,
+          concepts::ReadWriteVertexPropertyMap<G> DistanceMap, concepts::ReadableEdgePropertyMap<G> WeightMap,
+          concepts::ReadWriteVertexPropertyMap<G> ColorMap, typename VertexIndexMap, typename CompareFunction,
+          typename CombineFunction>
 void astar_search_no_init(const G& g, graph_vertex_descriptor_t<G> s, H h, V vis, PredecessorMap predecessor,
                           CostMap cost, DistanceMap distance, WeightMap weight, ColorMap color,
                           VertexIndexMap index_map, CompareFunction compare, CombineFunction combine,
-                          property_traits_value_t<CostMap> /*inf*/, property_traits_value_t<CostMap> zero) {
+                          property_traits_value_t<CostMap> zero) {
   using Vertex = graph_vertex_descriptor_t<G>;
   auto index_in_heap = make_vector_property_map<std::size_t>(index_map);
   auto q = make_d_ary_heap_indirect<Vertex, 4>(cost, index_in_heap, compare);
@@ -201,23 +203,13 @@ void astar_search_no_init(const G& g, graph_vertex_descriptor_t<G> s, H h, V vis
   breadth_first_visit(g, s, q, bfs_vis, color);
 }
 
-namespace astar_detail {
-template <typename P>
-struct select1st {
-  auto operator()(const P& p) const { return p.first; }
-};
-}  // namespace astar_detail
-
 template <concepts::IncidenceGraph G, concepts::AStarHeuristic<G> H, concepts::AStarVisitor<G> V,
-          concepts::ReadWriteVertexPropertyMap<G> PredecessorMap,
-          concepts::ReadWriteVertexPropertyMap<G> CostMap,
-          concepts::ReadWriteVertexPropertyMap<G> DistanceMap,
-          concepts::ReadableEdgePropertyMap<G> WeightMap, typename CompareFunction,
-          typename CombineFunction>
+          concepts::ReadWriteVertexPropertyMap<G> PredecessorMap, concepts::ReadWriteVertexPropertyMap<G> CostMap,
+          concepts::ReadWriteVertexPropertyMap<G> DistanceMap, concepts::ReadableEdgePropertyMap<G> WeightMap,
+          typename CompareFunction, typename CombineFunction>
 void astar_search_no_init_tree(const G& g, graph_vertex_descriptor_t<G> s, H h, V vis, PredecessorMap predecessor,
                                CostMap cost, DistanceMap distance, WeightMap weight, CompareFunction compare,
-                               CombineFunction combine, property_traits_value_t<CostMap> /*inf*/,
-                               property_traits_value_t<CostMap> zero) {
+                               CombineFunction combine, property_traits_value_t<CostMap> zero) {
   using Vertex = graph_vertex_descriptor_t<G>;
   using Distance = property_traits_value_t<DistanceMap>;
   using DVPair = std::pair<Distance, Vertex>;
@@ -256,11 +248,9 @@ void astar_search_no_init_tree(const G& g, graph_vertex_descriptor_t<G> s, H h, 
 
 // Non-named parameter interface
 template <concepts::VertexListGraph G, concepts::AStarHeuristic<G> H, concepts::AStarVisitor<G> V,
-          concepts::ReadWriteVertexPropertyMap<G> PredecessorMap,
-          concepts::ReadWriteVertexPropertyMap<G> CostMap,
-          concepts::ReadWriteVertexPropertyMap<G> DistanceMap,
-          concepts::ReadableEdgePropertyMap<G> WeightMap,
-          concepts::ReadWriteVertexPropertyMap<G> ColorMap, typename VertexIndexMap,
+          concepts::ReadWriteVertexPropertyMap<G> PredecessorMap, concepts::ReadWriteVertexPropertyMap<G> CostMap,
+          concepts::ReadWriteVertexPropertyMap<G> DistanceMap, concepts::ReadableEdgePropertyMap<G> WeightMap,
+          concepts::ReadWriteVertexPropertyMap<G> ColorMap, concepts::ReadableVertexIndexMap<G> VertexIndexMap,
           typename CompareFunction, typename CombineFunction>
 void astar_search(const G& g, graph_vertex_descriptor_t<G> s, H h, V vis, PredecessorMap predecessor, CostMap cost,
                   DistanceMap distance, WeightMap weight, VertexIndexMap index_map, ColorMap color,
@@ -278,8 +268,7 @@ void astar_search(const G& g, graph_vertex_descriptor_t<G> s, H h, V vis, Predec
   put(distance, s, zero);
   put(cost, s, h(s));
 
-  astar_search_no_init(g, s, h, vis, predecessor, cost, distance, weight, color, index_map, compare, combine, inf,
-                       zero);
+  astar_search_no_init(g, s, h, vis, predecessor, cost, distance, weight, color, index_map, compare, combine, zero);
 }
 
 // Non-named parameter interface
@@ -301,7 +290,7 @@ void astar_search_tree(const G& g, graph_vertex_descriptor_t<G> s, H h, V vis, P
   put(distance, s, zero);
   put(cost, s, h(s));
 
-  astar_search_no_init_tree(g, s, h, vis, predecessor, cost, distance, weight, compare, combine, inf, zero);
+  astar_search_no_init_tree(g, s, h, vis, predecessor, cost, distance, weight, compare, combine, zero);
 }
 
 }  // namespace bagl

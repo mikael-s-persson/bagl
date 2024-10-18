@@ -18,7 +18,7 @@ TEST(AdjacencyMatrix, ConceptChecks) {
     static_assert(concepts::EdgeListGraph<Graph>);
     static_assert(concepts::IncidenceGraph<Graph>);
     static_assert(concepts::AdjacencyGraph<Graph>);
-    static_assert(concepts::MutableGraph<Graph>);
+    static_assert(concepts::EdgeMutableGraph<Graph>);
     static_assert(concepts::AdjacencyMatrix<Graph>);
   }
   {
@@ -27,7 +27,7 @@ TEST(AdjacencyMatrix, ConceptChecks) {
     static_assert(concepts::EdgeListGraph<Graph>);
     static_assert(concepts::IncidenceGraph<Graph>);
     static_assert(concepts::AdjacencyGraph<Graph>);
-    static_assert(concepts::MutableGraph<Graph>);
+    static_assert(concepts::EdgeMutableGraph<Graph>);
     static_assert(concepts::AdjacencyMatrix<Graph>);
   }
   // Check adjacency_matrix with properties
@@ -40,7 +40,6 @@ TEST(AdjacencyMatrix, ConceptChecks) {
     static_assert(concepts::IncidenceGraph<Graph>);
     static_assert(concepts::AdjacencyGraph<Graph>);
     static_assert(concepts::AdjacencyMatrix<Graph>);
-    static_assert(concepts::VertexMutablePropertyGraph<Graph>);
     static_assert(concepts::EdgeMutablePropertyGraph<Graph>);
     static_assert(concepts::ReadablePropertyGraph<Graph, Vertex, vertex_index_t>);
     static_assert(concepts::PropertyGraph<Graph, Vertex, vertex_color_t>);
@@ -55,7 +54,6 @@ TEST(AdjacencyMatrix, ConceptChecks) {
     static_assert(concepts::IncidenceGraph<Graph>);
     static_assert(concepts::AdjacencyGraph<Graph>);
     static_assert(concepts::AdjacencyMatrix<Graph>);
-    static_assert(concepts::VertexMutablePropertyGraph<Graph>);
     static_assert(concepts::EdgeMutablePropertyGraph<Graph>);
     static_assert(concepts::ReadablePropertyGraph<Graph, Vertex, vertex_index_t>);
     static_assert(concepts::PropertyGraph<Graph, Vertex, vertex_color_t>);

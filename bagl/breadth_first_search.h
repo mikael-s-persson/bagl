@@ -7,9 +7,10 @@
 
 #include <cassert>
 #include <concepts>
-#include <ranges>
-#include <vector>
 #include <queue>
+#include <ranges>
+#include <tuple>
+#include <vector>
 
 #include "bagl/graph_concepts.h"
 #include "bagl/graph_traits.h"
@@ -122,7 +123,7 @@ template <class Visitors = null_visitors>
 class bfs_visitor {
  public:
   bfs_visitor() = default;
-  explicit bfs_visitor(Visitors vis) : vis_(vis) {}
+  explicit bfs_visitor(Visitors vis) : vis_(std::move(vis)) {}
 
   template <class Vertex, class Graph>
   void initialize_vertex(Vertex u, Graph& g) {

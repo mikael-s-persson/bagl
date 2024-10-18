@@ -235,7 +235,7 @@ class d_ary_heap_indirect {
       if (first_child_index >= heap_size) {
         break; /* No children */
       }
-      auto child_base_span = data_span.subspace(first_child_index);
+      auto child_base_span = data_span.subspan(first_child_index);
       size_type smallest_child_index = 0;
       distance_type smallest_child_dist = get(distance_, child_base_span[smallest_child_index]);
       if (first_child_index + Arity <= heap_size) {

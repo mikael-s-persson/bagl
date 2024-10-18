@@ -189,3 +189,12 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "astar_search_test",
+    srcs = [ "astar_search_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+

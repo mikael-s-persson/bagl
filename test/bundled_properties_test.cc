@@ -37,10 +37,6 @@ std::ostream& operator<<(std::ostream& out, const City& city) {
   return out;
 }
 
-bool operator==(const City& c1, const City& c2) {
-  return (c1.name == c2.name && c1.population == c2.population && c1.zipcodes == c2.zipcodes);
-}
-
 struct Highway {
   Highway() {}
   Highway(const std::string& a_name, double a_miles, int a_speed_limit = 65, int a_lanes = 4, bool a_divided = true)
@@ -56,11 +52,6 @@ struct Highway {
 std::ostream& operator<<(std::ostream& out, const Highway& highway) {
   return out << highway.name << ' ' << highway.miles << ' ' << highway.miles << ' ' << highway.speed_limit << ' '
              << highway.lanes << ' ' << highway.divided;
-}
-
-bool operator==(const Highway& h1, const Highway& h2) {
-  return (h1.name == h2.name && h1.miles == h2.miles && h1.speed_limit == h2.speed_limit && h1.lanes == h2.lanes &&
-          h1.divided == h2.divided);
 }
 
 template <typename T>
