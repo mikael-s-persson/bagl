@@ -173,9 +173,9 @@ struct brandes_unweighted_shortest_paths {
 
     visitor_type<G, IncomingMap, DistanceMap, PathCountMap> visitor(incoming, distance, path_count, ov);
 
-    std::vector<default_color_type> colors(num_vertices(g), color_traits<default_color_type>::white());
-    std::queue<Vertex> q;
-    breadth_first_visit(g, s, q, visitor, make_iterator_property_map(colors.begin(), vertex_index));
+    buffer_queue<Vertex> q;
+    breadth_first_visit(g, s, q, visitor,
+                        vector_property_map(num_vertices(g), vertex_index, color_traits<default_color_type>::white()));
   }
 };
 
@@ -231,6 +231,7 @@ void brandes_betweenness_centrality_impl(const G& g,
                                          PathCountMap path_count,   // sigma
                                          VertexIndexMap vertex_index, ShortestPaths shortest_paths) {
   using Vertex = graph_vertex_descriptor_t<G>;
+  using DependencyType = property_traits_value_t<DependencyMap>;
 
   // Initialize centrality
   init_centrality_map(vertices(g), centrality);
@@ -255,10 +256,12 @@ void brandes_betweenness_centrality_impl(const G& g,
       Vertex w = ordered_vertices.top();
       ordered_vertices.pop();
 
-      using DependencyType = property_traits_value_t<DependencyMap>;
+      auto w_pcount = static_cast<DependencyType>(get(path_count, w));
+
       for (auto vw : incoming[w]) {
         Vertex v = source(vw, g);
-        auto factor = DependencyType{get(path_count, v)} / DependencyType{get(path_count, w)};
+        auto v_pcount = static_cast<DependencyType>(get(path_count, v));
+        auto factor = v_pcount / w_pcount;
         factor *= (DependencyType{1} + get(dependency, w));
         put(dependency, v, get(dependency, v) + factor);
         update_centrality(edge_centrality_map, vw, factor);
@@ -316,13 +319,43 @@ void brandes_betweenness_centrality(const G& g,
                                                  path_count, vindex, shortest_paths);
 }
 
-namespace bc_detail {
+template <concepts::VertexListGraph G, concepts::ReadWriteVertexPropertyMap<G> CentralityMap,
+          concepts::ReadWriteEdgePropertyMap<G> EdgeCentralityMap, concepts::ReadableVertexIndexMap<G> VertexIndexMap>
+void brandes_betweenness_centrality(const G& g, CentralityMap centrality, EdgeCentralityMap edge_centrality_map,
+                                    VertexIndexMap vindex) {
+  using Edge = graph_edge_descriptor_t<G>;
+  using OtherCentralityMap =
+      std::conditional_t<std::is_same_v<CentralityMap, dummy_property_map>, EdgeCentralityMap, CentralityMap>;
+  using OtherCentralityType = property_traits_value_t<OtherCentralityMap>;
+
+  const std::size_t num_v_in_g = num_vertices(g);
+
+  auto incoming = make_vector_property_map<std::vector<Edge>>(num_v_in_g, vindex);
+  auto distance = make_vector_property_map<OtherCentralityType>(num_v_in_g, vindex);
+  auto dependency = make_vector_property_map<OtherCentralityType>(num_v_in_g, vindex);
+  auto path_count = make_vector_property_map<std::size_t>(num_v_in_g, vindex);
+
+  brandes_betweenness_centrality(g, centrality, edge_centrality_map, incoming, distance, dependency, path_count,
+                                 vindex);
+}
+
+template <concepts::VertexListGraph G, concepts::ReadWriteVertexPropertyMap<G> CentralityMap>
+void brandes_betweenness_centrality(const G& g, CentralityMap centrality) {
+  brandes_betweenness_centrality(g, centrality, dummy_property_map(), get(vertex_index, g));
+}
+
+template <concepts::VertexListGraph G, concepts::ReadWriteVertexPropertyMap<G> CentralityMap,
+          concepts::ReadWriteEdgePropertyMap<G> EdgeCentralityMap>
+void brandes_betweenness_centrality(const G& g, CentralityMap centrality, EdgeCentralityMap edge_centrality_map) {
+  brandes_betweenness_centrality(g, centrality, edge_centrality_map, get(vertex_index, g));
+}
+
 template <concepts::VertexListGraph G, concepts::ReadWriteVertexPropertyMap<G> CentralityMap,
           concepts::ReadWriteEdgePropertyMap<G> EdgeCentralityMap, concepts::ReadableEdgePropertyMap<G> WeightMap,
-          concepts::ReadableVertexPropertyMap<G> VertexIndexMap>
-void brandes_betweenness_centrality_dispatch2(const G& g, CentralityMap centrality,
-                                              EdgeCentralityMap edge_centrality_map, WeightMap weight_map,
-                                              VertexIndexMap vindex) {
+          concepts::ReadableVertexIndexMap<G> VertexIndexMap>
+void brandes_betweenness_centrality_weighted(const G& g, CentralityMap centrality,
+                                             EdgeCentralityMap edge_centrality_map, WeightMap weight_map,
+                                             VertexIndexMap vindex) {
   using Edge = graph_edge_descriptor_t<G>;
   using OtherCentralityMap =
       std::conditional_t<std::is_same_v<CentralityMap, dummy_property_map>, EdgeCentralityMap, CentralityMap>;
@@ -340,39 +373,16 @@ void brandes_betweenness_centrality_dispatch2(const G& g, CentralityMap centrali
 }
 
 template <concepts::VertexListGraph G, concepts::ReadWriteVertexPropertyMap<G> CentralityMap,
-          concepts::ReadWriteEdgePropertyMap<G> EdgeCentralityMap,
-          concepts::ReadableVertexPropertyMap<G> VertexIndexMap>
-void brandes_betweenness_centrality_dispatch2(const G& g, CentralityMap centrality,
-                                              EdgeCentralityMap edge_centrality_map, VertexIndexMap vindex) {
-  using Edge = graph_edge_descriptor_t<G>;
-  using OtherCentralityMap =
-      std::conditional_t<std::is_same_v<CentralityMap, dummy_property_map>, EdgeCentralityMap, CentralityMap>;
-  using OtherCentralityType = property_traits_value_t<OtherCentralityMap>;
-
-  const std::size_t num_v_in_g = num_vertices(g);
-
-  auto incoming = make_vector_property_map<std::vector<Edge>>(num_v_in_g, vindex);
-  auto distance = make_vector_property_map<OtherCentralityType>(num_v_in_g, vindex);
-  auto dependency = make_vector_property_map<OtherCentralityType>(num_v_in_g, vindex);
-  auto path_count = make_vector_property_map<std::size_t>(num_v_in_g, vindex);
-
-  brandes_betweenness_centrality(g, centrality, edge_centrality_map, incoming, distance, dependency, path_count,
-                                 vindex);
-}
-
-}  // namespace bc_detail
-
-// disable_if is required to work around problem with MSVC 7.1 (it seems to not
-// get partial ordering getween this overload and the previous one correct)
-template <concepts::VertexListGraph G, concepts::ReadWriteVertexPropertyMap<G> CentralityMap>
-void brandes_betweenness_centrality(const G& g, CentralityMap centrality) {
-  bc_detail::brandes_betweenness_centrality_dispatch2(g, centrality, dummy_property_map(), get(vertex_index, g));
+          concepts::ReadableEdgePropertyMap<G> WeightMap, concepts::ReadableVertexIndexMap<G> VertexIndexMap>
+void brandes_betweenness_centrality_weighted(const G& g, CentralityMap centrality, WeightMap weight_map,
+                                             VertexIndexMap vindex) {
+  brandes_betweenness_centrality_weighted(g, centrality, dummy_property_map(), weight_map, vindex);
 }
 
 template <concepts::VertexListGraph G, concepts::ReadWriteVertexPropertyMap<G> CentralityMap,
-          concepts::ReadWriteEdgePropertyMap<G> EdgeCentralityMap>
-void brandes_betweenness_centrality(const G& g, CentralityMap centrality, EdgeCentralityMap edge_centrality_map) {
-  bc_detail::brandes_betweenness_centrality_dispatch2(g, centrality, edge_centrality_map, get(vertex_index, g));
+          concepts::ReadableEdgePropertyMap<G> WeightMap>
+void brandes_betweenness_centrality_weighted(const G& g, CentralityMap centrality, WeightMap weight_map) {
+  brandes_betweenness_centrality_weighted(g, centrality, dummy_property_map(), weight_map, get(vertex_index, g));
 }
 
 // Converts "absolute" betweenness centrality (as computed by the
@@ -384,7 +394,7 @@ void relative_betweenness_centrality(const G& g, CentralityMap centrality) {
   using CentralityValue = property_traits_value_t<CentralityMap>;
 
   std::size_t n = num_vertices(g);
-  CentralityValue factor = CentralityValue{2} / CentralityValue{n * n - 3 * n + 2};
+  CentralityValue factor = CentralityValue{2} / static_cast<CentralityValue>(n * n - 3 * n + 2);
   for (auto v : vertices(g)) {
     put(centrality, v, factor * get(centrality, v));
   }

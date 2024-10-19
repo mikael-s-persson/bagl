@@ -237,3 +237,12 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_test(
+    name = "betweenness_centrality_test",
+    srcs = [ "betweenness_centrality_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
