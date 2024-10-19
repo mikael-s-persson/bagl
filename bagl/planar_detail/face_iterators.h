@@ -79,8 +79,8 @@ class face_iterator {
   using difference_type = int;
   using iterator_category = std::forward_iterator_tag;
 
-  bool operator==(const self& rhs) { return equal(rhs); }
-  bool operator!=(const self& rhs) { return !equal(rhs); }
+  bool operator==(const self& rhs) const { return equal(rhs); }
+  bool operator!=(const self& rhs) const { return !equal(rhs); }
 
   self& operator++() {
     increment();
@@ -204,8 +204,8 @@ class face_iterator<Graph, FaceHandlesMap, ValueType, both_sides, VisitorType, T
   using difference_type = int;
   using iterator_category = std::forward_iterator_tag;
 
-  bool operator==(const self& rhs) { return equal(rhs); }
-  bool operator!=(const self& rhs) { return !equal(rhs); }
+  bool operator==(const self& rhs) const { return equal(rhs); }
+  bool operator!=(const self& rhs) const { return !equal(rhs); }
 
   self& operator++() {
     increment();

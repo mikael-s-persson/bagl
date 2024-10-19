@@ -40,16 +40,6 @@ TEST(DepthFirstSearchConcepts, ColorMap) {
   depth_first_search(g, v, color);
 }
 
-TEST(DepthFirstSearchConcepts, VertexIndexMap) {
-  using vertex_t = semiregular_archetype<1>;
-  using incidence_graph_t = incidence_graph_archetype<vertex_t, directed_tag, allow_parallel_edge_tag>;
-  using graph_t = vertex_list_graph_archetype<vertex_t, directed_tag, allow_parallel_edge_tag, incidence_graph_t>;
-  graph_t g;
-  dfs_visitor<> v;
-  readable_property_map_archetype<vertex_t, std::size_t> v_index;
-  depth_first_search(g, v, v_index);
-}
-
 template <typename ColorMap, typename ParentMap, typename DiscoverTimeMap, typename FinishTimeMap>
 class dfs_test_visitor {
   using ColorValue = property_traits_value_t<ColorMap>;

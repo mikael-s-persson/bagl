@@ -161,16 +161,17 @@ class boyer_myrvold_impl {
 
     // Perform a depth-first search to find each vertex's low point, least
     // ancestor, and dfs tree information
-    depth_first_search(g_, visitor(vis).vertex_index_map(vm_));
+    depth_first_search(g_, vis, two_bit_color_map(num_vertices(g_), vm_));
 
     // Sort vertices by their lowpoint - need this later in the constructor
     vertex_vector_t vertices_by_lowpoint(num_vertices(g_));
-    std::copy(vertices(g_).first, vertices(g_).second, vertices_by_lowpoint.begin());
+    auto v_rg = vertices(g_);
+    std::copy(v_rg.begin(), v_rg.end(), vertices_by_lowpoint.begin());
     bucket_sort(vertices_by_lowpoint.begin(), vertices_by_lowpoint.end(), low_point_);
 
     // Sort vertices by their dfs number - need this to iterate by reverse
     // DFS number in the main loop.
-    std::copy(vertices(g_).first, vertices(g_).second, vertices_by_dfs_num_.begin());
+    std::copy(v_rg.begin(), v_rg.end(), vertices_by_dfs_num_.begin());
     bucket_sort(vertices_by_dfs_num_.begin(), vertices_by_dfs_num_.end(), dfs_number_);
 
     // Initialize face handles. A face handle is an abstraction that serves
@@ -285,7 +286,7 @@ class boyer_myrvold_impl {
     // (for instance, whether or not a bicomp is flipped in the final
     // embedding). It's dispatched on the the StoreEmbeddingPolicy, since
     // it's not needed if an embedding isn't desired.
-    for (auto v : vertices_by_dfs_num_ | std::ranges::reverse) {
+    for (auto v : std::views::all(vertices_by_dfs_num_) | std::views::reverse) {
       store_old_face_handles(StoreOldHandlesPolicy());
 
       walkup(v);
@@ -470,12 +471,12 @@ class boyer_myrvold_impl {
               vertex_t first = face_handles_[first_tail].first_vertex();
               vertex_t second = face_handles_[first_tail].second_vertex();
               std::tie(first_side_vertex, first_tail) =
-                  make_tuple(first_tail, first == first_side_vertex ? second : first);
+                  std::tuple(first_tail, first == first_side_vertex ? second : first);
             } else if (second_tail != v) {
               vertex_t first = face_handles_[second_tail].first_vertex();
               vertex_t second = face_handles_[second_tail].second_vertex();
               std::tie(second_side_vertex, second_tail) =
-                  make_tuple(second_tail, first == second_side_vertex ? second : first);
+                  std::tuple(second_tail, first == second_side_vertex ? second : first);
             } else {
               break;
             }
@@ -524,7 +525,7 @@ class boyer_myrvold_impl {
             }
           }
         } else {
-          merge_stack_.push_back(make_tuple(chosen, chose_first_upper_path, chose_first_lower_path));
+          merge_stack_.emplace_back(chosen, chose_first_upper_path, chose_first_lower_path);
           curr_face_handle = *pertinent_roots_[chosen]->begin();
           continue;
         }

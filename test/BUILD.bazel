@@ -218,3 +218,22 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_test(
+    name = "bellman_ford_test",
+    srcs = [ "bellman_ford_test.cc", ],
+    deps = [
+        ":new_york_state_map",
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "boyer_myrvold_test",
+    srcs = [ "boyer_myrvold_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)

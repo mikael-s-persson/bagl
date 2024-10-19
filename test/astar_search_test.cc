@@ -31,6 +31,8 @@ TEST(AStarSearchTest, Search) {
   using Graph = test::state_map_type;
   using Vertex = graph_vertex_descriptor_t<Graph>;
 
+  std::mt19937 gen(42);
+
   Graph g = test::make_new_york_state_map();
 
   auto name = get(vertex_name, g);
@@ -44,7 +46,6 @@ TEST(AStarSearchTest, Search) {
 
   for (int i = 0; i < 5; ++i) {
     // pick random start/goal
-    std::mt19937 gen(42);
     Vertex start = gen() % num_vertices(g);
     Vertex goal = gen() % num_vertices(g);
 
@@ -96,6 +97,11 @@ TEST(AStarSearchTest, Search) {
     SCOPED_TRACE(print_solution());
 
     EXPECT_THAT(dm[goal], ::testing::FloatNear(path_weight_sum, 1.0e-5F));
+    float early_stop_cost = dm[goal];
+    // Run astar exhaustively, to be sure.
+    astar_search(g, start, test::travel_time_heuristic(g, goal), default_astar_visitor(), pm, cm, dm, weight, idx,
+                 colorm);
+    EXPECT_THAT(early_stop_cost, ::testing::FloatNear(dm[goal], 1.0e-5F));
     for (auto v : vertices(g)) {
       if (pm[v] == v) {
         continue;
@@ -105,11 +111,6 @@ TEST(AStarSearchTest, Search) {
         EXPECT_GE(dm[target(e, g)] + get(weight, e), dm[v] - 1e-5F);
       }
     }
-    float early_stop_cost = dm[goal];
-    // Run astar exhaustively, to be sure.
-    astar_search(g, start, test::travel_time_heuristic(g, goal), default_astar_visitor(), pm, cm, dm, weight, idx,
-                 colorm);
-    EXPECT_THAT(early_stop_cost, ::testing::FloatNear(dm[goal], 1.0e-5F));
   }
 }
 

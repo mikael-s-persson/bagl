@@ -15,7 +15,7 @@ namespace bagl {
 
 // Basic versions.
 
-template <concepts::VertexListGraph G, concepts::ReadableVertexPropertyMap<G> VertexIndexMap>
+template <concepts::VertexListGraph G, concepts::ReadableVertexIndexMap<G> VertexIndexMap>
 requires concepts::IncidenceGraph<G>
 bool boyer_myrvold_planarity_test(const G& g, VertexIndexMap v_index) {
   boyer_myrvold_impl<G, VertexIndexMap, planar_detail::no_old_handles, planar_detail::no_embedding> planarity_tester(
@@ -31,7 +31,7 @@ bool boyer_myrvold_planarity_test(const G& g) {
 
 // Versions that gather the kuratowski subgraph.
 
-template <concepts::VertexAndEdgeListGraph G, concepts::ReadableVertexPropertyMap<G> VertexIndexMap,
+template <concepts::VertexAndEdgeListGraph G, concepts::ReadableVertexIndexMap<G> VertexIndexMap,
           std::output_iterator<graph_edge_descriptor_t<G>> OutputIterator,
           concepts::ReadableEdgePropertyMap<G> EdgeIndexMap>
 requires concepts::IncidenceGraph<G>
@@ -47,7 +47,7 @@ bool boyer_myrvold_planarity_test(const G& g, VertexIndexMap v_index, OutputIter
   return false;
 }
 
-template <concepts::VertexAndEdgeListGraph G, concepts::ReadableVertexPropertyMap<G> VertexIndexMap,
+template <concepts::VertexAndEdgeListGraph G, concepts::ReadableVertexIndexMap<G> VertexIndexMap,
           std::output_iterator<graph_edge_descriptor_t<G>> OutputIterator>
 requires concepts::IncidenceGraph<G>
 bool boyer_myrvold_planarity_test(const G& g, VertexIndexMap v_index, OutputIterator kuratowski_subgraph) {
@@ -69,8 +69,21 @@ bool boyer_myrvold_planarity_test(const G& g, OutputIterator kuratowski_subgraph
 
 // Versions that gather the permutation map.
 
-template <concepts::VertexListGraph G, concepts::ReadableVertexPropertyMap<G> VertexIndexMap,
-          concepts::MutableLvalueVertexPropertyMap<G> PermutationMap>
+namespace concepts {
+
+// A permutation map, for the purposes of this algo, is a mutable property map that maps
+// vertices to containers of edges. Containers that can be cleared first, and then back-inserted.
+template <typename PMap, typename Graph>
+concept MutableVertexPermutationMap = concepts::MutableLvalueVertexPropertyMap<PMap, Graph> &&
+    requires(PMap pmap, graph_vertex_descriptor_t<Graph> v) {
+  pmap[v].clear();
+  { std::back_inserter(pmap[v]) } -> std::output_iterator<graph_edge_descriptor_t<Graph>>;
+};
+
+}  // namespace concepts
+
+template <concepts::VertexListGraph G, concepts::ReadableVertexIndexMap<G> VertexIndexMap,
+          concepts::MutableVertexPermutationMap<G> PermutationMap>
 requires concepts::IncidenceGraph<G>
 bool boyer_myrvold_planarity_test(const G& g, VertexIndexMap v_index, PermutationMap embedding) {
   boyer_myrvold_impl<G, VertexIndexMap, planar_detail::no_old_handles, planar_detail::std_list> planarity_tester(
@@ -83,7 +96,7 @@ bool boyer_myrvold_planarity_test(const G& g, VertexIndexMap v_index, Permutatio
   return false;
 }
 
-template <concepts::VertexListGraph G, concepts::MutableLvalueVertexPropertyMap<G> PermutationMap>
+template <concepts::VertexListGraph G, concepts::MutableVertexPermutationMap<G> PermutationMap>
 requires concepts::IncidenceGraph<G>
 bool boyer_myrvold_planarity_test(const G& g, PermutationMap embedding) {
   return boyer_myrvold_planarity_test(g, get(vertex_index, g), embedding);
@@ -91,8 +104,8 @@ bool boyer_myrvold_planarity_test(const G& g, PermutationMap embedding) {
 
 // Versions that gather both the kuratowski subgraph and permutation map.
 
-template <concepts::VertexAndEdgeListGraph G, concepts::ReadableVertexPropertyMap<G> VertexIndexMap,
-          concepts::MutableLvalueVertexPropertyMap<G> PermutationMap,
+template <concepts::VertexAndEdgeListGraph G, concepts::ReadableVertexIndexMap<G> VertexIndexMap,
+          concepts::MutableVertexPermutationMap<G> PermutationMap,
           std::output_iterator<graph_edge_descriptor_t<G>> OutputIterator,
           concepts::ReadableEdgePropertyMap<G> EdgeIndexMap>
 requires concepts::IncidenceGraph<G>
@@ -109,7 +122,7 @@ bool boyer_myrvold_planarity_test(const G& g, VertexIndexMap v_index, Permutatio
   return false;
 }
 
-template <concepts::VertexAndEdgeListGraph G, concepts::MutableLvalueVertexPropertyMap<G> PermutationMap,
+template <concepts::VertexAndEdgeListGraph G, concepts::MutableVertexPermutationMap<G> PermutationMap,
           std::output_iterator<graph_edge_descriptor_t<G>> OutputIterator,
           concepts::ReadableEdgePropertyMap<G> EdgeIndexMap>
 requires concepts::IncidenceGraph<G>
@@ -118,8 +131,8 @@ bool boyer_myrvold_planarity_test(const G& g, PermutationMap embedding, OutputIt
   return boyer_myrvold_planarity_test(g, get(vertex_index, g), embedding, kuratowski_subgraph, e_index);
 }
 
-template <concepts::VertexAndEdgeListGraph G, concepts::ReadableVertexPropertyMap<G> VertexIndexMap,
-          concepts::MutableLvalueVertexPropertyMap<G> PermutationMap,
+template <concepts::VertexAndEdgeListGraph G, concepts::ReadableVertexIndexMap<G> VertexIndexMap,
+          concepts::MutableVertexPermutationMap<G> PermutationMap,
           std::output_iterator<graph_edge_descriptor_t<G>> OutputIterator>
 requires concepts::IncidenceGraph<G>
 bool boyer_myrvold_planarity_test(const G& g, VertexIndexMap v_index, PermutationMap embedding,
@@ -127,7 +140,7 @@ bool boyer_myrvold_planarity_test(const G& g, VertexIndexMap v_index, Permutatio
   return boyer_myrvold_planarity_test(g, v_index, embedding, kuratowski_subgraph, get(edge_index, g));
 }
 
-template <concepts::VertexAndEdgeListGraph G, concepts::MutableLvalueVertexPropertyMap<G> PermutationMap,
+template <concepts::VertexAndEdgeListGraph G, concepts::MutableVertexPermutationMap<G> PermutationMap,
           std::output_iterator<graph_edge_descriptor_t<G>> OutputIterator>
 requires concepts::IncidenceGraph<G>
 bool boyer_myrvold_planarity_test(const G& g, PermutationMap embedding, OutputIterator kuratowski_subgraph) {
