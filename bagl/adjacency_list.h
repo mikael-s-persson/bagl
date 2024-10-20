@@ -20,6 +20,7 @@
 #include "bagl/property.h"
 #include "bagl/property_map.h"
 #include "bagl/tree_traits.h"
+#include "bagl/zip_range.h"
 
 namespace bagl {
 
@@ -178,7 +179,7 @@ class adjacency_list {
   // Construct from a given number of vertices and an edge range.
   // Edges should be represented as pairs of vertex indices.
   template <std::ranges::input_range EdgeRange>
-  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::pair<std::size_t, std::size_t>>
+  requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>>
   adjacency_list(vertices_size_type num_vertices, const EdgeRange& e_range, graph_property_type graph_prop = {})
       : m_pack(), m_graph_prop(std::move(graph_prop)) {
     std::vector<vertex_descriptor> tmp_vs(num_vertices);
@@ -194,8 +195,8 @@ class adjacency_list {
   // Construct from a given number of vertices and an edge and edge-property range.
   // Edges should be represented as pairs of vertex indices.
   template <std::ranges::input_range EdgeRange, std::ranges::input_range EdgePropRange>
-  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::pair<std::size_t, std::size_t>> &&
-      std::convertible_to<std::ranges::range_reference_t<EdgePropRange>, edge_property_type>
+  requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>> &&
+      std::constructible_from<edge_property_type, std::ranges::range_reference_t<EdgePropRange>>
       adjacency_list(vertices_size_type num_vertices, const EdgeRange& e_range, const EdgePropRange& ep_range,
                      graph_property_type graph_prop = {})
       : m_pack(), m_graph_prop(std::move(graph_prop)) {
@@ -204,7 +205,7 @@ class adjacency_list {
       v = m_pack.add_vertex(vertex_property_type{});
     }
 
-    for (auto [e, ep] : zip_range(e_range, ep_range)) {
+    for (auto [e, ep] : zip_range_ref(e_range, ep_range)) {
       auto [u, v] = e;
       m_pack.add_edge(tmp_vs[u], tmp_vs[v], ep);
     }
@@ -213,13 +214,13 @@ class adjacency_list {
   // Construct from a given number of vertices and an edge and vertex-property range.
   // Edges should be represented as pairs of vertex indices.
   template <std::ranges::input_range VertexPropRange, std::ranges::input_range EdgeRange>
-  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::pair<std::size_t, std::size_t>> &&
-      std::convertible_to<std::ranges::range_reference_t<VertexPropRange>, vertex_property_type>
+  requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>> &&
+      std::constructible_from<vertex_property_type, std::ranges::range_reference_t<VertexPropRange>>
       adjacency_list(vertices_size_type num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
                      graph_property_type graph_prop = {})
       : m_pack(), m_graph_prop(std::move(graph_prop)) {
     std::vector<vertex_descriptor> tmp_vs(num_vertices);
-    for (auto& [v, vp] : zip_range(tmp_vs, vp_range)) {
+    for (auto [v, vp] : zip_range_ref(tmp_vs, vp_range)) {
       v = m_pack.add_vertex(vp);
     }
 
@@ -232,18 +233,18 @@ class adjacency_list {
   // Edges should be represented as pairs of vertex indices.
   template <std::ranges::input_range VertexPropRange, std::ranges::input_range EdgeRange,
             std::ranges::input_range EdgePropRange>
-  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::pair<std::size_t, std::size_t>> &&
-      std::convertible_to<std::ranges::range_reference_t<VertexPropRange>, vertex_property_type> &&
-      std::convertible_to<std::ranges::range_reference_t<EdgePropRange>, edge_property_type>
+  requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>> &&
+      std::constructible_from<vertex_property_type, std::ranges::range_reference_t<VertexPropRange>> &&
+      std::constructible_from<edge_property_type, std::ranges::range_reference_t<EdgePropRange>>
       adjacency_list(vertices_size_type num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
                      const EdgePropRange& ep_range, graph_property_type graph_prop = {})
       : m_pack(), m_graph_prop(std::move(graph_prop)) {
     std::vector<vertex_descriptor> tmp_vs(num_vertices);
-    for (auto& [v, vp] : zip_range(tmp_vs, vp_range)) {
+    for (auto [v, vp] : zip_range_ref(tmp_vs, vp_range)) {
       v = m_pack.add_vertex(vp);
     }
 
-    for (auto [e, ep] : zip_range(e_range, ep_range)) {
+    for (auto [e, ep] : zip_range_ref(e_range, ep_range)) {
       auto [u, v] = e;
       m_pack.add_edge(tmp_vs[u], tmp_vs[v], ep);
     }
@@ -943,8 +944,8 @@ class adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, 
   // Construct from a given number of vertices and an edge range.
   // Edges should be represented as pairs of vertex indices.
   template <std::ranges::input_range EdgeRange>
-  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> adjacency_list(
-      vertices_size_type num_vertices, const EdgeRange& e_range, graph_property_type graph_prop = {})
+  requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>>
+  adjacency_list(vertices_size_type num_vertices, const EdgeRange& e_range, graph_property_type graph_prop = {})
       : m_pack(), m_graph_prop(std::move(graph_prop)) {
     std::vector<vertex_descriptor> tmp_vs(num_vertices);
     for (auto& v : tmp_vs) {
@@ -959,8 +960,8 @@ class adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, 
   // Construct from a given number of vertices and an edge and edge-property range.
   // Edges should be represented as pairs of vertex indices.
   template <std::ranges::input_range EdgeRange, std::ranges::input_range EdgePropRange>
-  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> &&
-      std::convertible_to<std::ranges::range_reference_t<EdgePropRange>, edge_property_type>
+  requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>> &&
+      std::constructible_from<edge_property_type, std::ranges::range_reference_t<EdgePropRange>>
       adjacency_list(vertices_size_type num_vertices, const EdgeRange& e_range, const EdgePropRange& ep_range,
                      graph_property_type graph_prop = {})
       : m_pack(), m_graph_prop(std::move(graph_prop)) {
@@ -969,7 +970,7 @@ class adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, 
       v = m_pack.add_vertex(vertex_property_type{});
     }
 
-    for (auto [e, ep] : zip_range(e_range, ep_range)) {
+    for (auto [e, ep] : zip_range_ref(e_range, ep_range)) {
       auto [u, v] = e;
       m_pack.add_edge(tmp_vs[u], tmp_vs[v], ep);
     }
@@ -978,13 +979,13 @@ class adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, 
   // Construct from a given number of vertices and an edge and vertex-property range.
   // Edges should be represented as pairs of vertex indices.
   template <std::ranges::input_range VertexPropRange, std::ranges::input_range EdgeRange>
-  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> &&
-      std::convertible_to<std::ranges::range_reference_t<VertexPropRange>, vertex_property_type>
+  requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>> &&
+      std::constructible_from<vertex_property_type, std::ranges::range_reference_t<VertexPropRange>>
       adjacency_list(vertices_size_type num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
                      graph_property_type graph_prop = {})
       : m_pack(), m_graph_prop(std::move(graph_prop)) {
     std::vector<vertex_descriptor> tmp_vs(num_vertices);
-    for (auto& [v, vp] : zip_range(tmp_vs, vp_range)) {
+    for (auto [v, vp] : zip_range_ref(tmp_vs, vp_range)) {
       v = m_pack.add_vertex(vp);
     }
 
@@ -997,18 +998,18 @@ class adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, 
   // Edges should be represented as pairs of vertex indices.
   template <std::ranges::input_range VertexPropRange, std::ranges::input_range EdgeRange,
             std::ranges::input_range EdgePropRange>
-  requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::size_t> &&
-      std::convertible_to<std::ranges::range_reference_t<VertexPropRange>, vertex_property_type> &&
-      std::convertible_to<std::ranges::range_reference_t<EdgePropRange>, edge_property_type>
+  requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>> &&
+      std::constructible_from<vertex_property_type, std::ranges::range_reference_t<VertexPropRange>> &&
+      std::constructible_from<edge_property_type, std::ranges::range_reference_t<EdgePropRange>>
       adjacency_list(vertices_size_type num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
                      const EdgePropRange& ep_range, graph_property_type graph_prop = {})
       : m_pack(), m_graph_prop(std::move(graph_prop)) {
     std::vector<vertex_descriptor> tmp_vs(num_vertices);
-    for (auto& [v, vp] : zip_range(tmp_vs, vp_range)) {
+    for (auto [v, vp] : zip_range_ref(tmp_vs, vp_range)) {
       v = m_pack.add_vertex(vp);
     }
 
-    for (auto [e, ep] : zip_range(e_range, ep_range)) {
+    for (auto [e, ep] : zip_range_ref(e_range, ep_range)) {
       auto [u, v] = e;
       m_pack.add_edge(tmp_vs[u], tmp_vs[v], ep);
     }

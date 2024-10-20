@@ -70,14 +70,13 @@ struct bipartition_visitor {
 };
 
 // Find the beginning of a common suffix of two sequences
-// `sequence1` Pair of bidirectional iterators defining the first sequence.
-// `sequence2` Pair of bidirectional iterators defining the second sequence.
-// Returns a pair of iterators pointing to the beginning of the common suffix.
+// `sequence1` Bidirectional range defining the first sequence.
+// `sequence2` Bidirectional range defining the second sequence.
+// Returns a pair of sub-ranges spanning the mismatching prefix.
 template <std::ranges::bidirectional_range Range1, std::ranges::bidirectional_range Range2>
-std::pair<std::ranges::iterator_t<Range1>, std::ranges::iterator_t<Range2>> reverse_mismatch(const Range1& rg1,
-                                                                                             const Range2& rg2) {
+auto reverse_mismatch(const Range1& rg1, const Range2& rg2) {
   if (rg1.empty() || rg2.empty()) {
-    return {rg1.begin(), rg2.begin()};
+    return std::pair{std::ranges::subrange(rg1.begin(), rg1.end()), std::ranges::subrange(rg2.begin(), rg2.end())};
   }
 
   auto it1 = rg1.end();
@@ -99,7 +98,7 @@ std::pair<std::ranges::iterator_t<Range1>, std::ranges::iterator_t<Range2>> reve
     }
   }
 
-  return {it1, it2};
+  return std::pair{std::ranges::subrange(rg1.begin(), it1), std::ranges::subrange(rg2.begin(), it2)};
 }
 
 }  // namespace bipartite_detail
@@ -121,8 +120,8 @@ bool is_bipartite(const G& g, const IndexMap index_map, PartitionMap partition_m
 
   // Call dfs
   try {
-    depth_first_search(g, make_dfs_visitor(bipartition_visitor(partition_map)),
-                       make_vector_property_map(num_vertices_or_zero(g), index_map, default_color_type::white_color));
+    depth_first_search(g, make_dfs_visitor(bipartite_detail::bipartition_visitor(partition_map)),
+                       make_vector_property_map(num_vertices(g), index_map, default_color_type::white_color));
   } catch (const bipartite_detail::bipartite_visitor_error<Vertex>&) {
     return false;
   }
@@ -136,7 +135,7 @@ bool is_bipartite(const G& g, const IndexMap index_map, PartitionMap partition_m
 // Returns true if and only if the given graph is bipartite.
 template <concepts::VertexListGraph G, concepts::ReadableVertexPropertyMap<G> IndexMap>
 bool is_bipartite(const G& g, const IndexMap index_map) {
-  return is_bipartite(g, index_map, make_one_bit_color_map(num_vertices_or_zero(g), index_map));
+  return is_bipartite(g, index_map, make_one_bit_color_map(num_vertices(g), index_map));
 }
 
 // Checks a given graph for bipartiteness. The graph must
@@ -168,7 +167,7 @@ OutputIterator find_odd_cycle(const G& g, IndexMap index_map, PartitionMap parti
   using Vertex = graph_vertex_descriptor_t<G>;
 
   // Declare predecessor map
-  auto predecessor_map = make_vector_property_map(num_vertices(g), index_map, graph_traits<G>::null_vertex());
+  auto predecessor_map = vector_property_map(num_vertices(g), index_map, graph_traits<G>::null_vertex());
 
   // Initialize predecessor map
   for (auto v : vertices(g)) {
@@ -177,9 +176,10 @@ OutputIterator find_odd_cycle(const G& g, IndexMap index_map, PartitionMap parti
 
   // Call dfs
   try {
-    depth_first_search(
-        g, make_dfs_visitor(bipartition_visitor(partition_map), predecessor_recorder_on_tree_edge(predecessor_map)),
-        make_vector_property_map(num_vertices_or_zero(g), index_map, default_color_type::white_color));
+    depth_first_search(g,
+                       make_dfs_visitor(bipartite_detail::bipartition_visitor(partition_map),
+                                        predecessor_recorder_on_tree_edge(predecessor_map)),
+                       make_vector_property_map(num_vertices(g), index_map, default_color_type::white_color));
   } catch (const bipartite_detail::bipartite_visitor_error<Vertex>& error) {
     using Path = std::vector<Vertex>;
 
@@ -207,8 +207,13 @@ OutputIterator find_odd_cycle(const G& g, IndexMap index_map, PartitionMap parti
     auto mismatch = bipartite_detail::reverse_mismatch(path1, path2);
 
     // Copy the odd-length cycle
-    result = std::copy(path1.begin(), mismatch.first + 1, result);
-    return std::reverse_copy(path2.begin(), mismatch.second, result);
+    result = std::ranges::copy(mismatch.first, result).out;
+    if (mismatch.first.end() != path1.end()) {
+      *result++ = *mismatch.first.end();
+    } else if (mismatch.second.end() != path2.end()) {
+      *result++ = *mismatch.second.end();
+    }
+    result = std::ranges::copy(mismatch.second | std::views::reverse, result).out;
   }
 
   return result;

@@ -318,6 +318,10 @@ template <std::ranges::range... Ranges>
 auto zip_range(Ranges&&... ranges) {
   return zipped_range<std::decay_t<Ranges>...>(std::forward<Ranges>(ranges)...);
 }
+template <std::ranges::range... Ranges>
+auto zip_range_ref(Ranges&&... ranges) {
+  return zip_range(std::ranges::ref_view(std::forward<Ranges>(ranges))...);
+}
 
 // Factory function that conveniently creates an enumerated iterator range
 // where each element of the range is paired with its integer index / counter

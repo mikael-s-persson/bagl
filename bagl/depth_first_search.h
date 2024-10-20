@@ -183,7 +183,7 @@ template <typename Visitors = null_visitors>
 class dfs_visitor {
  public:
   dfs_visitor() = default;
-  explicit dfs_visitor(Visitors vis) : vis_(vis) {}
+  explicit dfs_visitor(Visitors&& vis) : vis_(std::move(vis)) {}
 
   template <typename Vertex, typename Graph>
   void initialize_vertex(Vertex u, const Graph& g) {
@@ -231,7 +231,7 @@ auto make_dfs_visitor(Visitors&&... vis) {
   if constexpr (sizeof...(Visitors) == 0) {
     return dfs_visitor<>();
   } else {
-    return dfs_visitor<std::tuple<std::decay_t<Visitors>...>>(std::forward<Visitors>(vis)...);
+    return dfs_visitor(std::tuple<std::decay_t<Visitors>...>(std::forward<Visitors>(vis)...));
   }
 }
 using default_dfs_visitor = dfs_visitor<>;

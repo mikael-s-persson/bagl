@@ -164,6 +164,18 @@ requires concepts::VertexListGraph<G> std::pair<std::size_t, OutputIterator> bic
 
 template <concepts::IncidenceGraph G, concepts::WritableEdgePropertyMap<G> ComponentMap,
           std::output_iterator<graph_vertex_descriptor_t<G>> OutputIterator,
+          concepts::ReadableVertexPropertyMap<G> VertexIndexMap,
+          concepts::ReadWriteVertexPropertyMap<G> DiscoverTimeMap, concepts::ReadWriteVertexPropertyMap<G> LowPointMap>
+requires concepts::VertexListGraph<G> std::pair<std::size_t, OutputIterator> biconnected_components(
+    const G& g, ComponentMap comp, OutputIterator out, VertexIndexMap index_map, DiscoverTimeMap dtm,
+    LowPointMap lowpt) {
+  return biconnected_components(g, comp, out, index_map, dtm, lowpt,
+                                make_vector_property_map(num_vertices(g), index_map, graph_traits<G>::null_vertex()),
+                                make_dfs_visitor());
+}
+
+template <concepts::IncidenceGraph G, concepts::WritableEdgePropertyMap<G> ComponentMap,
+          std::output_iterator<graph_vertex_descriptor_t<G>> OutputIterator,
           concepts::ReadWriteVertexPropertyMap<G> DiscoverTimeMap, concepts::ReadWriteVertexPropertyMap<G> LowPointMap>
 requires concepts::VertexListGraph<G> std::pair<std::size_t, OutputIterator> biconnected_components(
     const G& g, ComponentMap comp, OutputIterator out, DiscoverTimeMap dtm, LowPointMap lowpt) {

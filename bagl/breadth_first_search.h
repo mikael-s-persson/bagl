@@ -124,7 +124,7 @@ template <class Visitors = null_visitors>
 class bfs_visitor {
  public:
   bfs_visitor() = default;
-  explicit bfs_visitor(Visitors vis) : vis_(std::move(vis)) {}
+  explicit bfs_visitor(Visitors&& vis) : vis_(std::move(vis)) {}
 
   template <class Vertex, class Graph>
   void initialize_vertex(Vertex u, Graph& g) {
@@ -196,7 +196,7 @@ auto make_bfs_visitor(Visitors&&... vis) {
   if constexpr (sizeof...(Visitors) == 0) {
     return bfs_visitor<>();
   } else {
-    return bfs_visitor<std::tuple<std::decay_t<Visitors>...>>(std::forward<Visitors>(vis)...);
+    return bfs_visitor(std::tuple<std::decay_t<Visitors>...>(std::forward<Visitors>(vis)...));
   }
 }
 using default_bfs_visitor = bfs_visitor<>;

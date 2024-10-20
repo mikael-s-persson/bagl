@@ -66,7 +66,7 @@ template <class Visitors = null_visitors>
 class dijkstra_visitor : public bfs_visitor<Visitors> {
  public:
   dijkstra_visitor() = default;
-  explicit dijkstra_visitor(Visitors vis) : bfs_visitor<Visitors>(vis) {}
+  explicit dijkstra_visitor(Visitors&& vis) : bfs_visitor<Visitors>(std::move(vis)) {}
 
   template <class Edge, class Graph>
   void edge_relaxed(Edge e, Graph& g) {
