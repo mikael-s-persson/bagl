@@ -9,6 +9,7 @@
 #include <iosfwd>
 #include <limits>
 #include <list>
+#include <memory>
 #include <queue>
 #include <utility>
 #include <vector>
@@ -186,10 +187,10 @@ class bk_max_flow {
         // source tree growing
         if (current_node != last_grow_vertex_) {
           last_grow_vertex_ = current_node;
-          last_grow_edge_range_ = partial_view(out_edges(current_node, g_));
+          last_grow_edge_range_ = std::make_unique<partial_view<out_edge_range>>(out_edges(current_node, g_));
         }
-        for (; !last_grow_edge_range_.empty(); last_grow_edge_range_.move_to_next()) {
-          edge_descriptor out_edge = *last_grow_edge_range_.begin();
+        for (; !last_grow_edge_range_->empty(); last_grow_edge_range_->move_to_next()) {
+          edge_descriptor out_edge = *last_grow_edge_range_->begin();
           if (get(res_cap_map_, out_edge) > 0) {  // check if we have capacity left on this edge
             vertex_descriptor other_node = target(out_edge, g_);
             if (get_tree(other_node) == color::gray()) {  // it's a free node
@@ -224,10 +225,10 @@ class bk_max_flow {
         assert(get_tree(current_node) == color::white());
         if (current_node != last_grow_vertex_) {
           last_grow_vertex_ = current_node;
-          last_grow_edge_range_ = partial_view(out_edges(current_node, g_));
+          last_grow_edge_range_ = std::make_unique<partial_view<out_edge_range>>(out_edges(current_node, g_));
         }
-        for (; !last_grow_edge_range_.empty(); last_grow_edge_range_.move_to_next()) {
-          edge_descriptor in_edge = get(rev_edge_map_, *last_grow_edge_range_.begin());
+        for (; !last_grow_edge_range_->empty(); last_grow_edge_range_->move_to_next()) {
+          edge_descriptor in_edge = get(rev_edge_map_, *last_grow_edge_range_->begin());
           if (get(res_cap_map_, in_edge) > 0) {  // check if there is capacity left
             vertex_descriptor other_node = source(in_edge, g_);
             if (get_tree(other_node) == color::gray()) {  // it's a free node
@@ -654,7 +655,7 @@ class bk_max_flow {
   edge_flow_value flow_ = 0;
   std::int64_t time_ = 1;
   vertex_descriptor last_grow_vertex_ = graph_traits<Graph>::null_vertex();
-  partial_view<out_edge_range> last_grow_edge_range_ = {out_edge_range{}};
+  std::unique_ptr<partial_view<out_edge_range>> last_grow_edge_range_;
 };
 
 }  // namespace max_flow_detail
@@ -668,8 +669,7 @@ template <concepts::IncidenceGraph G, concepts::ReadableEdgePropertyMap<G> Capac
           concepts::ReadableEdgePropertyMap<G> ReverseEdgeMap, concepts::ReadWriteVertexPropertyMap<G> PredecessorMap,
           concepts::ReadWriteVertexPropertyMap<G> ColorMap, concepts::ReadWriteVertexPropertyMap<G> DistanceMap,
           concepts::ReadableVertexPropertyMap<G> IndexMap>
-requires concepts::VertexAndEdgeListGraph<G>
-typename property_traits<CapacityEdgeMap>::value_type boykov_kolmogorov_max_flow(
+requires concepts::VertexAndEdgeListGraph<G> property_traits_value_t<CapacityEdgeMap> boykov_kolmogorov_max_flow(
     G& g, CapacityEdgeMap cap, ResidualCapacityEdgeMap res_cap, ReverseEdgeMap rev_map, PredecessorMap pre_map,
     ColorMap color, DistanceMap dist, IndexMap idx, graph_vertex_descriptor_t<G> src,
     graph_vertex_descriptor_t<G> sink) {
