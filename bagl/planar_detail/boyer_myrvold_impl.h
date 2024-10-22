@@ -21,7 +21,7 @@ namespace bagl {
 enum class bm_case_t { bm_no_case_chosen, bm_case_a, bm_case_b, bm_case_c, bm_case_d, bm_case_e };
 
 template <typename LowPointMap, typename DFSParentMap, typename DFSNumberMap, typename LeastAncestorMap,
-          typename DFSParentEdgeMap, typename SizeType>
+          typename DFSParentEdgeMap>
 struct planar_dfs_visitor : public dfs_visitor<> {
   planar_dfs_visitor(LowPointMap lpm, DFSParentMap dfs_p, DFSNumberMap dfs_n, LeastAncestorMap lam,
                      DFSParentEdgeMap dfs_edge)
@@ -54,15 +54,14 @@ struct planar_dfs_visitor : public dfs_visitor<> {
   template <typename Edge, typename Graph>
   void back_edge(const Edge& e, Graph& g) {
     using vertex_t = typename graph_traits<Graph>::vertex_descriptor;
-    using v_size_t = typename graph_traits<Graph>::vertices_size_type;
 
     vertex_t s(source(e, g));
     vertex_t t(target(e, g));
 
     if (t != get(parent_, s)) {
-      v_size_t s_low_df_number = get(low_, s);
-      v_size_t t_df_number = get(df_number_, t);
-      v_size_t s_least_ancestor_df_number = get(least_ancestor_, s);
+      std::size_t s_low_df_number = get(low_, s);
+      std::size_t t_df_number = get(df_number_, t);
+      std::size_t s_least_ancestor_df_number = get(least_ancestor_, s);
 
       put(low_, s, std::min(s_low_df_number, t_df_number));
 
@@ -72,11 +71,9 @@ struct planar_dfs_visitor : public dfs_visitor<> {
 
   template <typename Vertex, typename Graph>
   void finish_vertex(const Vertex& u, Graph& /*unused*/) {
-    using v_size_t = typename graph_traits<Graph>::vertices_size_type;
-
     Vertex u_parent = get(parent_, u);
-    v_size_t u_parent_lowpoint = get(low_, u_parent);
-    v_size_t u_lowpoint = get(low_, u);
+    std::size_t u_parent_lowpoint = get(low_, u_parent);
+    std::size_t u_lowpoint = get(low_, u);
 
     if (u_parent != u) {
       put(low_, u_parent, std::min(u_lowpoint, u_parent_lowpoint));
@@ -88,13 +85,12 @@ struct planar_dfs_visitor : public dfs_visitor<> {
   DFSNumberMap df_number_;
   LeastAncestorMap least_ancestor_;
   DFSParentEdgeMap df_edge_;
-  SizeType count_;
+  std::size_t count_;
 };
 
 template <typename Graph, typename VertexIndexMap, typename StoreOldHandlesPolicy = planar_detail::store_old_handles,
           typename StoreEmbeddingPolicy = planar_detail::recursive_lazy_list>
 class boyer_myrvold_impl {
-  using v_size_t = typename graph_traits<Graph>::vertices_size_type;
   using vertex_t = typename graph_traits<Graph>::vertex_descriptor;
   using edge_t = typename graph_traits<Graph>::edge_descriptor;
   using face_handle_t = planar_detail::face_handle<Graph, StoreOldHandlesPolicy, StoreEmbeddingPolicy>;
@@ -110,7 +106,7 @@ class boyer_myrvold_impl {
   template <typename T>
   using map_vertex_to = vector_property_map<T, VertexIndexMap>;
 
-  using vertex_to_v_size_map_t = map_vertex_to<v_size_t>;
+  using vertex_to_v_size_map_t = map_vertex_to<std::size_t>;
   using vertex_to_vertex_map_t = map_vertex_to<vertex_t>;
   using vertex_to_edge_map_t = map_vertex_to<edge_t>;
   using vertex_to_vertex_list_ptr_map_t = map_vertex_to<vertex_list_ptr_t>;
@@ -123,12 +119,14 @@ class boyer_myrvold_impl {
   template <typename BicompSideToTraverse = single_side, typename VisitorType = lead_visitor,
             typename Time = current_iteration>
   struct face_vertex_iterator {
-    using type = face_iterator<Graph, vertex_to_face_handle_map_t, vertex_t, BicompSideToTraverse, VisitorType, Time>;
+    using type = face_iterator<Graph, property_map_ref<vertex_to_face_handle_map_t>, vertex_t, BicompSideToTraverse,
+                               VisitorType, Time>;
   };
 
   template <typename BicompSideToTraverse = single_side, typename Time = current_iteration>
   struct face_edge_iterator {
-    using type = face_iterator<Graph, vertex_to_face_handle_map_t, edge_t, BicompSideToTraverse, lead_visitor, Time>;
+    using type = face_iterator<Graph, property_map_ref<vertex_to_face_handle_map_t>, edge_t, BicompSideToTraverse,
+                               lead_visitor, Time>;
   };
 
  public:
@@ -155,24 +153,23 @@ class boyer_myrvold_impl {
         dfs_parent_edge_(num_vertices(g_), vm_)
 
   {
-    planar_dfs_visitor<vertex_to_v_size_map_t, vertex_to_vertex_map_t, vertex_to_v_size_map_t, vertex_to_v_size_map_t,
-                       vertex_to_edge_map_t, v_size_t>
-        vis(low_point_, dfs_parent_, dfs_number_, least_ancestor_, dfs_parent_edge_);
+    planar_dfs_visitor vis(low_point_.ref(), dfs_parent_.ref(), dfs_number_.ref(), least_ancestor_.ref(),
+                           dfs_parent_edge_.ref());
 
     // Perform a depth-first search to find each vertex's low point, least
     // ancestor, and dfs tree information
-    depth_first_search(g_, vis, two_bit_color_map(num_vertices(g_), vm_));
+    depth_first_search(g_, vis, two_bit_color_map(num_vertices(g_), vm_).ref());
 
     // Sort vertices by their lowpoint - need this later in the constructor
     vertex_vector_t vertices_by_lowpoint(num_vertices(g_));
     auto v_rg = vertices(g_);
     std::copy(v_rg.begin(), v_rg.end(), vertices_by_lowpoint.begin());
-    bucket_sort(vertices_by_lowpoint.begin(), vertices_by_lowpoint.end(), low_point_);
+    bucket_sort(vertices_by_lowpoint.begin(), vertices_by_lowpoint.end(), low_point_.ref());
 
     // Sort vertices by their dfs number - need this to iterate by reverse
     // DFS number in the main loop.
     std::copy(v_rg.begin(), v_rg.end(), vertices_by_dfs_num_.begin());
-    bucket_sort(vertices_by_dfs_num_.begin(), vertices_by_dfs_num_.end(), dfs_number_);
+    bucket_sort(vertices_by_dfs_num_.begin(), vertices_by_dfs_num_.end(), dfs_number_.ref());
 
     // Initialize face handles. A face handle is an abstraction that serves
     // two uses in our implementation - it allows us to efficiently move
@@ -329,10 +326,10 @@ class boyer_myrvold_impl {
 
       backedges_[w].push_back(e);
 
-      v_size_t timestamp = dfs_number_[v];
+      std::size_t timestamp = dfs_number_[v];
       backedge_flag_[w] = timestamp;
 
-      walkup_iterator_t walkup_itr(w, face_handles_);
+      walkup_iterator_t walkup_itr(w, face_handles_.ref());
       walkup_iterator_t walkup_end;
       vertex_t lead_vertex = w;
 
@@ -365,7 +362,7 @@ class boyer_myrvold_impl {
           }
 
           if (parent != v && visited_[parent] != timestamp) {
-            walkup_itr = walkup_iterator_t(parent, face_handles_);
+            walkup_itr = walkup_iterator_t(parent, face_handles_.ref());
             lead_vertex = parent;
           } else {
             break;
@@ -405,8 +402,8 @@ class boyer_myrvold_impl {
         vertex_t second_tail;
 
         first_tail = second_tail = curr_face_handle.get_anchor();
-        first_face_itr = typename face_vertex_iterator<>::type(curr_face_handle, face_handles_, first_side());
-        second_face_itr = typename face_vertex_iterator<>::type(curr_face_handle, face_handles_, second_side());
+        first_face_itr = typename face_vertex_iterator<>::type(curr_face_handle, face_handles_.ref(), first_side());
+        second_face_itr = typename face_vertex_iterator<>::type(curr_face_handle, face_handles_.ref(), second_side());
 
         for (; first_face_itr != face_end; ++first_face_itr) {
           vertex_t face_vertex(*first_face_itr);
@@ -673,7 +670,7 @@ class boyer_myrvold_impl {
     // active with respect to v if there exists a backedge (a,w) or a
     // backedge (a,w_0) for some w_0 in a descendent bicomp of w.
 
-    v_size_t dfs_number_of_v = dfs_number_[v];
+    std::size_t dfs_number_of_v = dfs_number_[v];
     return (least_ancestor_[w] < dfs_number_of_v) ||
            (!separated_dfs_child_list_[w]->empty() &&
             low_point_[separated_dfs_child_list_[w]->front()] < dfs_number_of_v);
@@ -719,7 +716,7 @@ class boyer_myrvold_impl {
 
       using walkup_itr_t = typename face_edge_iterator<>::type;
 
-      walkup_itr_t walkup_itr(current_endpoint, face_handles_, first_side());
+      walkup_itr_t walkup_itr(current_endpoint, face_handles_.ref(), first_side());
       walkup_itr_t walkup_end;
 
       seen_goal_edge = false;
@@ -743,7 +740,7 @@ class boyer_myrvold_impl {
           break;
         }
 
-        walkup_itr = walkup_itr_t(current_endpoint, face_handles_, first_side());
+        walkup_itr = walkup_itr_t(current_endpoint, face_handles_.ref(), first_side());
       }
 
       if (seen_goal_edge) {
@@ -855,8 +852,8 @@ class boyer_myrvold_impl {
     // backedge from V, then goes up until it hits either X or Y
     //(but doesn't find X or Y as the root of a bicomp)
 
-    typename face_vertex_iterator<>::type x_upper_itr(x, face_handles_, first_side());
-    typename face_vertex_iterator<>::type x_lower_itr(x, face_handles_, second_side());
+    typename face_vertex_iterator<>::type x_upper_itr(x, face_handles_.ref(), first_side());
+    typename face_vertex_iterator<>::type x_lower_itr(x, face_handles_.ref(), second_side());
     typename face_vertex_iterator<>::type face_itr;
     typename face_vertex_iterator<>::type face_end;
 
@@ -909,12 +906,12 @@ class boyer_myrvold_impl {
     edge_to_bool_map_t outer_face_edge(outer_face_edge_vector.begin(), em);
 
     walkup_itr_t walkup_end;
-    for (walkup_itr_t walkup_itr(x, face_handles_, first_side()); walkup_itr != walkup_end; ++walkup_itr) {
+    for (walkup_itr_t walkup_itr(x, face_handles_.ref(), first_side()); walkup_itr != walkup_end; ++walkup_itr) {
       outer_face_edge[*walkup_itr] = true;
       is_in_subgraph[*walkup_itr] = true;
     }
 
-    for (walkup_itr_t walkup_itr(x, face_handles_, second_side()); walkup_itr != walkup_end; ++walkup_itr) {
+    for (walkup_itr_t walkup_itr(x, face_handles_.ref(), second_side()); walkup_itr != walkup_end; ++walkup_itr) {
       outer_face_edge[*walkup_itr] = true;
       is_in_subgraph[*walkup_itr] = true;
     }
@@ -1021,9 +1018,9 @@ class boyer_myrvold_impl {
         vertex_t anchor =
             source(final_edge, g_) == w_handle.get_anchor() ? target(final_edge, g_) : source(final_edge, g_);
         if (face_handles_[anchor].first_edge() == final_edge) {
-          wi = walkup_itr_t(anchor, face_handles_, second_side());
+          wi = walkup_itr_t(anchor, face_handles_.ref(), second_side());
         } else {
-          wi = walkup_itr_t(anchor, face_handles_, first_side());
+          wi = walkup_itr_t(anchor, face_handles_.ref(), first_side());
         }
 
         w_path.pop_back();
@@ -1072,8 +1069,8 @@ class boyer_myrvold_impl {
 
       using old_face_iterator_t = typename face_edge_iterator<single_side, previous_iteration>::type;
 
-      old_face_iterator_t first_old_face_itr(z, face_handles_, first_side());
-      old_face_iterator_t second_old_face_itr(z, face_handles_, second_side());
+      old_face_iterator_t first_old_face_itr(z, face_handles_.ref(), first_side());
+      old_face_iterator_t second_old_face_itr(z, face_handles_.ref(), second_side());
       old_face_iterator_t old_face_end;
 
       std::vector<old_face_iterator_t> old_face_iterators;
@@ -1144,9 +1141,9 @@ class boyer_myrvold_impl {
         typename face_edge_iterator<>::type internal_face_itr;
         typename face_edge_iterator<>::type internal_face_end;
         if (face_handles_[curr_v].first_vertex() == v) {
-          internal_face_itr = typename face_edge_iterator<>::type(curr_v, face_handles_, second_side());
+          internal_face_itr = typename face_edge_iterator<>::type(curr_v, face_handles_.ref(), second_side());
         } else {
-          internal_face_itr = typename face_edge_iterator<>::type(curr_v, face_handles_, first_side());
+          internal_face_itr = typename face_edge_iterator<>::type(curr_v, face_handles_.ref(), first_side());
         }
 
         while (internal_face_itr != internal_face_end && !outer_face_edge[*internal_face_itr] &&
@@ -1250,11 +1247,11 @@ class boyer_myrvold_impl {
 
       typename face_vertex_iterator<single_side, follow_visitor>::type follow_itr;
       if (face_handles_[v_dfchild_handle.first_vertex()].first_edge() == v_dfchild_handle.first_edge()) {
-        follow_itr = typename face_vertex_iterator<single_side, follow_visitor>::type(v_dfchild_handle.first_vertex(),
-                                                                                      face_handles_, second_side());
+        follow_itr = typename face_vertex_iterator<single_side, follow_visitor>::type(
+            v_dfchild_handle.first_vertex(), face_handles_.ref(), second_side());
       } else {
-        follow_itr = typename face_vertex_iterator<single_side, follow_visitor>::type(v_dfchild_handle.first_vertex(),
-                                                                                      face_handles_, first_side());
+        follow_itr = typename face_vertex_iterator<single_side, follow_visitor>::type(
+            v_dfchild_handle.first_vertex(), face_handles_.ref(), first_side());
       }
 
       for (; true; ++follow_itr) {
@@ -1299,7 +1296,7 @@ class boyer_myrvold_impl {
         typename face_edge_iterator<>::type del_face_end;
 
         bool found_other_endpoint = false;
-        for (del_face_itr = typename face_edge_iterator<>::type(deletion_endpoint, face_handles_, first_side());
+        for (del_face_itr = typename face_edge_iterator<>::type(deletion_endpoint, face_handles_.ref(), first_side());
              del_face_itr != del_face_end; ++del_face_itr) {
           edge_t e(*del_face_itr);
           if (source(e, g_) == other_endpoint || target(e, g_) == other_endpoint) {

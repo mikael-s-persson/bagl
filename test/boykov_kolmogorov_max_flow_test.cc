@@ -95,7 +95,7 @@ class bk_max_flow_tester
                      PredecessorMap pred, ColorMap color, DistanceMap dist, IndexMap vindex, Vertex src, Vertex sink)
       : Super(g, cap, res_cap, rev, pred, color, dist, vindex, src, sink) {}
 
-  void invariant_four(Vertex v) const {
+  void invariant_four(Vertex v) {
     // passive nodes in S or T
     if (v == this->source_ || v == this->sink_) {
       return;
@@ -118,14 +118,14 @@ class bk_max_flow_tester
     }
   }
 
-  void invariant_five(const Vertex& v) const {
+  void invariant_five(const Vertex& v) {
     auto tree_color = this->get_tree(v);
     if (tree_color == ColorTraits::gray()) {
       EXPECT_LE(this->time_map_[v], this->time_);
     }
   }
 
-  void invariant_six(const Vertex& v) const {
+  void invariant_six(const Vertex& v) {
     if (this->get_tree(v) == ColorTraits::gray() || this->time_map_[v] != this->time_) {
       return;
     }
@@ -146,7 +146,7 @@ class bk_max_flow_tester
     EXPECT_EQ(distance, this->dist_map_[v]);
   }
 
-  void invariant_seven(const Vertex& v) const {
+  void invariant_seven(const Vertex& v) {
     if (this->get_tree(v) == ColorTraits::gray()) {
       return;
     }
@@ -160,7 +160,7 @@ class bk_max_flow_tester
     }
   }
 
-  void invariant_eight(const Vertex& v) const {
+  void invariant_eight(const Vertex& v) {
     if (this->get_tree(v) == ColorTraits::gray()) {
       return;
     }
@@ -255,12 +255,12 @@ class BoykoyKolmogorovTest : public ::testing::Test {
     AdjVecGraph g;
     auto rev = vector_property_map(2 * n_edges, get(edge_index, g), graph_edge_descriptor_t<AdjVecGraph>{});
 
-    auto [src, sink] = fill_random_max_flow_graph(g, get(edge_capacity, g), rev, get(edge_index, g),
+    auto [src, sink] = fill_random_max_flow_graph(g, get(edge_capacity, g), rev.ref(), get(edge_index, g),
                                                   get(vertex_index, g), n_verts, n_edges, seed);
 
     auto pred = vector_property_map(n_verts, get(vertex_index, g), graph_edge_descriptor_t<AdjVecGraph>{});
     expected_max_flow_ =
-        boykov_kolmogorov_max_flow(g, get(edge_capacity, g), get(edge_residual_capacity, g), rev, pred,
+        boykov_kolmogorov_max_flow(g, get(edge_capacity, g), get(edge_residual_capacity, g), rev.ref(), pred.ref(),
                                    get(vertex_color, g), get(vertex_distance, g), get(vertex_index, g), src, sink);
   }
 
@@ -272,11 +272,11 @@ TEST_F(BoykoyKolmogorovTest, AdjListGraphTest) {
   AdjListGraph g;
   auto rev = vector_property_map(2 * n_edges, get(edge_index, g), graph_edge_descriptor_t<AdjListGraph>{});
 
-  auto [src, sink] = fill_random_max_flow_graph(g, get(edge_capacity, g), rev, get(edge_index, g), get(vertex_index, g),
-                                                n_verts, n_edges, seed);
+  auto [src, sink] = fill_random_max_flow_graph(g, get(edge_capacity, g), rev.ref(), get(edge_index, g),
+                                                get(vertex_index, g), n_verts, n_edges, seed);
 
   auto pred = vector_property_map(n_verts, get(vertex_index, g), graph_edge_descriptor_t<AdjListGraph>{});
-  EXPECT_EQ(boykov_kolmogorov_max_flow(g, get(edge_capacity, g), get(edge_residual_capacity, g), rev, pred,
+  EXPECT_EQ(boykov_kolmogorov_max_flow(g, get(edge_capacity, g), get(edge_residual_capacity, g), rev.ref(), pred.ref(),
                                        get(vertex_color, g), get(vertex_distance, g), get(vertex_index, g), src, sink),
             expected_max_flow_);
 }
@@ -285,25 +285,26 @@ TEST_F(BoykoyKolmogorovTest, BundleGraphTest) {
   BundleGraph g;
   auto rev = vector_property_map(2 * n_edges, get(&Link::index, g), graph_edge_descriptor_t<BundleGraph>{});
 
-  auto [src, sink] = fill_random_max_flow_graph(g, get(&Link::capacity, g), rev, get(&Link::index, g),
+  auto [src, sink] = fill_random_max_flow_graph(g, get(&Link::capacity, g), rev.ref(), get(&Link::index, g),
                                                 get(vertex_index, g), n_verts, n_edges, seed);
 
   auto pred = vector_property_map(n_verts, get(vertex_index, g), graph_edge_descriptor_t<BundleGraph>{});
-  EXPECT_EQ(boykov_kolmogorov_max_flow(g, get(&Link::capacity, g), get(&Link::residual_capacity, g), rev, pred,
-                                       get(&Node::color, g), get(&Node::distance, g), get(vertex_index, g), src, sink),
-            expected_max_flow_);
+  EXPECT_EQ(
+      boykov_kolmogorov_max_flow(g, get(&Link::capacity, g), get(&Link::residual_capacity, g), rev.ref(), pred.ref(),
+                                 get(&Node::color, g), get(&Node::distance, g), get(vertex_index, g), src, sink),
+      expected_max_flow_);
 }
 
 TEST_F(BoykoyKolmogorovTest, InvariantsTest) {
   AdjVecGraph g;
   auto rev = vector_property_map(2 * n_edges, get(edge_index, g), graph_edge_descriptor_t<AdjVecGraph>{});
 
-  auto [src, sink] = fill_random_max_flow_graph(g, get(edge_capacity, g), rev, get(edge_index, g), get(vertex_index, g),
-                                                n_verts, n_edges, seed);
+  auto [src, sink] = fill_random_max_flow_graph(g, get(edge_capacity, g), rev.ref(), get(edge_index, g),
+                                                get(vertex_index, g), n_verts, n_edges, seed);
 
   auto pred = vector_property_map(n_verts, get(vertex_index, g), graph_edge_descriptor_t<AdjVecGraph>{});
-  bk_max_flow_tester tester(g, get(edge_capacity, g), get(edge_residual_capacity, g), rev, pred, get(vertex_color, g),
-                            get(vertex_distance, g), get(vertex_index, g), src, sink);
+  bk_max_flow_tester tester(g, get(edge_capacity, g), get(edge_residual_capacity, g), rev.ref(), pred.ref(),
+                            get(vertex_color, g), get(vertex_distance, g), get(vertex_index, g), src, sink);
   EXPECT_EQ(tester.test(), expected_max_flow_);
 }
 

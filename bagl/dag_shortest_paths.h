@@ -25,7 +25,7 @@ void dag_shortest_paths(const G& g, graph_vertex_descriptor_t<G> start,
                         DistanceMap distance,  // get(vertex_distance, g)
                         WeightMap weight,      // get(edge_weight, g)
                         ColorMap color,        // get(vertex_color, g) or
-                                               // two_bit_color_map(num_vertices(g), get(vertex_index, g))
+                                               // two_bit_color_map(num_vertices(g), get(vertex_index, g)).ref()
                         PredecessorMap pred,   // get(vertex_predecessor, g)
                         V vis,                 // default_dfs_visitor()
                         Compare compare, Combine combine, property_traits_value_t<DistanceMap> inf,
@@ -80,7 +80,7 @@ requires std::same_as<graph_vertex_descriptor_t<G>, property_traits_value_t<Pred
 void dag_shortest_paths(const G& g, graph_vertex_descriptor_t<G> start, WeightMap weight, ColorMap color,
                         PredecessorMap pred, V vis) {
   using D = property_traits_value_t<WeightMap>;
-  dag_shortest_paths(g, start, make_vector_property_map(num_vertices(g), get(vertex_index, g), default_zero_v<D>),
+  dag_shortest_paths(g, start, vector_property_map(num_vertices(g), get(vertex_index, g), default_zero_v<D>).ref(),
                      weight, color, pred, vis);
 }
 
@@ -91,7 +91,8 @@ requires std::same_as<graph_vertex_descriptor_t<G>, property_traits_value_t<Pred
     std::convertible_to<property_traits_value_t<WeightMap>, property_traits_value_t<DistanceMap>>
 void dag_shortest_paths(const G& g, graph_vertex_descriptor_t<G> start, DistanceMap distance, WeightMap weight,
                         PredecessorMap pred, V vis) {
-  dag_shortest_paths(g, start, distance, weight, two_bit_color_map(num_vertices(g), get(vertex_index, g)), pred, vis);
+  dag_shortest_paths(g, start, distance, weight, two_bit_color_map(num_vertices(g), get(vertex_index, g)).ref(), pred,
+                     vis);
 }
 
 template <concepts::VertexListGraph G, concepts::DijkstraVisitor<G> V, concepts::ReadableEdgePropertyMap<G> WeightMap,
@@ -99,8 +100,8 @@ template <concepts::VertexListGraph G, concepts::DijkstraVisitor<G> V, concepts:
 requires std::same_as<graph_vertex_descriptor_t<G>, property_traits_value_t<PredecessorMap>>
 void dag_shortest_paths(const G& g, graph_vertex_descriptor_t<G> start, WeightMap weight, PredecessorMap pred, V vis) {
   using D = property_traits_value_t<WeightMap>;
-  dag_shortest_paths(g, start, make_vector_property_map(num_vertices(g), get(vertex_index, g), default_zero_v<D>),
-                     weight, two_bit_color_map(num_vertices(g), get(vertex_index, g)), pred, vis);
+  dag_shortest_paths(g, start, vector_property_map(num_vertices(g), get(vertex_index, g), default_zero_v<D>).ref(),
+                     weight, two_bit_color_map(num_vertices(g), get(vertex_index, g)).ref(), pred, vis);
 }
 
 template <concepts::VertexListGraph G, concepts::DijkstraVisitor<G> V, concepts::ReadableEdgePropertyMap<G> WeightMap,
@@ -109,8 +110,8 @@ requires std::same_as<graph_vertex_descriptor_t<G>, property_traits_value_t<Pred
 void dag_shortest_paths(const G& g, graph_vertex_descriptor_t<G> start, WeightMap weight, PredecessorMap pred, V vis,
                         VertexIndexMap v_index) {
   using D = property_traits_value_t<WeightMap>;
-  dag_shortest_paths(g, start, make_vector_property_map(num_vertices(g), v_index, default_zero_v<D>), weight,
-                     two_bit_color_map(num_vertices(g), v_index), pred, vis);
+  dag_shortest_paths(g, start, vector_property_map(num_vertices(g), v_index, default_zero_v<D>).ref(), weight,
+                     two_bit_color_map(num_vertices(g), v_index).ref(), pred, vis);
 }
 
 }  // namespace bagl

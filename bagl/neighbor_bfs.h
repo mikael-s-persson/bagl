@@ -205,14 +205,15 @@ template <concepts::BidirectionalGraph G, concepts::NeighborBFSVisitor<G> V>
 requires concepts::VertexListGraph<G>
 void neighbor_breadth_first_search(G& g, graph_vertex_descriptor_t<G> start, V vis) {
   neighbor_breadth_first_search(g, start, vis,
-                                make_vector_property_map<default_color_type>(num_vertices(g), get(vertex_index, g)));
+                                vector_property_map<default_color_type>(num_vertices(g), get(vertex_index, g)).ref());
 }
 
 template <concepts::BidirectionalGraph G>
 requires concepts::VertexListGraph<G>
 void neighbor_breadth_first_search(G& g, graph_vertex_descriptor_t<G> start) {
-  neighbor_breadth_first_search(g, start, make_neighbor_bfs_visitor(null_visitor()),
-                                make_vector_property_map<default_color_type>(num_vertices(g), get(vertex_index, g)));
+  neighbor_breadth_first_search(
+      g, start, make_neighbor_bfs_visitor(null_visitor()),
+      make_vector_property_map<default_color_type>(num_vertices(g), get(vertex_index, g)).ref());
 }
 }  // namespace bagl
 

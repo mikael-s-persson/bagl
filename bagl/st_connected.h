@@ -65,14 +65,14 @@ bool st_connected(const Graph& g, graph_vertex_descriptor_t<Graph> s, graph_vert
 template <concepts::VertexListGraph Graph>
 requires concepts::IncidenceGraph<Graph>
 bool st_connected(const Graph& g, graph_vertex_descriptor_t<Graph> s, graph_vertex_descriptor_t<Graph> t) {
-  return st_connected(g, s, t, two_bit_color_map(num_vertices(g), get(vertex_index, g)));
+  return st_connected(g, s, t, two_bit_color_map(num_vertices(g), get(vertex_index, g)).ref());
 }
 
 template <concepts::VertexListGraph Graph, concepts::ReadableVertexIndexMap<Graph> VertexIndexMap>
 requires concepts::IncidenceGraph<Graph>
 bool st_connected(const Graph& g, graph_vertex_descriptor_t<Graph> s, graph_vertex_descriptor_t<Graph> t,
                   VertexIndexMap v_index) {
-  return st_connected(g, s, t, two_bit_color_map(num_vertices(g), v_index));
+  return st_connected(g, s, t, two_bit_color_map(num_vertices(g), v_index).ref());
 }
 
 }  // namespace bagl

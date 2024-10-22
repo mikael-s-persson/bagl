@@ -111,13 +111,13 @@ void breadth_first_search(const G& g, Seeds seeds, V vis, ColorMap color) {
 template <concepts::VertexListGraph G, std::ranges::input_range Seeds, concepts::BFSVisitor<G> V, concepts::ReadableVertexIndexMap<G> IndexMap>
 void breadth_first_search(const G& g, Seeds seeds, V vis, IndexMap v_index) {
   buffer_queue<graph_vertex_descriptor_t<G>> q;
-  breadth_first_search(g, seeds, q, vis, two_bit_color_map(num_vertices(g), v_index));
+  breadth_first_search(g, seeds, q, vis, two_bit_color_map(num_vertices(g), v_index).ref());
 }
 
 template <concepts::VertexListGraph G, std::ranges::input_range Seeds, concepts::BFSVisitor<G> V>
 void breadth_first_search(const G& g, Seeds seeds, V vis) {
   buffer_queue<graph_vertex_descriptor_t<G>> q;
-  breadth_first_search(g, seeds, q, vis, two_bit_color_map(num_vertices(g), get(vertex_index, g)));
+  breadth_first_search(g, seeds, q, vis, two_bit_color_map(num_vertices(g), get(vertex_index, g)).ref());
 }
 
 template <class Visitors = null_visitors>

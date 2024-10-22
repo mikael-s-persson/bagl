@@ -52,23 +52,23 @@ void check_bipartite(const Graph& g, IndexMap index_map, bool expect_bipartite) 
   std::vector<graph_vertex_descriptor_t<Graph> > odd_cycle;
   odd_cycle.resize(num_vertices(g));
 
-  bool first_result = is_bipartite(g, index_map, partition_map);
+  bool first_result = is_bipartite(g, index_map, partition_map.ref());
 
   EXPECT_EQ(first_result, is_bipartite(g, index_map));
   EXPECT_EQ(first_result, is_bipartite(g));
 
   if (first_result) {
-    check_two_coloring(g, partition_map);
+    check_two_coloring(g, partition_map.ref());
   }
 
   EXPECT_EQ(first_result, expect_bipartite);
 
   auto second_first = odd_cycle.begin();
-  auto second_beyond = find_odd_cycle(g, index_map, partition_map, second_first);
+  auto second_beyond = find_odd_cycle(g, index_map, partition_map.ref(), second_first);
 
   if (expect_bipartite) {
     EXPECT_EQ(second_beyond, second_first);
-    check_two_coloring(g, partition_map);
+    check_two_coloring(g, partition_map.ref());
   } else {
     check_odd_cycle(g, second_first, second_beyond);
   }

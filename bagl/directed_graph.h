@@ -11,7 +11,7 @@
 #include "bagl/adjacency_list.h"
 #include "bagl/properties.h"
 #include "bagl/property.h"
-#include "bagl/transform_value_property_map.h"
+#include "bagl/property_map.h"
 
 namespace bagl {
 struct directed_graph_tag {};
@@ -455,19 +455,18 @@ struct property_map<BAGL_DIRECTED_GRAPH, Property> : property_map<typename BAGL_
 template <BAGL_DIRECTED_GRAPH_PARAMS>
 struct property_map<BAGL_DIRECTED_GRAPH, vertex_all_t> {
   using const_type =
-      transform_value_property_map<top_property_remover,
-                                   property_map_const_t<typename BAGL_DIRECTED_GRAPH::graph_type, vertex_all_t>>;
-  using type = transform_value_property_map<top_property_remover,
-                                            property_map_t<typename BAGL_DIRECTED_GRAPH::graph_type, vertex_all_t>>;
+      transform_property_map<top_property_remover,
+                             property_map_const_t<typename BAGL_DIRECTED_GRAPH::graph_type, vertex_all_t>>;
+  using type = transform_property_map<top_property_remover,
+                                      property_map_t<typename BAGL_DIRECTED_GRAPH::graph_type, vertex_all_t>>;
 };
 
 template <BAGL_DIRECTED_GRAPH_PARAMS>
 struct property_map<BAGL_DIRECTED_GRAPH, edge_all_t> {
-  using const_type =
-      transform_value_property_map<top_property_remover,
-                                   property_map_const_t<typename BAGL_DIRECTED_GRAPH::graph_type, edge_all_t>>;
-  using type = transform_value_property_map<top_property_remover,
-                                            property_map_t<typename BAGL_DIRECTED_GRAPH::graph_type, edge_all_t>>;
+  using const_type = transform_property_map<top_property_remover,
+                                            property_map_const_t<typename BAGL_DIRECTED_GRAPH::graph_type, edge_all_t>>;
+  using type = transform_property_map<top_property_remover,
+                                      property_map_t<typename BAGL_DIRECTED_GRAPH::graph_type, edge_all_t>>;
 };
 
 // PropertyGraph concepts

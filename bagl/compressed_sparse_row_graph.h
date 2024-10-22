@@ -25,7 +25,6 @@
 #include "bagl/graph_traits.h"
 #include "bagl/properties.h"
 #include "bagl/property_map.h"
-#include "bagl/transform_value_property_map.h"
 #include "bagl/zip_range.h"
 
 namespace bagl {
@@ -927,9 +926,9 @@ struct csr_property_map_helper<BAGL_CSR_GRAPH_TYPE, Tag, vertex_property_tag> {
   using plist_type = VertexProperty;
   using all_type = property_map_t<BAGL_CSR_GRAPH_TYPE, vertex_all_t>;
   using all_const_type = property_map_const_t<BAGL_CSR_GRAPH_TYPE, vertex_all_t>;
-  using type = transform_value_property_map<property_detail::lookup_one_property_f<plist_type, Tag>, all_type>;
+  using type = transform_property_map<property_detail::lookup_one_property_f<plist_type, Tag>, all_type>;
   using const_type =
-      transform_value_property_map<property_detail::lookup_one_property_f<const plist_type, Tag>, all_const_type>;
+      transform_property_map<property_detail::lookup_one_property_f<const plist_type, Tag>, all_const_type>;
 };
 
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Tag>
@@ -938,9 +937,9 @@ struct csr_property_map_helper<BAGL_CSR_GRAPH_TYPE, Tag, edge_property_tag> {
   using plist_type = EdgeProperty;
   using all_type = property_map_t<BAGL_CSR_GRAPH_TYPE, edge_all_t>;
   using all_const_type = property_map_const_t<BAGL_CSR_GRAPH_TYPE, edge_all_t>;
-  using type = transform_value_property_map<property_detail::lookup_one_property_f<plist_type, Tag>, all_type>;
+  using type = transform_property_map<property_detail::lookup_one_property_f<plist_type, Tag>, all_type>;
   using const_type =
-      transform_value_property_map<property_detail::lookup_one_property_f<const plist_type, Tag>, all_const_type>;
+      transform_property_map<property_detail::lookup_one_property_f<const plist_type, Tag>, all_const_type>;
 };
 
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Tag>
@@ -949,9 +948,9 @@ struct csr_property_map_helper<BAGL_CSR_GRAPH_TYPE, Tag, graph_property_tag> {
   using plist_type = GraphProperty;
   using all_type = property_map_t<BAGL_CSR_GRAPH_TYPE, graph_all_t>;
   using all_const_type = property_map_const_t<BAGL_CSR_GRAPH_TYPE, graph_all_t>;
-  using type = transform_value_property_map<property_detail::lookup_one_property_f<plist_type, Tag>, all_type>;
+  using type = transform_property_map<property_detail::lookup_one_property_f<plist_type, Tag>, all_type>;
   using const_type =
-      transform_value_property_map<property_detail::lookup_one_property_f<const plist_type, Tag>, all_const_type>;
+      transform_property_map<property_detail::lookup_one_property_f<const plist_type, Tag>, all_const_type>;
 };
 
 // disable_if isn't truly necessary but required to avoid ambiguity with

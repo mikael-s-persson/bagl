@@ -507,7 +507,7 @@ class bk_max_flow {
    * returns the search tree of v; color_value::black() for source tree,
    * white() for sink tree, gray() for no tree
    */
-  color_value get_tree(vertex_descriptor v) const { return get(tree_map_, v); }
+  color_value get_tree(vertex_descriptor v) { return get(tree_map_, v); }
 
   /**
    * sets search tree of v; color_value::black() for source tree, white()
@@ -518,12 +518,12 @@ class bk_max_flow {
   /**
    * returns edge to parent vertex of v;
    */
-  edge_descriptor get_edge_to_parent(vertex_descriptor v) const { return get(pre_map_, v); }
+  edge_descriptor get_edge_to_parent(vertex_descriptor v) { return get(pre_map_, v); }
 
   /**
    * returns true if the edge stored in pre_map_[v] is a valid entry
    */
-  bool has_parent(vertex_descriptor v) const { return get(has_parent_map_, v); }
+  bool has_parent(vertex_descriptor v) { return get(has_parent_map_, v); }
 
   /**
    * sets edge to parent vertex of v;
@@ -692,9 +692,9 @@ requires concepts::VertexAndEdgeListGraph<G> property_traits_value_t<CapacityEdg
     graph_vertex_descriptor_t<G> src, graph_vertex_descriptor_t<G> sink) {
   std::size_t n_verts = num_vertices(g);
   return boykov_kolmogorov_max_flow(g, cap, res_cap, rev,
-                                    make_vector_property_map(n_verts, idx, graph_edge_descriptor_t<G>{}),
-                                    make_vector_property_map(n_verts, idx, default_color_type::white_color),
-                                    make_vector_property_map(n_verts, idx, std::size_t{0}), idx, src, sink);
+                                    vector_property_map(n_verts, idx, graph_edge_descriptor_t<G>{}).ref(),
+                                    vector_property_map(n_verts, idx, default_color_type::white_color).ref(),
+                                    vector_property_map(n_verts, idx, std::size_t{0}).ref(), idx, src, sink);
 }
 
 /**
@@ -711,8 +711,8 @@ requires concepts::VertexAndEdgeListGraph<G> property_traits_value_t<CapacityEdg
     graph_vertex_descriptor_t<G> src, graph_vertex_descriptor_t<G> sink) {
   std::size_t n_verts = num_vertices(g);
   return boykov_kolmogorov_max_flow(g, cap, res_cap, rev,
-                                    make_vector_property_map(n_verts, idx, graph_edge_descriptor_t<G>{}), color,
-                                    make_vector_property_map(n_verts, idx, std::size_t{0}), idx, src, sink);
+                                    vector_property_map(n_verts, idx, graph_edge_descriptor_t<G>{}).ref(), color,
+                                    vector_property_map(n_verts, idx, std::size_t{0}).ref(), idx, src, sink);
 }
 
 template <concepts::IncidenceGraph G>

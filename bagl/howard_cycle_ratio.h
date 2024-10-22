@@ -407,32 +407,32 @@ double minimum_cycle_ratio(const Graph& g, VertexIndexMap vim, EdgeWeight1Map ew
 
 // Maximum Cycle Mean
 
-template <typename FloatTraits, typename Graph, typename VertexIndexMap, typename EdgeWeightMap, typename EdgeIndexMap>
-auto maximum_cycle_mean(const Graph& g, VertexIndexMap vim, EdgeWeightMap ewm, EdgeIndexMap eim,
+template <typename FloatTraits, typename Graph, typename VertexIndexMap, typename EdgeWeightMap>
+auto maximum_cycle_mean(const Graph& g, VertexIndexMap vim, EdgeWeightMap ewm,
                         std::vector<graph_edge_descriptor_t<Graph>>* pcc = nullptr, FloatTraits ft = FloatTraits()) {
   using Weight = std::decay_t<property_traits_value_t<EdgeWeightMap>>;
-  return maximum_cycle_ratio(g, vim, ewm, vector_property_map(num_edges(g), eim, Weight{1}), pcc, ft);
+  return maximum_cycle_ratio(g, vim, ewm, single_property_map(Weight{1}), pcc, ft);
 }
 
-template <typename Graph, typename VertexIndexMap, typename EdgeWeightMap, typename EdgeIndexMap>
-double maximum_cycle_mean(const Graph& g, VertexIndexMap vim, EdgeWeightMap ewm, EdgeIndexMap eim,
+template <typename Graph, typename VertexIndexMap, typename EdgeWeightMap>
+double maximum_cycle_mean(const Graph& g, VertexIndexMap vim, EdgeWeightMap ewm,
                           std::vector<graph_edge_descriptor_t<Graph>>* pcc = 0) {
-  return maximum_cycle_mean(g, vim, ewm, eim, pcc, mcr_float<>());
+  return maximum_cycle_mean(g, vim, ewm, pcc, mcr_float<>());
 }
 
 // Minimum Cycle Mean
 
-template <typename FloatTraits, typename Graph, typename VertexIndexMap, typename EdgeWeightMap, typename EdgeIndexMap>
-auto minimum_cycle_mean(const Graph& g, VertexIndexMap vim, EdgeWeightMap ewm, EdgeIndexMap eim,
+template <typename FloatTraits, typename Graph, typename VertexIndexMap, typename EdgeWeightMap>
+auto minimum_cycle_mean(const Graph& g, VertexIndexMap vim, EdgeWeightMap ewm,
                         std::vector<graph_edge_descriptor_t<Graph>>* pcc = nullptr, FloatTraits ft = FloatTraits()) {
   using Weight = std::decay_t<property_traits_value_t<EdgeWeightMap>>;
-  return minimum_cycle_ratio(g, vim, ewm, vector_property_map(num_edges(g), eim, Weight{1}), pcc, ft);
+  return minimum_cycle_ratio(g, vim, ewm, single_property_map(Weight{1}), pcc, ft);
 }
 
-template <typename Graph, typename VertexIndexMap, typename EdgeWeightMap, typename EdgeIndexMap>
-double minimum_cycle_mean(const Graph& g, VertexIndexMap vim, EdgeWeightMap ewm, EdgeIndexMap eim,
+template <typename Graph, typename VertexIndexMap, typename EdgeWeightMap>
+double minimum_cycle_mean(const Graph& g, VertexIndexMap vim, EdgeWeightMap ewm,
                           std::vector<graph_edge_descriptor_t<Graph>>* pcc = nullptr) {
-  return minimum_cycle_mean(g, vim, ewm, eim, pcc, mcr_float<>());
+  return minimum_cycle_mean(g, vim, ewm, pcc, mcr_float<>());
 }
 
 }  // namespace bagl

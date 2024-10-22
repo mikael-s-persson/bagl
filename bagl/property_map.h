@@ -42,12 +42,12 @@ struct property_traits<const T*> {
 // V must be convertible to T
 template <typename T, typename V>
 void put(T* pa, std::ptrdiff_t k, V&& val) {
-  pa[k] = std::forward<V>(val); // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+  pa[k] = std::forward<V>(val);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 }
 
 template <typename T>
 const T& get(const T* pa, std::ptrdiff_t k) {
-  return pa[k]; // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+  return pa[k];  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 }
 
 //=========================================================================
@@ -56,12 +56,12 @@ const T& get(const T* pa, std::ptrdiff_t k) {
 namespace concepts {
 
 template <typename PMap, typename Key>
-concept ReadablePropertyMap = requires(const PMap& pmap, const Key& k) {
+concept ReadablePropertyMap = requires(PMap& pmap, const Key& k) {
   { get(pmap, k) } -> std::convertible_to<property_traits_value_t<PMap>>;
 };
 
 template <typename PMap, typename Key>
-concept WritablePropertyMap = requires(PMap& pmap, const Key& k) {
+concept WritablePropertyMap = requires(PMap& pmap, Key& k) {
   put(pmap, k, std::declval<property_traits_value_t<PMap>>());
 };
 
@@ -74,8 +74,9 @@ concept LvaluePropertyMap = ReadablePropertyMap<PMap, Key> && requires(PMap& pma
 };
 
 template <typename PMap, typename Key>
-concept MutableLvaluePropertyMap = ReadWritePropertyMap<PMap, Key> && requires(PMap& pmap, const Key& k) {
-  { pmap[k] } -> std::same_as<property_traits_value_t<PMap>&>;
+concept MutableLvaluePropertyMap = ReadWritePropertyMap<PMap, Key> &&
+    requires(PMap& pmap, Key& k, const property_traits_value_t<PMap>& value) {
+  pmap[k] = value;
 };
 
 template <typename Func, typename PMap>
@@ -88,7 +89,7 @@ concept PropertyComparator = requires(Func f, const property_traits_value_t<PMap
   { f(value, value) } -> std::same_as<bool>;
 };
 
-} // namespace concepts
+}  // namespace concepts
 
 template <typename KeyArchetype, typename ValueArchetype>
 struct readable_property_map_archetype {
@@ -137,9 +138,17 @@ template <typename PropertyMap, typename K>
 decltype(auto) get(const put_get_helper<PropertyMap>& pa, K&& k) {
   return static_cast<const PropertyMap&>(pa)[std::forward<K>(k)];
 }
+template <typename PropertyMap, typename K>
+decltype(auto) get(put_get_helper<PropertyMap>& pa, K&& k) {
+  return static_cast<PropertyMap&>(pa)[std::forward<K>(k)];
+}
 template <typename PropertyMap, typename K, typename U>
 void put(const put_get_helper<PropertyMap>& pa, K&& k, U&& u) {
   static_cast<const PropertyMap&>(pa)[std::forward<K>(k)] = std::forward<U>(u);
+}
+template <typename PropertyMap, typename K, typename U>
+void put(put_get_helper<PropertyMap>& pa, K&& k, U&& u) {
+  static_cast<PropertyMap&>(pa)[std::forward<K>(k)] = std::forward<U>(u);
 }
 
 //=========================================================================
@@ -168,8 +177,7 @@ class safe_iterator_property_map : public put_get_helper<safe_iterator_property_
  public:
   using value_type = std::decay_t<decltype(*std::declval<RAIter>())>;
 
-  explicit safe_iterator_property_map(RAIter first = RAIter(), std::size_t n = 0,
-                             IndexMap index = IndexMap())
+  explicit safe_iterator_property_map(RAIter first = RAIter(), std::size_t n = 0, IndexMap index = IndexMap())
       : iter_(std::move(first)), n_(n), index_(std::move(index)) {}
 
   template <typename Key>
@@ -275,6 +283,55 @@ class composite_property_map : public put_get_helper<composite_property_map<Outp
   }
 };
 
+//======== Function property-map ==========
+
+// This property-map turns a function into a property-map.
+template <typename Func, typename Key, typename Ret = decltype(std::declval<Func>()(std::declval<Key>()))>
+class function_property_map : public put_get_helper<function_property_map<Func, Key, Ret>> {
+ public:
+  using value_type = std::decay_t<Ret>;
+
+  explicit function_property_map(Func f = Func()) : f_(std::move(f)) {}
+
+  template <typename T>
+  decltype(auto) operator[](T&& k) const {
+    return f_(std::forward<T>(k));
+  }
+
+ private:
+  Func f_;
+};
+
+template <typename Key, typename Func>
+auto make_function_property_map(Func&& f) {
+  return function_property_map<std::decay_t<Func>, Key>(std::forward<Func>(f));
+}
+
+template <typename Key, typename Ret, typename Func>
+auto make_function_property_map(Func&& f) {
+  return function_property_map<std::decay_t<Func>, Key, Ret>(std::forward<Func>(f));
+}
+
+//======== Transform property-map ==========
+
+// This is a short-hand for composite of a function and an underlying property-map.
+template <typename Func, typename PM>
+class transform_property_map : public put_get_helper<transform_property_map<Func, PM>> {
+ public:
+  transform_property_map(Func f, PM pm) : f_(std::move(f)), pm_(std::move(pm)) {}
+
+  template <typename Key>
+  decltype(auto) operator[](Key&& k) const {
+    return f_(get(pm_, std::forward<Key>(k)));
+  }
+
+  using value_type = std::decay_t<decltype(std::declval<Func>()(std::declval<property_traits_value_t<PM>>()))>;
+
+ private:
+  Func f_;
+  PM pm_;
+};
+
 //======== Property-map reference-wrapper ==========
 
 // This property-map is like std::reference_wrapper for property-maps.
@@ -295,31 +352,62 @@ class property_map_ref : public put_get_helper<property_map_ref<UnderlyingMap>> 
   }
 };
 
+//======== Property-storage helper ==========
+
+// This can be used as a base-class (CRTP) when creating property maps that
+// also store the properties, meaning they would be expensive to copy.
+// Generally, property-maps are "views", meaning, lightweight objects that
+// implement some indexing or mapping logic to some underlying storage.
+// Sometimes, if there is no preexisting storage to map to, and instead you
+// just need to create ad hoc property storage (e.g., "scratch-space" data
+// for an algorithm), then you want a "property-store", i.e., a property-map
+// that owns the data.
+// This CRTP base class makes the class movable but non-copyable, and gives it
+// a `ref()` function to get a lightweight property-map that refers to it.
+template <typename LvaluePropertyStore>
+struct property_store_helper : put_get_helper<LvaluePropertyStore> {
+  property_store_helper() = default;
+  property_store_helper(const property_store_helper&) = delete;
+  property_store_helper& operator=(const property_store_helper&) = delete;
+  property_store_helper(property_store_helper&&) = default;
+  property_store_helper& operator=(property_store_helper&&) = default;
+
+  property_map_ref<LvaluePropertyStore> ref() {
+    return property_map_ref<LvaluePropertyStore>{static_cast<LvaluePropertyStore&>(*this)};
+  }
+  property_map_ref<const LvaluePropertyStore> ref() const {
+    return property_map_ref<const LvaluePropertyStore>{static_cast<const LvaluePropertyStore&>(*this)};
+  }
+};
+
 //=========================================================================
 // A property map that does not do anything, for
 // when you have to supply a property map, but don't need it.
 namespace property_map_detail {
+template <typename T>
 struct dummy_pmap_proxy {
-  template <typename T>
-  dummy_pmap_proxy& operator=(const T& /*unused*/) {
+  template <typename U>
+  dummy_pmap_proxy& operator=(U&& /*unused*/) {
     return *this;
   }
-  template <typename T>
-  operator T() { return T{}; } // NOLINT
+  operator T() const { return T{}; }  // NOLINT
 };
 }  // namespace property_map_detail
 
-class dummy_property_map : public put_get_helper<dummy_property_map> {
+template <typename T = int>
+class null_property_map : public put_get_helper<null_property_map<T>> {
  public:
-  using value_type = int;
+  using value_type = T;
 
-  template <typename T>
-  property_map_detail::dummy_pmap_proxy& operator[](T&& /*unused*/) const {
+  template <typename K>
+  property_map_detail::dummy_pmap_proxy<T>& operator[](K&& /*unused*/) const {
     return dummy_lvalue_;
   }
+
  private:
-  mutable property_map_detail::dummy_pmap_proxy dummy_lvalue_{};
+  mutable property_map_detail::dummy_pmap_proxy<T> dummy_lvalue_{};
 };
+using dummy_property_map = null_property_map<>;
 
 // Convert a Readable property map into a function object
 template <typename PropMap>

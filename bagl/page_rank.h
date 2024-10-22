@@ -91,7 +91,8 @@ void page_rank(const Graph& g, RankMap rank_map, Done done, property_traits_valu
 template <concepts::VertexListGraph Graph, concepts::ReadWriteVertexPropertyMap<Graph> RankMap, typename Done>
 void page_rank(const Graph& g, RankMap rank_map, Done done, property_traits_value_t<RankMap> damping, std::size_t n) {
   using RankValue = property_traits_value_t<RankMap>;
-  page_rank(g, rank_map, done, damping, n, vector_property_map(num_vertices(g), get(vertex_index, g), RankValue{0}));
+  page_rank(g, rank_map, done, damping, n,
+            vector_property_map(num_vertices(g), get(vertex_index, g), RankValue{0}).ref());
 }
 
 template <concepts::VertexListGraph Graph, concepts::ReadWriteVertexPropertyMap<Graph> RankMap, typename Done>

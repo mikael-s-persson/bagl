@@ -9,7 +9,6 @@
 #include <type_traits>
 
 #include "bagl/graph_traits.h"
-#include "bagl/null_property_map.h"
 #include "bagl/numeric_values.h"
 #include "bagl/property.h"
 #include "bagl/property_map.h"
@@ -46,13 +45,22 @@ concept MutableLvalueEdgePropertyMap = MutableLvaluePropertyMap<PMap, graph_edge
 // Special graph property maps that are very common.
 
 template <typename PMap, typename G>
-concept ReadableVertexIndexMap = ReadablePropertyMap<PMap, graph_vertex_descriptor_t<G>> && std::integral<property_traits_value_t<PMap>>;
+concept ReadableVertexIndexMap =
+    ReadablePropertyMap<PMap, graph_vertex_descriptor_t<G>> && std::integral<property_traits_value_t<PMap>>;
 template <typename PMap, typename G>
-concept ReadableEdgeIndexMap = ReadablePropertyMap<PMap, graph_edge_descriptor_t<G>> && std::integral<property_traits_value_t<PMap>>;
+concept ReadableEdgeIndexMap =
+    ReadablePropertyMap<PMap, graph_edge_descriptor_t<G>> && std::integral<property_traits_value_t<PMap>>;
 
-} // namespace concepts
+}  // namespace concepts
 
-enum class default_color_type : std::uint8_t { white_color, gray_color, green_color, red_color, black_color, invalid_color = std::numeric_limits<std::uint8_t>::max() };
+enum class default_color_type : std::uint8_t {
+  white_color,
+  gray_color,
+  green_color,
+  red_color,
+  black_color,
+  invalid_color = std::numeric_limits<std::uint8_t>::max()
+};
 
 template <class ColorValue>
 struct color_traits {
@@ -79,11 +87,11 @@ struct numeric_values<default_color_type> {
 
 // Define a bunch of pre-defined properties that come up a lot.
 
-#define BAGL_DEF_PROPERTY(KIND, NAME) \
-  struct KIND##_##NAME##_t {          \
-    using kind = KIND##_property_tag; \
+#define BAGL_DEF_PROPERTY(KIND, NAME)                         \
+  struct KIND##_##NAME##_t {                                  \
+    using kind = KIND##_property_tag;                         \
     static constexpr std::string_view name = #KIND "_" #NAME; \
-  };                                  \
+  };                                                          \
   constexpr KIND##_##NAME##_t KIND##_##NAME = {};
 
 BAGL_DEF_PROPERTY(vertex, index);
@@ -154,7 +162,7 @@ struct property_kind_from_graph<G, R T::*> {
       std::conditional_t<std::is_convertible_v<vertex_bundle_type<G>&, T&>, vertex_property_tag,
                          std::conditional_t<std::is_convertible_v<edge_bundle_type<G>&, T&>, edge_property_tag,
                                             std::conditional_t<std::is_convertible_v<graph_bundle_type<G>&, T&>,
-                                                               graph_property_tag, void> > >;
+                                                               graph_property_tag, void>>>;
 };
 
 struct dummy_edge_property_selector {
@@ -194,7 +202,7 @@ struct graph_tag_or_void {
 };
 
 template <typename Graph>
-struct graph_tag_or_void<Graph, std::void_t<typename Graph::graph_tag> > {
+struct graph_tag_or_void<Graph, std::void_t<typename Graph::graph_tag>> {
   using type = typename Graph::graph_tag;
 };
 
@@ -211,7 +219,7 @@ struct property_map
     : std::conditional_t<std::is_same_v<typename properties_detail::property_kind_from_graph<Graph, Property>::type,
                                         edge_property_tag>,
                          properties_detail::edge_property_map<Graph, Property>,
-                         properties_detail::vertex_property_map<Graph, Property> > {};
+                         properties_detail::vertex_property_map<Graph, Property>> {};
 template <typename Graph, typename Property>
 using property_map_const_t = typename property_map<Graph, Property>::const_type;
 template <typename Graph, typename Property>
@@ -234,14 +242,16 @@ struct has_property_map_check {
 };
 
 template <typename Graph, typename Tag>
-struct has_property_map_check<Graph, Tag, graph_property_tag, std::void_t<decltype(get_property(std::declval<const Graph&>(), Tag{}))>> {
+struct has_property_map_check<Graph, Tag, graph_property_tag,
+                              std::void_t<decltype(get_property(std::declval<const Graph&>(), Tag{}))>> {
   static constexpr bool value = !std::is_same_v<
       std::remove_cv_t<property_traits_value_t<decltype(get_property(std::declval<const Graph&>(), Tag{}))>>,
       no_property>;
 };
 
 template <typename Graph, typename Tag>
-struct has_property_map_check<Graph, Tag, vertex_property_tag, std::void_t<decltype(get(Tag{}, std::declval<const Graph&>()))>> {
+struct has_property_map_check<Graph, Tag, vertex_property_tag,
+                              std::void_t<decltype(get(Tag{}, std::declval<const Graph&>()))>> {
   static constexpr bool value =
       concepts::ReadableVertexPropertyMap<decltype(get(Tag{}, std::declval<const Graph&>())), Graph> &&
       !std::is_same_v<std::remove_cv_t<property_traits_value_t<decltype(get(Tag{}, std::declval<const Graph&>()))>>,
@@ -249,7 +259,8 @@ struct has_property_map_check<Graph, Tag, vertex_property_tag, std::void_t<declt
 };
 
 template <typename Graph, typename Tag>
-struct has_property_map_check<Graph, Tag, edge_property_tag, std::void_t<decltype(get(Tag{}, std::declval<const Graph&>()))>> {
+struct has_property_map_check<Graph, Tag, edge_property_tag,
+                              std::void_t<decltype(get(Tag{}, std::declval<const Graph&>()))>> {
   static constexpr bool value =
       concepts::ReadableEdgePropertyMap<decltype(get(Tag{}, std::declval<const Graph&>())), Graph> &&
       !std::is_same_v<std::remove_cv_t<property_traits_value_t<decltype(get(Tag{}, std::declval<const Graph&>()))>>,

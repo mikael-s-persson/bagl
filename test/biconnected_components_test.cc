@@ -31,7 +31,7 @@ using Vertex = graph_vertex_descriptor_t<Graph>;
 
 void check_articulation_points(const Graph& g, std::vector<Vertex> art_points) {
   auto components = vector_property_map(num_vertices(g), get(vertex_index, g), int{0});
-  int basic_comps = connected_components(g, components);
+  int basic_comps = connected_components(g, components.ref());
 
   std::vector<Vertex> art_points_check;
   for (auto v : vertices(g)) {
@@ -40,7 +40,7 @@ void check_articulation_points(const Graph& g, std::vector<Vertex> art_points) {
     clear_vertex(victim, g_copy);
     remove_vertex(victim, g_copy);
 
-    int copy_comps = connected_components(g_copy, components);
+    int copy_comps = connected_components(g_copy, components.ref());
     if (copy_comps > basic_comps) {
       art_points_check.push_back(v);
     }

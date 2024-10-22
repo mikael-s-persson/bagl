@@ -157,7 +157,7 @@ requires concepts::VertexListGraph<G> std::pair<std::size_t, OutputIterator> bic
       comp, num_components, children_of_root,      dtm,       dfs_time, lowpt, pred,
       out,  edge_stack,     is_articulation_point, index_map, dfs_vis};
 
-  depth_first_search(g, vis, make_vector_property_map<default_color_type>(index_map));
+  depth_first_search(g, vis, make_vector_property_map<default_color_type>(index_map).ref());
 
   return {num_components, vis.out_};
 }
@@ -169,9 +169,9 @@ template <concepts::IncidenceGraph G, concepts::WritableEdgePropertyMap<G> Compo
 requires concepts::VertexListGraph<G> std::pair<std::size_t, OutputIterator> biconnected_components(
     const G& g, ComponentMap comp, OutputIterator out, VertexIndexMap index_map, DiscoverTimeMap dtm,
     LowPointMap lowpt) {
-  return biconnected_components(g, comp, out, index_map, dtm, lowpt,
-                                make_vector_property_map(num_vertices(g), index_map, graph_traits<G>::null_vertex()),
-                                make_dfs_visitor());
+  return biconnected_components(
+      g, comp, out, index_map, dtm, lowpt,
+      make_vector_property_map(num_vertices(g), index_map, graph_traits<G>::null_vertex()).ref(), make_dfs_visitor());
 }
 
 template <concepts::IncidenceGraph G, concepts::WritableEdgePropertyMap<G> ComponentMap,
@@ -180,9 +180,9 @@ template <concepts::IncidenceGraph G, concepts::WritableEdgePropertyMap<G> Compo
 requires concepts::VertexListGraph<G> std::pair<std::size_t, OutputIterator> biconnected_components(
     const G& g, ComponentMap comp, OutputIterator out, DiscoverTimeMap dtm, LowPointMap lowpt) {
   auto index_map = get(vertex_index, g);
-  return biconnected_components(g, comp, out, index_map, dtm, lowpt,
-                                make_vector_property_map(num_vertices(g), index_map, graph_traits<G>::null_vertex()),
-                                make_dfs_visitor());
+  return biconnected_components(
+      g, comp, out, index_map, dtm, lowpt,
+      make_vector_property_map(num_vertices(g), index_map, graph_traits<G>::null_vertex()).ref(), make_dfs_visitor());
 }
 
 template <concepts::IncidenceGraph G, concepts::WritableEdgePropertyMap<G> ComponentMap,
@@ -193,7 +193,7 @@ requires concepts::VertexListGraph<G> std::pair<std::size_t, OutputIterator> bic
   auto dtm = make_vector_property_map(num_vertices(g), index_map, std::size_t{0});
   auto lowpt = make_vector_property_map(num_vertices(g), index_map, std::size_t{0});
 
-  return biconnected_components(g, comp, out, index_map, dtm, lowpt);
+  return biconnected_components(g, comp, out, index_map, dtm.ref(), lowpt.ref());
 }
 
 template <concepts::IncidenceGraph G, concepts::WritableEdgePropertyMap<G> ComponentMap>

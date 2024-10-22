@@ -187,15 +187,15 @@ TYPED_TEST_P(BreadthFirstSearchTest, Search) {
       auto color_pm = vector_property_map(i, idx, Color::white());
 
       // Create the testing visitor.
-      bfs_testing_visitor vis(start, distance_pm, parent_pm, color_pm);
+      bfs_testing_visitor vis(start, distance_pm.ref(), parent_pm.ref(), color_pm.ref());
 
-      breadth_first_search(g, std::ranges::single_view(start), vis, color_pm);
+      breadth_first_search(g, std::ranges::single_view(start), vis, color_pm.ref());
 
       // All white vertices should be unreachable from the source.
       for (auto u : vertices(g)) {
         if (color_pm[u] == Color::white()) {
           auto color2_pm = vector_property_map(i, idx, Color::white());
-          EXPECT_FALSE(is_reachable(start, u, g, color2_pm));
+          EXPECT_FALSE(is_reachable(start, u, g, color2_pm.ref()));
         }
       }
 

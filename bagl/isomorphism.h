@@ -377,8 +377,8 @@ auto count_vertices(const Graph& g) {
 template <concepts::VertexListGraph G, concepts::ReadableVertexIndexMap<G> Index>
 auto make_degree_invariant(const G& g, const Index& index) {
   auto pm = vector_property_map(num_vertices(g), index, std::size_t{0});
-  isomorphism_detail::compute_in_degree(g, pm);
-  return degree_vertex_invariant(g, pm);
+  isomorphism_detail::compute_in_degree(g, pm.ref());
+  return degree_vertex_invariant(g, pm.ref());
 }
 
 template <concepts::VertexAndEdgeListGraph Graph1, concepts::VertexListGraph Graph2,

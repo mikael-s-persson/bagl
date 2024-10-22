@@ -11,7 +11,6 @@
 #include "bagl/breadth_first_search.h"
 #include "bagl/d_ary_heap.h"
 #include "bagl/exception.h"
-#include "bagl/function_property_map.h"
 #include "bagl/graph_traits.h"
 #include "bagl/property_map.h"
 #include "bagl/relax.h"
@@ -194,7 +193,7 @@ void astar_search_no_init(const G& g, graph_vertex_descriptor_t<G> s, H h, V vis
                           property_traits_value_t<CostMap> zero) {
   using Vertex = graph_vertex_descriptor_t<G>;
   auto index_in_heap = make_vector_property_map<std::size_t>(index_map);
-  auto q = make_d_ary_heap_indirect<Vertex, 4>(cost, index_in_heap, compare);
+  auto q = make_d_ary_heap_indirect<Vertex, 4>(cost, index_in_heap.ref(), compare);
 
   astar_detail::astar_bfs_visitor bfs_vis{h,      vis,   q,       predecessor, cost, distance,
                                           weight, color, combine, compare,     zero};
@@ -215,7 +214,7 @@ void astar_search_no_init_tree(const G& g, graph_vertex_descriptor_t<G> s, H h, 
 
   auto q =
       make_d_ary_heap_indirect<Vertex, 4>(make_function_property_map<DVPair>([](const auto& p) { return p.first; }),
-                                          null_property_map<DVPair, std::size_t>(), compare);
+                                          null_property_map<std::size_t>(), compare);
 
   vis.discover_vertex(s, g);
   q.emplace(get(cost, s), s);

@@ -236,7 +236,7 @@ void lengauer_tarjan_dominator_tree(const Graph& g, const graph_vertex_descripto
       g, entry,
       make_dfs_visitor(predecessor_recorder_on_tree_edge(parent_map),
                        detail::time_stamper_with_vertex_on_discover_vertex(df_num_map, vertices_by_df_num, time)),
-      vector_property_map(num_of_vertices, index_map, color_traits<default_color_type>::white()));
+      vector_property_map(num_of_vertices, index_map, color_traits<default_color_type>::white()).ref());
 
   // 2. Run main algorithm.
   lengauer_tarjan_dominator_tree_without_dfs(g, entry, index_map, df_num_map, parent_map, vertices_by_df_num,
@@ -264,7 +264,8 @@ void lengauer_tarjan_dominator_tree(const Graph& g, const graph_vertex_descripto
   std::vector<Vertex> vertices_by_df_num(num_of_vertices, graph_traits<Graph>::null_vertex());
 
   // Run main algorithm
-  lengauer_tarjan_dominator_tree(g, entry, index_map, df_num_map, parent_map, vertices_by_df_num, dom_tree_pred_map);
+  lengauer_tarjan_dominator_tree(g, entry, index_map, df_num_map.ref(), parent_map.ref(), vertices_by_df_num,
+                                 dom_tree_pred_map);
 }
 
 // Muchnick. p. 182, 184

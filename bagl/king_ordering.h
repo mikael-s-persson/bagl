@@ -197,7 +197,7 @@ OutputIter king_ordering(const G& g, const VertexRange& vertex_rg, OutputIter pe
 
   // create the visitor
   sparse_detail::sparse_ordering_queue<Vertex> q;
-  king_detail::bfs_king_visitor vis{&permutation, &q, comp, pseudo_degree, loc, colors, index_map};
+  king_detail::bfs_king_visitor vis{&permutation, &q, comp, pseudo_degree.ref(), loc, colors, index_map};
 
   for (Vertex s : vertex_rg) {
     // call BFS with visitor
@@ -260,7 +260,7 @@ OutputIter king_ordering(const G& g, OutputIter permutation, VertexIndexMap inde
     return permutation;
   }
 
-  return king_ordering(g, permutation, two_bit_color_map(num_vertices(g), index_map), make_out_degree_map(g),
+  return king_ordering(g, permutation, two_bit_color_map(num_vertices(g), index_map).ref(), make_out_degree_map(g),
                        index_map);
 }
 

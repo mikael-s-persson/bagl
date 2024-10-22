@@ -17,6 +17,7 @@
 #include "bagl/d_ary_heap.h"
 #include "bagl/exception.h"
 #include "bagl/graph_traits.h"
+#include "bagl/graph_utility.h"
 #include "bagl/mutable_queue.h"
 #include "bagl/numeric_values.h"
 #include "bagl/property_map.h"
@@ -198,24 +199,6 @@ struct dijkstra_bfs_visitor {
   Combine combine_;
   D zero_;
 };
-
-template <concepts::IncidenceGraph G, concepts::ReadableVertexIndexMap<G> IndexMap>
-auto make_default_index_map(const G& g, const IndexMap& index) {
-  if constexpr (is_vertex_list_graph_v<G>) {
-    return make_vector_property_map<std::size_t>(num_vertices(g), index);
-  } else {
-    return make_vector_property_map<std::size_t>(index);
-  }
-}
-
-template <concepts::IncidenceGraph G, concepts::ReadableVertexIndexMap<G> IndexMap>
-auto make_default_color_map(const G& g, const IndexMap& index) {
-  if constexpr (is_vertex_list_graph_v<G>) {
-    return two_bit_color_map(num_vertices(g), index);
-  } else {
-    return make_vector_property_map<two_bit_color_type>(index);
-  }
-}
 }  // namespace dijkstra_detail
 
 // Call dijkstra search with default color map.
@@ -227,7 +210,7 @@ void dijkstra_shortest_paths_no_init(const G& g, Seeds seeds, PredecessorMap pre
                                      WeightMap weight, IndexMap index_map, Compare compare, Combine combine,
                                      property_traits_value_t<DistanceMap> zero, V vis) {
   dijkstra_shortest_paths_no_init(g, seeds, predecessor, distance, weight, index_map, compare, combine, zero, vis,
-                                  dijkstra_detail::make_default_color_map(g, index_map));
+                                  two_bit_color_map(num_vertices_or_zero(g), index_map).ref());
 }
 
 // Call dijkstra search with default color map.
@@ -254,8 +237,8 @@ void dijkstra_shortest_paths_no_init(const G& g, Seeds seeds, PredecessorMap pre
   using Vertex = graph_vertex_descriptor_t<G>;
 
   // Now the default: use a d-ary heap
-  auto index_in_heap = dijkstra_detail::make_default_index_map(g, index_map);
-  auto q = make_d_ary_heap_indirect<Vertex, 4>(distance, index_in_heap, compare);
+  auto index_in_heap = vector_property_map(num_vertices_or_zero(g), index_map, std::size_t{0});
+  auto q = make_d_ary_heap_indirect<Vertex, 4>(distance, index_in_heap.ref(), compare);
 
   dijkstra_detail::dijkstra_bfs_visitor bfs_vis{vis, q, weight, predecessor, distance, compare, combine, zero};
 
@@ -299,8 +282,8 @@ void dijkstra_shortest_paths(const G& g, Seeds seeds, PredecessorMap predecessor
                              WeightMap weight, IndexMap index_map, Compare compare, Combine combine,
                              property_traits_value_t<DistanceMap> inf, property_traits_value_t<DistanceMap> zero,
                              V vis) {
-  two_bit_color_map<IndexMap> color(num_vertices(g), index_map);
-  dijkstra_shortest_paths(g, seeds, predecessor, distance, weight, index_map, compare, combine, inf, zero, vis, color);
+  dijkstra_shortest_paths(g, seeds, predecessor, distance, weight, index_map, compare, combine, inf, zero, vis,
+                          two_bit_color_map(num_vertices(g), index_map).ref());
 }
 
 // Initialize distances and call dijkstra search with default color map

@@ -50,7 +50,7 @@ struct topo_sort_visitor : dfs_visitor<> {
 //
 template <concepts::VertexListGraph G, std::output_iterator<graph_vertex_descriptor_t<G>> OutputIterator>
 void topological_sort(G& g, OutputIterator result) {
-  depth_first_search(g, topo_sort_visitor(result), two_bit_color_map(num_vertices(g), get(vertex_index, g)));
+  depth_first_search(g, topo_sort_visitor(result), two_bit_color_map(num_vertices(g), get(vertex_index, g)).ref());
 }
 
 template <concepts::VertexListGraph G, std::output_iterator<graph_vertex_descriptor_t<G>> OutputIterator,
@@ -62,7 +62,7 @@ void topological_sort(const G& g, OutputIterator result, ColorMap color) {
 template <concepts::VertexListGraph G, std::output_iterator<graph_vertex_descriptor_t<G>> OutputIterator,
           concepts::ReadableVertexIndexMap<G> VertexIndexMap>
 void topological_sort(const G& g, OutputIterator result, VertexIndexMap v_index) {
-  depth_first_search(g, topo_sort_visitor(result), two_bit_color_map(num_vertices(g), v_index));
+  depth_first_search(g, topo_sort_visitor(result), two_bit_color_map(num_vertices(g), v_index).ref());
 }
 
 }  // namespace bagl

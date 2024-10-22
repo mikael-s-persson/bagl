@@ -301,9 +301,9 @@ void fruchterman_reingold_force_directed_layout(const G& g, PositionMap position
                                                 ForcePairs force_pairs,  // make_grid_force_pairs(topology, position, g)
                                                 Cooling cool) {          // linear_cooling<double>(100)
   using PointDiff = typename Topology::point_difference_type;
-  fruchterman_reingold_force_directed_layout(g, position, topology, attractive_force, repulsive_force, force_pairs,
-                                             cool,
-                                             vector_property_map(num_vertices(g), get(vertex_index, g), PointDiff{}));
+  fruchterman_reingold_force_directed_layout(
+      g, position, topology, attractive_force, repulsive_force, force_pairs, cool,
+      vector_property_map(num_vertices(g), get(vertex_index, g), PointDiff{}).ref());
 }
 
 }  // namespace bagl

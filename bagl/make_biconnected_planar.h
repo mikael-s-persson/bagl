@@ -26,7 +26,7 @@ void make_biconnected_planar(G& g, PlanarEmbedding embedding, EdgeIndexMap em, A
   std::vector<vertex_t> articulation_points;
   auto component_map = vector_property_map(n_edges, em, std::size_t{0});
 
-  biconnected_components(g, component_map, std::back_inserter(articulation_points));
+  biconnected_components(g, component_map.ref(), std::back_inserter(articulation_points));
 
   for (auto v : articulation_points) {
     std::size_t previous_component = std::numeric_limits<std::size_t>::max();

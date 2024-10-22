@@ -128,7 +128,7 @@ OutputIterator cuthill_mckee_ordering(const G& g, OutputIterator permutation, Ve
     return permutation;
   }
 
-  return cuthill_mckee_ordering(g, permutation, two_bit_color_map(num_vertices(g), index_map),
+  return cuthill_mckee_ordering(g, permutation, two_bit_color_map(num_vertices(g), index_map).ref(),
                                 out_degree_property_map(g));
 }
 

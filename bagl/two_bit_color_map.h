@@ -28,47 +28,45 @@ struct color_traits<two_bit_color_type> {
   static constexpr two_bit_color_type black() { return two_bit_color_type::black; }
 };
 
-template <typename IndexMap = identity_property_map>
-struct two_bit_color_map {
-  std::size_t n;
-  IndexMap index;
-  std::shared_ptr<std::uint8_t[]> data;
+struct two_bit_color_proxy {
+  static constexpr std::uint8_t bits_per_char = std::numeric_limits<std::uint8_t>::digits;
+  static constexpr std::uint8_t elements_per_char = bits_per_char / 2;
+  static constexpr std::size_t byte_index(std::size_t i) { return i / elements_per_char; }
+  static constexpr std::uint8_t bit_offset(std::size_t i) {
+    return static_cast<std::uint8_t>((i % elements_per_char) * 2);
+  }
 
-  static constexpr int bits_per_char = std::numeric_limits<std::uint8_t>::digits;
-  static constexpr int elements_per_char = bits_per_char / 2;
-  using value_type = two_bit_color_type;
-  using reference = void;
+  operator two_bit_color_type() const { return static_cast<two_bit_color_type>(((*byte_ptr) >> offset) & 3); }
+  const two_bit_color_proxy& operator=(two_bit_color_type c) const {
+    (*byte_ptr) = static_cast<std::uint8_t>(((*byte_ptr) & ~(3 << offset)) | (static_cast<std::uint8_t>(c) << offset));
+    return *this;
+  }
 
-  explicit two_bit_color_map(std::size_t a_n, const IndexMap& a_index = IndexMap())
-      : n(a_n), index(a_index), data(new std::uint8_t[(n + elements_per_char - 1) / elements_per_char]()) {}
+  std::uint8_t* byte_ptr = nullptr;
+  std::uint8_t offset = 0;
 };
 
-template <typename Key, concepts::ReadablePropertyMap<Key> IndexMap>
-two_bit_color_type get(const two_bit_color_map<IndexMap>& pm, const Key& key) {
-  static constexpr int elements_per_char = two_bit_color_map<IndexMap>::elements_per_char;
-  auto i = get(pm.index, key);
-  assert(i < pm.n);
-  const std::size_t byte_num = i / elements_per_char;
-  const std::size_t bit_position = ((i % elements_per_char) * 2);
-  return two_bit_color_type((pm.data.get()[byte_num] >> bit_position) & 3);
-}
+template <typename IndexMap = identity_property_map>
+struct two_bit_color_map : property_store_helper<two_bit_color_map<IndexMap>> {
+  IndexMap index;
+  std::vector<std::uint8_t> data;
 
-template <typename Key, concepts::ReadablePropertyMap<Key> IndexMap>
-void put(const two_bit_color_map<IndexMap>& pm, const Key& key, two_bit_color_type value) {
-  static constexpr int elements_per_char = two_bit_color_map<IndexMap>::elements_per_char;
-  auto i = get(pm.index, key);
-  assert(i < pm.n);
-  const std::size_t byte_num = i / elements_per_char;
-  const std::size_t bit_position = ((i % elements_per_char) * 2);
-  pm.data.get()[byte_num] = static_cast<std::uint8_t>((pm.data.get()[byte_num] & ~(3 << bit_position)) |
-                                                       (static_cast<std::uint8_t>(value) << bit_position));
-}
+  using value_type = two_bit_color_type;
 
-template <typename IndexMap>
-two_bit_color_map<IndexMap> make_two_bit_color_map(std::size_t n, const IndexMap& index_map) {
-  return two_bit_color_map<IndexMap>(n, index_map);
-}
+  explicit two_bit_color_map(std::size_t a_n, const IndexMap& a_index = IndexMap())
+      : index(a_index), data(two_bit_color_proxy::byte_index(a_n) + 1, 0) {}
 
-}  // end namespace bagl
+  template <typename Key>
+  two_bit_color_proxy operator[](Key&& k) {
+    auto i = get(index, std::forward<Key>(k));
+    std::size_t bi = two_bit_color_proxy::byte_index(i);
+    if (bi >= data.size()) [[unlikely]] {
+      data.resize(bi + 1, 0);
+    }
+    return two_bit_color_proxy(&data[bi], two_bit_color_proxy::bit_offset(i));
+  }
+};
+
+}  // namespace bagl
 
 #endif  // BAGL_BAGL_TWO_BIT_COLOR_MAP_H_

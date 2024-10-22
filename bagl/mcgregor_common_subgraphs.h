@@ -273,9 +273,9 @@ void mcgregor_common_subgraphs_internal_init(const GraphFirst& graph1, const Gra
 
   std::stack<VertexFirst> vertex_stack1;
 
-  mcgregor_common_subgraphs_internal(graph1, graph2, vindex_map1, vindex_map2, correspondence_map_1_to_2,
-                                     correspondence_map_2_to_1, vertex_stack1, edges_equivalent, vertices_equivalent,
-                                     only_connected_subgraphs, subgraph_callback);
+  mcgregor_common_subgraphs_internal(graph1, graph2, vindex_map1, vindex_map2, correspondence_map_1_to_2.ref(),
+                                     correspondence_map_2_to_1.ref(), vertex_stack1, edges_equivalent,
+                                     vertices_equivalent, only_connected_subgraphs, subgraph_callback);
 }
 
 }  // namespace mcgregor_detail
@@ -334,7 +334,7 @@ auto copy_subgraph_maps(std::size_t subgraph_size, const GraphFirst& graph1, con
     put(new_subgraph_2_to_1, vertex2, get(corr_2_to_1, vertex2));
   }
 
-  return std::tuple{subgraph_size, new_subgraph_1_to_2, new_subgraph_2_to_1};
+  return std::tuple{subgraph_size, std::move(new_subgraph_1_to_2), std::move(new_subgraph_2_to_1)};
 }
 
 // Binary function object that intercepts subgraphs from
@@ -406,7 +406,7 @@ template <concepts::VertexListGraph GraphFirst, concepts::VertexListGraph GraphS
           typename VertexEquivalencePredicate, typename SubGraphCallback>
 void mcgregor_common_subgraphs_unique(const GraphFirst& graph1, const GraphSecond& graph2,
                                       const VertexIndexMapFirst vindex_map1,           // get(vertex_index, graph1)
-                                      const VertexIndexMapSecond vindex_map2,          // get(vertex_index, graph1)
+                                      const VertexIndexMapSecond vindex_map2,          // get(vertex_index, graph2)
                                       EdgeEquivalencePredicate edges_equivalent,       // always_equivalent()
                                       VertexEquivalencePredicate vertices_equivalent,  // always_equivalent()
                                       bool only_connected_subgraphs, SubGraphCallback user_callback) {
@@ -477,8 +477,8 @@ struct maximum_subgraph_interceptor : unique_subgraph_interceptor<GraphFirst, Gr
   }
 
   void output_subgraphs() {
-    for (auto [cached_size, cached_1_to_2, cached_2_to_1] : *this->subgraphs_) {
-      user_callback_(cached_1_to_2, cached_2_to_1, cached_size);
+    for (auto& [cached_size, cached_1_to_2, cached_2_to_1] : *this->subgraphs_) {
+      user_callback_(cached_1_to_2.ref(), cached_2_to_1.ref(), cached_size);
     }
   }
 
@@ -497,7 +497,7 @@ template <concepts::VertexListGraph GraphFirst, concepts::VertexListGraph GraphS
           typename VertexEquivalencePredicate, typename SubGraphCallback>
 void mcgregor_common_subgraphs_maximum(const GraphFirst& graph1, const GraphSecond& graph2,
                                        const VertexIndexMapFirst vindex_map1,           // get(vertex_index, graph1)
-                                       const VertexIndexMapSecond vindex_map2,          // get(vertex_index, graph1)
+                                       const VertexIndexMapSecond vindex_map2,          // get(vertex_index, graph2)
                                        EdgeEquivalencePredicate edges_equivalent,       // always_equivalent()
                                        VertexEquivalencePredicate vertices_equivalent,  // always_equivalent()
                                        bool only_connected_subgraphs, SubGraphCallback user_callback) {
@@ -532,7 +532,7 @@ template <concepts::VertexListGraph GraphFirst, concepts::VertexListGraph GraphS
           typename VertexEquivalencePredicate, typename SubGraphCallback>
 void mcgregor_common_subgraphs_maximum_unique(const GraphFirst& graph1, const GraphSecond& graph2,
                                               const VertexIndexMapFirst vindex_map1,      // get(vertex_index, graph1)
-                                              const VertexIndexMapSecond vindex_map2,     // get(vertex_index, graph1)
+                                              const VertexIndexMapSecond vindex_map2,     // get(vertex_index, graph2)
                                               EdgeEquivalencePredicate edges_equivalent,  // always_equivalent()
                                               VertexEquivalencePredicate vertices_equivalent,  // always_equivalent()
                                               bool only_connected_subgraphs, SubGraphCallback user_callback) {

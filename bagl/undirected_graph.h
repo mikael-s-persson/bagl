@@ -12,7 +12,7 @@
 #include "bagl/graph_selectors.h"
 #include "bagl/properties.h"
 #include "bagl/property.h"
-#include "bagl/transform_value_property_map.h"
+#include "bagl/property_map.h"
 
 namespace bagl {
 struct undirected_graph_tag {};
@@ -470,21 +470,20 @@ struct property_map<BAGL_UNDIRECTED_GRAPH, Property>
 
 template <BAGL_UNDIRECTED_GRAPH_PARAMS>
 struct property_map<BAGL_UNDIRECTED_GRAPH, vertex_all_t> {
-  using const_type = transform_value_property_map<
-      top_property_remover, property_map_const_t<typename undirected_graph<VP, EP, GP>::graph_type, vertex_all_t>>;
-  using type =
-      transform_value_property_map<top_property_remover,
-                                   property_map_t<typename undirected_graph<VP, EP, GP>::graph_type, vertex_all_t>>;
+  using const_type =
+      transform_property_map<top_property_remover,
+                             property_map_const_t<typename undirected_graph<VP, EP, GP>::graph_type, vertex_all_t>>;
+  using type = transform_property_map<top_property_remover,
+                                      property_map_t<typename undirected_graph<VP, EP, GP>::graph_type, vertex_all_t>>;
 };
 
 template <BAGL_UNDIRECTED_GRAPH_PARAMS>
 struct property_map<BAGL_UNDIRECTED_GRAPH, edge_all_t> {
   using const_type =
-      transform_value_property_map<top_property_remover,
-                                   property_map_const_t<typename undirected_graph<VP, EP, GP>::graph_type, edge_all_t>>;
-  using type =
-      transform_value_property_map<top_property_remover,
-                                   property_map_t<typename undirected_graph<VP, EP, GP>::graph_type, edge_all_t>>;
+      transform_property_map<top_property_remover,
+                             property_map_const_t<typename undirected_graph<VP, EP, GP>::graph_type, edge_all_t>>;
+  using type = transform_property_map<top_property_remover,
+                                      property_map_t<typename undirected_graph<VP, EP, GP>::graph_type, edge_all_t>>;
 };
 
 // PropertyGraph concepts

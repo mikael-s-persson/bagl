@@ -192,7 +192,7 @@ class base_state {
   [[nodiscard]] bool term_in() const { return core_count_ < term_in_count_; }
 
   // Returns true if vertex belongs to the in-terminal set
-  [[nodiscard]] bool term_in(const vertex_this_type& v) const {
+  [[nodiscard]] bool term_in(const vertex_this_type& v) {
     return (get(in_, v) > 0) && (get(core_, v) == graph_traits<GraphOther>::null_vertex());
   }
 
@@ -200,7 +200,7 @@ class base_state {
   [[nodiscard]] bool term_out() const { return core_count_ < term_out_count_; }
 
   // Returns true if vertex belongs to the out-terminal set
-  [[nodiscard]] bool term_out(const vertex_this_type& v) const {
+  [[nodiscard]] bool term_out(const vertex_this_type& v) {
     return (get(out_, v) > 0) && (get(core_, v) == graph_traits<GraphOther>::null_vertex());
   }
 
@@ -208,13 +208,13 @@ class base_state {
   [[nodiscard]] bool term_both() const { return core_count_ < term_both_count_; }
 
   // Returns true if vertex belongs to both (in- and out-terminal) sets
-  [[nodiscard]] bool term_both(const vertex_this_type& v) const {
+  [[nodiscard]] bool term_both(const vertex_this_type& v) {
     return (get(in_, v) > 0) && (get(out_, v) > 0) && (get(core_, v) == graph_traits<GraphOther>::null_vertex());
   }
 
   // Returns true if vertex belongs to the core map, i.e. it is in the
   // present mapping
-  [[nodiscard]] bool in_core(const vertex_this_type& v) const {
+  [[nodiscard]] bool in_core(const vertex_this_type& v) {
     return get(core_, v) != graph_traits<GraphOther>::null_vertex();
   }
 
@@ -222,18 +222,18 @@ class base_state {
   [[nodiscard]] std::size_t count() const { return core_count_; }
 
   // Returns the image (in graph_other) of vertex v (in graph_this)
-  [[nodiscard]] vertex_other_type core(const vertex_this_type& v) const { return get(core_, v); }
+  [[nodiscard]] vertex_other_type core(const vertex_this_type& v) { return get(core_, v); }
 
   // Returns the mapping
-  [[nodiscard]] auto get_map() const { return core_; }
+  [[nodiscard]] auto get_map() { return core_.ref(); }
 
   // Returns the "time" (or depth) when vertex was added to the
   // in-terminal set
-  [[nodiscard]] std::size_t in_depth(const vertex_this_type& v) const { return get(in_, v); }
+  [[nodiscard]] std::size_t in_depth(const vertex_this_type& v) { return get(in_, v); }
 
   // Returns the "time" (or depth) when vertex was added to the
   // out-terminal set
-  [[nodiscard]] std::size_t out_depth(const vertex_this_type& v) const { return get(out_, v); }
+  [[nodiscard]] std::size_t out_depth(const vertex_this_type& v) { return get(out_, v); }
 
   // Returns the terminal set counts
   [[nodiscard]] std::tuple<std::size_t, std::size_t, std::size_t> term_set() const {
@@ -486,7 +486,7 @@ class state {
 
   // Returns true if vertex v in graph1 is a possible candidate to
   // be added to the current state
-  [[nodiscard]] bool possible_candidate1(const vertex1_type& v) const {
+  [[nodiscard]] bool possible_candidate1(const vertex1_type& v) {
     if (state1_.term_both() && state2_.term_both()) {
       return state1_.term_both(v);
     }
@@ -501,7 +501,7 @@ class state {
 
   // Returns true if vertex w in graph2 is a possible candidate to
   // be added to the current state
-  [[nodiscard]] bool possible_candidate2(const vertex2_type& w) const {
+  [[nodiscard]] bool possible_candidate2(const vertex2_type& w) {
     if (state1_.term_both() && state2_.term_both()) {
       return state2_.term_both(w);
     }
@@ -528,9 +528,7 @@ class state {
   }
 
   // Calls the user_callback with a graph (sub)graph mapping
-  bool call_back(SubGraphIsoMapCallback user_callback) const {
-    return user_callback(state1_.get_map(), state2_.get_map());
-  }
+  bool call_back(SubGraphIsoMapCallback user_callback) { return user_callback(state1_.get_map(), state2_.get_map()); }
 };
 
 // Non-recursive method that explores state space using a depth-first

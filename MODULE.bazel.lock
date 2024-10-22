@@ -97,19 +97,19 @@
     "@@apple_support~//crosstool:setup.bzl%apple_cc_configure_extension": {
       "general": {
         "bzlTransitiveDigest": "ltCGFbl/LQQZXn/LEMXfKX7pGwyqNiOCHcmiQW0tmjM=",
-        "usagesDigest": "RkqDb8JtSSm4rLheCLMw/Dx3QQE7dZbl4taOVEYaQZg=",
+        "usagesDigest": "2Jj0sTGzjx2KfYRjWYbL6DZ1bi8HL2roIAGfOViiul8=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
         "generatedRepoSpecs": {
-          "local_config_apple_cc": {
-            "bzlFile": "@@apple_support~//crosstool:setup.bzl",
-            "ruleClassName": "_apple_cc_autoconf",
-            "attributes": {}
-          },
           "local_config_apple_cc_toolchains": {
             "bzlFile": "@@apple_support~//crosstool:setup.bzl",
             "ruleClassName": "_apple_cc_autoconf_toolchains",
+            "attributes": {}
+          },
+          "local_config_apple_cc": {
+            "bzlFile": "@@apple_support~//crosstool:setup.bzl",
+            "ruleClassName": "_apple_cc_autoconf",
             "attributes": {}
           }
         },
@@ -125,7 +125,7 @@
     "@@platforms//host:extension.bzl%host_platform": {
       "general": {
         "bzlTransitiveDigest": "xelQcPZH8+tmuOHVjL9vDxMnnQNMlwj0SlvgoqBkm4U=",
-        "usagesDigest": "V1R2Y2oMxKNfx2WCWpSCaUV1WefW1o8HZGm3v1vHgY4=",
+        "usagesDigest": "hgylFkgWSg0ulUwWZzEM1aIftlUnbmw2ynWLdEfHnZc=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -142,11 +142,29 @@
     "@@toolchains_llvm~//toolchain/extensions:llvm.bzl%llvm": {
       "general": {
         "bzlTransitiveDigest": "y9h5L2NtWbogyWSOJgqnUaU50MTPWAW+waelXSirMVg=",
-        "usagesDigest": "0zjYTeUUkJkByhduf5FTQUTh5Ob07REdxngFSpOc6fA=",
+        "usagesDigest": "ZWLU3d1Lic+Du3ZxCF1hxjFel6BHtlx4itVD805vq8E=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
         "generatedRepoSpecs": {
+          "llvm_toolchain_llvm": {
+            "bzlFile": "@@toolchains_llvm~//toolchain:rules.bzl",
+            "ruleClassName": "llvm",
+            "attributes": {
+              "alternative_llvm_sources": [],
+              "auth_patterns": {},
+              "distribution": "auto",
+              "exec_arch": "",
+              "exec_os": "",
+              "llvm_mirror": "",
+              "llvm_version": "17.0.6",
+              "llvm_versions": {},
+              "netrc": "",
+              "sha256": {},
+              "strip_prefix": {},
+              "urls": {}
+            }
+          },
           "llvm_toolchain": {
             "bzlFile": "@@toolchains_llvm~//toolchain:rules.bzl",
             "ruleClassName": "toolchain",
@@ -174,24 +192,6 @@
               "unfiltered_compile_flags": {},
               "toolchain_roots": {},
               "sysroot": {}
-            }
-          },
-          "llvm_toolchain_llvm": {
-            "bzlFile": "@@toolchains_llvm~//toolchain:rules.bzl",
-            "ruleClassName": "llvm",
-            "attributes": {
-              "alternative_llvm_sources": [],
-              "auth_patterns": {},
-              "distribution": "auto",
-              "exec_arch": "",
-              "exec_os": "",
-              "llvm_mirror": "",
-              "llvm_version": "17.0.6",
-              "llvm_versions": {},
-              "netrc": "",
-              "sha256": {},
-              "strip_prefix": {},
-              "urls": {}
             }
           }
         },

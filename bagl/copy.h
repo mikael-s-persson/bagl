@@ -156,7 +156,7 @@ template <concepts::VertexListGraph GIn, concepts::MutableGraph GOut,
           std::invocable<graph_edge_descriptor_t<GIn>, graph_edge_descriptor_t<GOut>> EdgeCopier>
 void copy_graph(const GIn& g_in, GOut& g_out, VertexCopier v_copier, EdgeCopier e_copier) {
   copy_graph(g_in, g_out, v_copier, e_copier,
-             vector_property_map(num_vertices(g_in), get(vertex_index, g_in), graph_traits<GOut>::null_vertex()),
+             vector_property_map(num_vertices(g_in), get(vertex_index, g_in), graph_traits<GOut>::null_vertex()).ref(),
              get(vertex_index, g_in));
 }
 
@@ -170,7 +170,7 @@ void copy_graph(const GIn& g_in, GOut& g_out, OrigToCopyMap orig_to_copy, OrigVe
 template <concepts::VertexListGraph GIn, concepts::MutableGraph GOut>
 void copy_graph(const GIn& g_in, GOut& g_out) {
   copy_graph(g_in, g_out, default_vertex_copier(g_in, g_out), default_edge_copier(g_in, g_out),
-             vector_property_map(num_vertices(g_in), get(vertex_index, g_in), graph_traits<GOut>::null_vertex()),
+             vector_property_map(num_vertices(g_in), get(vertex_index, g_in), graph_traits<GOut>::null_vertex()).ref(),
              get(vertex_index, g_in));
 }
 
@@ -254,7 +254,7 @@ graph_vertex_descriptor_t<GOut> copy_component(const GIn& g_in, graph_vertex_des
                                                VertexCopier v_copier, EdgeCopier e_copier) {
   return copy_component(
       g_in, src, g_out, v_copier, e_copier,
-      vector_property_map(num_vertices(g_in), get(vertex_index, g_in), graph_traits<GOut>::null_vertex()),
+      vector_property_map(num_vertices(g_in), get(vertex_index, g_in), graph_traits<GOut>::null_vertex()).ref(),
       get(vertex_index, g_in));
 }
 
@@ -262,7 +262,7 @@ template <concepts::VertexListGraph GIn, concepts::MutableGraph GOut>
 graph_vertex_descriptor_t<GOut> copy_component(const GIn& g_in, graph_vertex_descriptor_t<GIn> src, GOut& g_out) {
   return copy_component(
       g_in, src, g_out, default_vertex_copier(g_in, g_out), default_edge_copier(g_in, g_out),
-      vector_property_map(num_vertices(g_in), get(vertex_index, g_in), graph_traits<GOut>::null_vertex()),
+      vector_property_map(num_vertices(g_in), get(vertex_index, g_in), graph_traits<GOut>::null_vertex()).ref(),
       get(vertex_index, g_in));
 }
 

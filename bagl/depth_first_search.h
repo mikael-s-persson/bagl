@@ -176,7 +176,8 @@ void depth_first_search(const G& g, V vis) {
     return;
   }
 
-  depth_first_search(g, vis, two_bit_color_map(num_vertices(g), get(vertex_index, g)), get_default_starting_vertex(g));
+  depth_first_search(g, vis, two_bit_color_map(num_vertices(g), get(vertex_index, g)).ref(),
+                     get_default_starting_vertex(g));
 }
 
 template <typename Visitors = null_visitors>

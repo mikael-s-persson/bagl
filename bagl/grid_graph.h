@@ -16,7 +16,6 @@
 #include "bagl/graph_traits.h"
 #include "bagl/properties.h"
 #include "bagl/property_map.h"
-#include "bagl/transform_value_property_map.h"
 
 namespace bagl {
 
@@ -496,15 +495,17 @@ class grid_graph {
   }
 
   friend auto get(vertex_index_t /*unused*/, const self& graph) {
-    return transformed_property_map<vertex_descriptor>([&graph](vertex_descriptor v) { return graph.index_of(v); });
+    return make_function_property_map<vertex_descriptor>([&graph](vertex_descriptor v) { return graph.index_of(v); });
   }
 
   friend auto get(edge_index_t /*unused*/, const self& graph) {
-    return transformed_property_map<edge_descriptor>([&graph](edge_descriptor e) { return graph.index_of(e); });
+    return make_function_property_map<edge_descriptor>([&graph](edge_descriptor e) { return graph.index_of(e); });
   }
 
   friend auto get(edge_reverse_t /*unused*/, const self& /*graph*/) {
-    return transformed_property_map<edge_descriptor>([](edge_descriptor e) { return edge_descriptor{e.target, e.source}; });
+    return make_function_property_map<edge_descriptor>([](edge_descriptor e) {
+      return edge_descriptor{e.target, e.source};
+    });
   }
 
 };  // grid_graph

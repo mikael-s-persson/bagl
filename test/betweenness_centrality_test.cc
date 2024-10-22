@@ -56,7 +56,7 @@ TYPED_TEST_P(BetweennessCentralityDirectedTest, WeightedEdges) {
   }
 
   auto centrality = vector_property_map(num_vertices(g), get(vertex_index, g), double{0.0});
-  brandes_betweenness_centrality_weighted(g, centrality, get(edge_weight, g));
+  brandes_betweenness_centrality_weighted(g, centrality.ref(), get(edge_weight, g));
 
   double correct_centrality[5] = {0.0, 1.5, 0.0, 1.0, 0.5};
   for (auto v : vertices(g)) {
@@ -105,14 +105,14 @@ void run_unweighted_test(std::span<unweighted_edge> edge_init, std::span<double>
 
   auto centrality1 = vector_property_map(num_vertices(g), vindex, double{0.0});
   auto edge_centrality1 = vector_property_map(edge_init.size(), eindex, double{0.0});
-  brandes_betweenness_centrality(g, centrality1, edge_centrality1);
+  brandes_betweenness_centrality(g, centrality1.ref(), edge_centrality1.ref());
 
   auto centrality2 = vector_property_map(num_vertices(g), vindex, double{0.0});
   auto edge_centrality2 = vector_property_map(edge_init.size(), eindex, double{0.0});
-  brandes_betweenness_centrality_weighted(g, centrality2, edge_centrality2, get(edge_weight, g), vindex);
+  brandes_betweenness_centrality_weighted(g, centrality2.ref(), edge_centrality2.ref(), get(edge_weight, g), vindex);
 
   auto edge_centrality3 = vector_property_map(edge_init.size(), eindex, double{0.0});
-  brandes_betweenness_centrality(g, dummy_property_map(), edge_centrality3);
+  brandes_betweenness_centrality(g, dummy_property_map(), edge_centrality3.ref());
 
   for (auto v : vertices(g)) {
     EXPECT_THAT(centrality1[v], ::testing::DoubleEq(centrality2[v]));
@@ -171,13 +171,13 @@ TYPED_TEST_P(BetweennessCentralityUndirectedTest, Wheel) {
   auto vindex = get(vertex_index, g);
 
   auto centrality1 = vector_property_map(num_vertices(g), vindex, double{0.0});
-  brandes_betweenness_centrality(g, centrality1);
+  brandes_betweenness_centrality(g, centrality1.ref());
 
   auto centrality2 = vector_property_map(num_vertices(g), vindex, double{0.0});
-  brandes_betweenness_centrality_weighted(g, centrality2, get(edge_weight, g), vindex);
+  brandes_betweenness_centrality_weighted(g, centrality2.ref(), get(edge_weight, g), vindex);
 
-  relative_betweenness_centrality(g, centrality1);
-  relative_betweenness_centrality(g, centrality2);
+  relative_betweenness_centrality(g, centrality1.ref());
+  relative_betweenness_centrality(g, centrality2.ref());
 
   for (auto v : vertices(g)) {
     EXPECT_THAT(centrality1[v], ::testing::DoubleEq(centrality2[v]));
@@ -188,7 +188,7 @@ TYPED_TEST_P(BetweennessCentralityUndirectedTest, Wheel) {
     }
   }
 
-  double dominance = central_point_dominance(g, centrality2);
+  double dominance = central_point_dominance(g, centrality2.ref());
   EXPECT_THAT(dominance, ::testing::DoubleEq(1.0));
 }
 
@@ -317,11 +317,11 @@ TYPED_TEST_P(BetweennessCentralityUndirectedTest, RandomUnweightedEdges) {
 
   // Direct translation of Brandes' algorithm...
   auto centrality1 = vector_property_map(num_vertices(g), get(vertex_index, g), double{0.0});
-  simple_unweighted_betweenness_centrality(g, get(vertex_index, g), centrality1);
+  simple_unweighted_betweenness_centrality(g, get(vertex_index, g), centrality1.ref());
 
   // Real version, unweighted...
   auto centrality2 = vector_property_map(num_vertices(g), get(vertex_index, g), double{0.0});
-  brandes_betweenness_centrality(g, centrality2);
+  brandes_betweenness_centrality(g, centrality2.ref());
 
   for (auto v : vertices(g)) {
     EXPECT_THAT(centrality2[v], ::testing::DoubleNear(centrality1[v], error_tolerance))
@@ -333,7 +333,7 @@ TYPED_TEST_P(BetweennessCentralityUndirectedTest, RandomUnweightedEdges) {
   }
 
   auto centrality3 = vector_property_map(num_vertices(g), get(vertex_index, g), double{0.0});
-  brandes_betweenness_centrality_weighted(g, centrality3, get(edge_weight, g), get(vertex_index, g));
+  brandes_betweenness_centrality_weighted(g, centrality3.ref(), get(edge_weight, g), get(vertex_index, g));
 
   for (auto v : vertices(g)) {
     EXPECT_THAT(centrality3[v], ::testing::DoubleNear(centrality1[v], error_tolerance))

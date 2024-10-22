@@ -93,7 +93,7 @@ template <concepts::VertexListGraph Graph, concepts::ReadableEdgePropertyMap<Gra
 requires std::same_as<graph_edge_descriptor_t<Graph>, property_traits_value_t<Pred>>
 void cycle_canceling(const Graph& g, Weight weight, Reversed rev, ResidualCapacity residual_capacity, Pred pred) {
   cycle_canceling(g, weight, rev, residual_capacity, pred,
-                  vector_property_map(num_vertices(g), get(vertex_index, g), property_traits_value_t<Weight>{}));
+                  vector_property_map(num_vertices(g), get(vertex_index, g), property_traits_value_t<Weight>{}).ref());
 }
 
 template <concepts::VertexListGraph Graph, concepts::ReadableEdgePropertyMap<Graph> Weight,
@@ -103,7 +103,7 @@ requires std::convertible_to<property_traits_value_t<Weight>, property_traits_va
 void cycle_canceling(const Graph& g, Weight weight, Reversed rev, ResidualCapacity residual_capacity,
                      Distance distance) {
   cycle_canceling(g, weight, rev, residual_capacity,
-                  vector_property_map(num_vertices(g), get(vertex_index, g), graph_edge_descriptor_t<Graph>{}),
+                  vector_property_map(num_vertices(g), get(vertex_index, g), graph_edge_descriptor_t<Graph>{}).ref(),
                   distance);
 }
 
@@ -111,8 +111,8 @@ template <concepts::VertexListGraph Graph, concepts::ReadableEdgePropertyMap<Gra
           concepts::ReadableEdgePropertyMap<Graph> Reversed, concepts::ReadWriteEdgePropertyMap<Graph> ResidualCapacity>
 void cycle_canceling(const Graph& g, Weight weight, Reversed rev, ResidualCapacity residual_capacity) {
   cycle_canceling(g, weight, rev, residual_capacity,
-                  vector_property_map(num_vertices(g), get(vertex_index, g), graph_edge_descriptor_t<Graph>{}),
-                  vector_property_map(num_vertices(g), get(vertex_index, g), property_traits_value_t<Weight>{}));
+                  vector_property_map(num_vertices(g), get(vertex_index, g), graph_edge_descriptor_t<Graph>{}).ref(),
+                  vector_property_map(num_vertices(g), get(vertex_index, g), property_traits_value_t<Weight>{}).ref());
 }
 
 }  // namespace bagl

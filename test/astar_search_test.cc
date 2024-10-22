@@ -60,9 +60,10 @@ TEST(AStarSearchTest, Search) {
     SCOPED_TRACE(print_problem_def());
 
     // call astar named parameter interface
-    EXPECT_THROW(astar_search(g, start, test::travel_time_heuristic(g, goal),
-                              make_astar_visitor(bfs_stop_at_goal(goal)), pm, cm, dm, weight, idx, colorm),
-                 search_succeeded)
+    EXPECT_THROW(
+        astar_search(g, start, test::travel_time_heuristic(g, goal), make_astar_visitor(bfs_stop_at_goal(goal)),
+                     pm.ref(), cm.ref(), dm.ref(), weight, idx, colorm.ref()),
+        search_succeeded)
         << "Did not find a path to the goal at all!";
     std::vector<Vertex> shortest_path;
     float path_weight_sum = 0.0F;
@@ -99,8 +100,8 @@ TEST(AStarSearchTest, Search) {
     EXPECT_THAT(dm[goal], ::testing::FloatNear(path_weight_sum, 1.0e-5F));
     float early_stop_cost = dm[goal];
     // Run astar exhaustively, to be sure.
-    astar_search(g, start, test::travel_time_heuristic(g, goal), default_astar_visitor(), pm, cm, dm, weight, idx,
-                 colorm);
+    astar_search(g, start, test::travel_time_heuristic(g, goal), default_astar_visitor(), pm.ref(), cm.ref(), dm.ref(),
+                 weight, idx, colorm.ref());
     EXPECT_THAT(early_stop_cost, ::testing::FloatNear(dm[goal], 1.0e-5F));
     for (auto v : vertices(g)) {
       if (pm[v] == v) {

@@ -32,8 +32,9 @@ void dijkstra_shortest_paths_no_color_map_no_init(const G& g, Seeds seeds,
                                                   property_traits_value_t<DistanceMap> d_infinity,
                                                   property_traits_value_t<DistanceMap> d_zero, V visitor) {
   // Default - use d-ary heap (d = 4)
-  auto vertex_queue = make_d_ary_heap_indirect<graph_vertex_descriptor_t<G>, 4>(
-      distance_map, vector_property_map{num_vertices_or_zero(g), index_map, std::size_t{}}, compare);
+  auto index_in_heap = vector_property_map{num_vertices_or_zero(g), index_map, std::size_t{}};
+  auto vertex_queue =
+      make_d_ary_heap_indirect<graph_vertex_descriptor_t<G>, 4>(distance_map, index_in_heap.ref(), compare);
 
   // Add vertex to the queue
   // Starting vertex will always be the first discovered vertex

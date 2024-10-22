@@ -134,7 +134,7 @@ TYPED_TEST_P(DepthFirstSearchTest, Search) {
       auto discover_time_pm = vector_property_map(num_vertices(g), idx, 0);
       auto finish_time_pm = vector_property_map(num_vertices(g), idx, 0);
 
-      dfs_test_visitor vis(color, parent_pm, discover_time_pm, finish_time_pm);
+      dfs_test_visitor vis(color, parent_pm.ref(), discover_time_pm.ref(), finish_time_pm.ref());
 
       depth_first_search(g, vis, color);
 
@@ -150,13 +150,13 @@ TYPED_TEST_P(DepthFirstSearchTest, Search) {
           if (u == v) {
             continue;
           }
-          EXPECT_THAT(true,
-                      ::testing::AnyOf(
-                          finish_time_pm[u] < discover_time_pm[v], finish_time_pm[v] < discover_time_pm[u],
-                          ::testing::AllOf(discover_time_pm[v] < discover_time_pm[u],
-                                           finish_time_pm[u] < finish_time_pm[v], is_descendant(u, v, parent_pm)),
-                          ::testing::AllOf(discover_time_pm[u] < discover_time_pm[v],
-                                           finish_time_pm[v] < finish_time_pm[u], is_descendant(v, u, parent_pm))));
+          EXPECT_THAT(
+              true, ::testing::AnyOf(
+                        finish_time_pm[u] < discover_time_pm[v], finish_time_pm[v] < discover_time_pm[u],
+                        ::testing::AllOf(discover_time_pm[v] < discover_time_pm[u],
+                                         finish_time_pm[u] < finish_time_pm[v], is_descendant(u, v, parent_pm.ref())),
+                        ::testing::AllOf(discover_time_pm[u] < discover_time_pm[v],
+                                         finish_time_pm[v] < finish_time_pm[u], is_descendant(v, u, parent_pm.ref()))));
         }
       }
     }

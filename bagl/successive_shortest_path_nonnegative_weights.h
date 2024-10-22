@@ -76,7 +76,7 @@ void successive_shortest_path_nonnegative_weights(const G& g, graph_vertex_descr
       put(pred, v, edge_descriptor());
     }
 
-    dijkstra_shortest_paths(gres, s, vector_property_map(num_vertices(g), index, graph_traits<G>::null_vertex()),
+    dijkstra_shortest_paths(gres, s, vector_property_map(num_vertices(g), index, graph_traits<G>::null_vertex()).ref(),
                             distance, successive_shortest_path_detail::map_reduced_weight(gres, weight, distance_prev),
                             index, make_dijkstra_visitor(edge_predecessor_recorder_on_edge_relaxed(pred)));
 
@@ -102,7 +102,7 @@ void successive_shortest_path_nonnegative_weights(const G& g, graph_vertex_descr
                                                   VertexIndex index, Pred pred, Distance distance) {
   using D = property_traits_value_t<Weight>;
   successive_shortest_path_nonnegative_weights(g, s, t, capacity, residual_capacity, weight, rev, index, pred, distance,
-                                               vector_property_map(num_vertices(g), index, D{}));
+                                               vector_property_map(num_vertices(g), index, D{}).ref());
 }
 
 template <concepts::VertexAndEdgeListGraph G, concepts::ReadableEdgePropertyMap<G> Capacity,
@@ -115,7 +115,7 @@ void successive_shortest_path_nonnegative_weights(const G& g, graph_vertex_descr
                                                   VertexIndex index, Pred pred) {
   using D = property_traits_value_t<Weight>;
   successive_shortest_path_nonnegative_weights(g, s, t, capacity, residual_capacity, weight, rev, index, pred,
-                                               vector_property_map(num_vertices(g), index, D{}));
+                                               vector_property_map(num_vertices(g), index, D{}).ref());
 }
 
 template <concepts::VertexAndEdgeListGraph G, concepts::ReadableEdgePropertyMap<G> Capacity,
@@ -127,7 +127,7 @@ void successive_shortest_path_nonnegative_weights(const G& g, graph_vertex_descr
                                                   VertexIndex index) {
   successive_shortest_path_nonnegative_weights(
       g, s, t, capacity, residual_capacity, weight, rev, index,
-      vector_property_map(num_vertices(g), index, graph_edge_descriptor_t<G>{}));
+      vector_property_map(num_vertices(g), index, graph_edge_descriptor_t<G>{}).ref());
 }
 
 template <concepts::VertexAndEdgeListGraph G>

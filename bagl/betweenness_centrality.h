@@ -103,7 +103,7 @@ struct brandes_dijkstra_shortest_paths {
     Visitor visitor(ov, weight_map_, incoming, distance, path_count);
 
     using D = property_traits_value_t<DistanceMap>;
-    dijkstra_shortest_paths(g, s, make_vector_property_map<graph_vertex_descriptor_t<G>>(vertex_index), distance,
+    dijkstra_shortest_paths(g, s, make_vector_property_map<graph_vertex_descriptor_t<G>>(vertex_index).ref(), distance,
                             weight_map_, vertex_index, std::less<>{}, std::plus<>{}, std::numeric_limits<D>::max(), D{},
                             visitor);
   }
@@ -174,8 +174,9 @@ struct brandes_unweighted_shortest_paths {
     visitor_type<G, IncomingMap, DistanceMap, PathCountMap> visitor(incoming, distance, path_count, ov);
 
     buffer_queue<Vertex> q;
-    breadth_first_visit(g, s, q, visitor,
-                        vector_property_map(num_vertices(g), vertex_index, color_traits<default_color_type>::white()));
+    breadth_first_visit(
+        g, s, q, visitor,
+        vector_property_map(num_vertices(g), vertex_index, color_traits<default_color_type>::white()).ref());
   }
 };
 
@@ -335,8 +336,8 @@ void brandes_betweenness_centrality(const G& g, CentralityMap centrality, EdgeCe
   auto dependency = make_vector_property_map<OtherCentralityType>(num_v_in_g, vindex);
   auto path_count = make_vector_property_map<std::size_t>(num_v_in_g, vindex);
 
-  brandes_betweenness_centrality(g, centrality, edge_centrality_map, incoming, distance, dependency, path_count,
-                                 vindex);
+  brandes_betweenness_centrality(g, centrality, edge_centrality_map, incoming.ref(), distance.ref(), dependency.ref(),
+                                 path_count.ref(), vindex);
 }
 
 template <concepts::VertexListGraph G, concepts::ReadWriteVertexPropertyMap<G> CentralityMap>
@@ -368,8 +369,8 @@ void brandes_betweenness_centrality_weighted(const G& g, CentralityMap centralit
   auto dependency = make_vector_property_map<OtherCentralityType>(num_v_in_g, vindex);
   auto path_count = make_vector_property_map<std::size_t>(num_v_in_g, vindex);
 
-  brandes_betweenness_centrality(g, centrality, edge_centrality_map, incoming, distance, dependency, path_count, vindex,
-                                 weight_map);
+  brandes_betweenness_centrality(g, centrality, edge_centrality_map, incoming.ref(), distance.ref(), dependency.ref(),
+                                 path_count.ref(), vindex, weight_map);
 }
 
 template <concepts::VertexListGraph G, concepts::ReadWriteVertexPropertyMap<G> CentralityMap,

@@ -83,14 +83,14 @@ void test_dijkstra_search() {
     // call astar named parameter interface
 
     if constexpr (WithoutColorMap) {
-      EXPECT_THROW(dijkstra_shortest_paths_no_color_map(g, std::ranges::single_view{start}, pm, dm, weight, idx,
-                                                        make_dijkstra_visitor(bfs_stop_at_goal(goal))),
+      EXPECT_THROW(dijkstra_shortest_paths_no_color_map(g, std::ranges::single_view{start}, pm.ref(), dm.ref(), weight,
+                                                        idx, make_dijkstra_visitor(bfs_stop_at_goal(goal))),
                    search_succeeded)
           << "Did not find a path to the goal at all!";
     } else {
-      EXPECT_THROW(
-          dijkstra_shortest_paths(g, start, pm, dm, weight, idx, make_dijkstra_visitor(bfs_stop_at_goal(goal))),
-          search_succeeded)
+      EXPECT_THROW(dijkstra_shortest_paths(g, start, pm.ref(), dm.ref(), weight, idx,
+                                           make_dijkstra_visitor(bfs_stop_at_goal(goal))),
+                   search_succeeded)
           << "Did not find a path to the goal at all!";
     }
     std::vector<Vertex> shortest_path;
@@ -129,10 +129,10 @@ void test_dijkstra_search() {
     float early_stop_cost = dm[goal];
     // Run astar exhaustively, to be sure.
     if constexpr (WithoutColorMap) {
-      dijkstra_shortest_paths_no_color_map(g, std::ranges::single_view{start}, pm, dm, weight, idx,
+      dijkstra_shortest_paths_no_color_map(g, std::ranges::single_view{start}, pm.ref(), dm.ref(), weight, idx,
                                            default_dijkstra_visitor());
     } else {
-      dijkstra_shortest_paths(g, start, pm, dm, weight, idx, default_dijkstra_visitor());
+      dijkstra_shortest_paths(g, start, pm.ref(), dm.ref(), weight, idx, default_dijkstra_visitor());
     }
     EXPECT_THAT(early_stop_cost, ::testing::FloatNear(dm[goal], 1.0e-5F));
     for (auto v : vertices(g)) {
@@ -194,9 +194,9 @@ TEST(DijkstraSearchTest, CompareAlgorithms) {
 
     // call astar named parameter interface
 
-    dijkstra_shortest_paths_no_color_map(g, std::ranges::single_view{start}, ncpm, ncdm, weight, idx,
+    dijkstra_shortest_paths_no_color_map(g, std::ranges::single_view{start}, ncpm.ref(), ncdm.ref(), weight, idx,
                                          default_dijkstra_visitor());
-    dijkstra_shortest_paths(g, start, pm, dm, weight, idx, default_dijkstra_visitor());
+    dijkstra_shortest_paths(g, start, pm.ref(), dm.ref(), weight, idx, default_dijkstra_visitor());
 
     for (auto u : vertices(g)) {
       EXPECT_EQ(pm[u], ncpm[u]);

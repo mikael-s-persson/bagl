@@ -69,9 +69,9 @@ void kruskal_minimum_spanning_tree(const Graph& g, OutputIterator spanning_tree_
   if (n == 0) {
     return;  // Nothing to do in this case
   }
-  kruskal_minimum_spanning_tree(g, spanning_tree_edges, vector_property_map(n, get(vertex_index, g), std::size_t{0}),
-                                vector_property_map(n, get(vertex_index, g), graph_traits<Graph>::null_vertex()),
-                                get(edge_weight, g));
+  kruskal_minimum_spanning_tree(
+      g, spanning_tree_edges, vector_property_map(n, get(vertex_index, g), std::size_t{0}).ref(),
+      vector_property_map(n, get(vertex_index, g), graph_traits<Graph>::null_vertex()).ref(), get(edge_weight, g));
 }
 
 }  // namespace bagl

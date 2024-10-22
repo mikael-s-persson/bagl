@@ -23,7 +23,7 @@ void make_connected(G& g, VertexIndexMap vm, AddEdgeVisitor& vis) {
   auto component = vector_property_map(num_vertices(g), vm, std::vector<std::size_t>{});
   std::vector<vertex_t> vertices_by_component(num_vertices(g));
 
-  std::size_t num_components = connected_components(g, component);
+  std::size_t num_components = connected_components(g, component.ref());
 
   if (num_components < 2) {
     return;
@@ -32,7 +32,7 @@ void make_connected(G& g, VertexIndexMap vm, AddEdgeVisitor& vis) {
   auto v_rg = vertices(g);
   std::copy(v_rg.begin(), v_rg.end(), vertices_by_component.begin());
 
-  bucket_sort(vertices_by_component.begin(), vertices_by_component.end(), component);
+  bucket_sort(vertices_by_component.begin(), vertices_by_component.end(), component.ref());
 
   auto ci_end = vertices_by_component.end();
   auto ci_prev = vertices_by_component.begin();

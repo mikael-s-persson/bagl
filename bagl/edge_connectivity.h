@@ -108,7 +108,7 @@ std::size_t edge_connectivity(G& g, OutputIterator disconnecting_set) {
   while (!non_neighbor_s.empty()) {  // at most n - 1 times
     auto k = non_neighbor_s.front();
 
-    std::size_t alpha_s_k = edmonds_karp_max_flow(flow_g, p, k, cap, res_cap, rev_edge, color, pred);
+    std::size_t alpha_s_k = edmonds_karp_max_flow(flow_g, p, k, cap, res_cap, rev_edge, color.ref(), pred.ref());
 
     if (alpha_s_k < alpha_star) {
       alpha_star = alpha_s_k;

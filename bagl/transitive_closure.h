@@ -28,10 +28,10 @@ void transitive_closure(const Graph& g, GraphTC& tc, G_to_TC_VertexMap g_to_tc_m
   using vertex = graph_vertex_descriptor_t<Graph>;
   auto component_number = vector_property_map(num_vertices(g), index_map, std::size_t{0});
 
-  const std::size_t num_scc = strong_components(g, component_number, index_map);
+  const std::size_t num_scc = strong_components(g, component_number.ref(), index_map);
 
   std::vector<std::vector<vertex> > components;
-  build_component_lists(g, num_scc, component_number, components);
+  build_component_lists(g, num_scc, component_number.ref(), components);
 
   adjacency_list<vec_s, vec_s, directed_s> cg(num_scc);
   for (std::size_t s = 0; s < components.size(); ++s) {
@@ -183,7 +183,7 @@ template <typename Graph, typename GraphTC>
 void transitive_closure(const Graph& g, GraphTC& tc) {
   auto index_map = get(vertex_index, g);
   auto g_to_tc_map = vector_property_map(num_vertices(g), index_map, graph_traits<GraphTC>::null_vertex());
-  transitive_closure(g, tc, g_to_tc_map, index_map);
+  transitive_closure(g, tc, g_to_tc_map.ref(), index_map);
 }
 
 template <concepts::EdgeMutableGraph G>

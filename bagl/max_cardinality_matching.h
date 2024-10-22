@@ -104,7 +104,7 @@ class edmonds_augmenting_path_finder {
         ds_parent_map_(n_vertices_, vm_),
         ds_rank_map_(n_vertices_, vm_),
 
-        ds_(ds_rank_map_, ds_parent_map_) {
+        ds_(ds_rank_map_.ref(), ds_parent_map_.ref()) {
     for (auto v : vertices(g_)) {
       mate_[v] = get(mate, v);
     }
@@ -364,7 +364,7 @@ class edmonds_augmenting_path_finder {
 
   vertex_list_t aug_path_;
   edge_list_t even_edges_;
-  disjoint_sets<vertex_to_size_map_t, vertex_to_vertex_map_t> ds_;
+  disjoint_sets<property_map_ref<vertex_to_size_map_t>, property_map_ref<vertex_to_vertex_map_t>> ds_;
 };
 
 // ================ Initial Matching Functors ===================
@@ -508,7 +508,7 @@ bool maximum_cardinality_matching_verify(const Graph& g, MateMap mate, VertexInd
   }
 
   auto vertex_state = vector_property_map(num_vertices(g), vm, max_cardinality_detail::vertex_state::unreached);
-  augmentor.get_vertex_state_map(vertex_state);
+  augmentor.get_vertex_state_map(vertex_state.ref());
 
   // count the number of graph::detail::V_ODD vertices
   std::size_t num_odd_vertices = 0;
@@ -520,7 +520,7 @@ bool maximum_cardinality_matching_verify(const Graph& g, MateMap mate, VertexInd
 
   // count the number of connected components with odd cardinality
   // in the graph without graph::detail::V_ODD vertices
-  auto non_odd_vertex = [vertex_state](const auto& v) {
+  auto non_odd_vertex = [&vertex_state](const auto& v) {
     return get(vertex_state, v) != max_cardinality_detail::vertex_state::odd;
   };
   filtered_graph<Graph, keep_all, decltype(non_odd_vertex)> fg(g, keep_all(), non_odd_vertex);

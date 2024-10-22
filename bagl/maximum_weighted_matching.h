@@ -134,7 +134,7 @@ class weighted_augmenting_path_finder {
         vm_(arg_vm),
         weight_(arg_weight),
         null_edge_(num_edges(g_) == 0 ? edge_descriptor_t() : *edges(g_).begin(), false),
-        mate_(num_vertices(g_), vm_, vm_, graph_traits<Graph>::null_vertex()),
+        mate_(num_vertices(g_), vm_, graph_traits<Graph>::null_vertex()),
         label_s_(num_vertices(g_), vm_, graph_traits<Graph>::null_vertex()),
         label_t_(num_vertices(g_), vm_, graph_traits<Graph>::null_vertex()),
         outlet_(num_vertices(g_), vm_, graph_traits<Graph>::null_vertex()),
@@ -1029,7 +1029,8 @@ class brute_force_matching {
   template <typename PartialEdgeRange>
   void select_edge(PartialEdgeRange e_rg) {
     if (e_rg.empty()) {
-      if (matching_weight_sum(g_, mate_, vm_, weight_) > matching_weight_sum(g_, best_mate_, vm_, weight_)) {
+      if (matching_weight_sum(g_, mate_.ref(), vm_, weight_) >
+          matching_weight_sum(g_, best_mate_.ref(), vm_, weight_)) {
         for (auto v : vertices(g_)) {
           best_mate_[v] = mate_[v];
         }

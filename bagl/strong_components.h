@@ -104,14 +104,16 @@ auto strong_components(const Graph& g,     // Input
                        ComponentMap comp,  // Output
                        // Internal record keeping
                        RootMap root) {
-  return strong_components(g, comp, root, vector_property_map(num_vertices(g), get(vertex_index, g), std::size_t{0}), get(vertex_index, g));
+  return strong_components(g, comp, root,
+                           vector_property_map(num_vertices(g), get(vertex_index, g), std::size_t{0}).ref(),
+                           get(vertex_index, g));
 }
 
 template <concepts::VertexListGraph Graph, concepts::ReadWriteVertexPropertyMap<Graph> ComponentMap>
 auto strong_components(const Graph& g,       // Input
                        ComponentMap comp) {  // Output
   return strong_components(
-      g, comp, vector_property_map(num_vertices(g), get(vertex_index, g), graph_traits<Graph>::null_vertex()));
+      g, comp, vector_property_map(num_vertices(g), get(vertex_index, g), graph_traits<Graph>::null_vertex()).ref());
 }
 
 template <concepts::VertexListGraph Graph, concepts::ReadWriteVertexPropertyMap<Graph> ComponentMap,
@@ -119,8 +121,9 @@ template <concepts::VertexListGraph Graph, concepts::ReadWriteVertexPropertyMap<
 auto strong_components(const Graph& g,       // Input
                        ComponentMap comp,    // Output
                        VertexIndexMap v_index) {
-  return strong_components(
-      g, comp, vector_property_map(num_vertices(g), v_index, graph_traits<Graph>::null_vertex()), vector_property_map(num_vertices(g), v_index, std::size_t{0}), v_index);
+  return strong_components(g, comp,
+                           vector_property_map(num_vertices(g), v_index, graph_traits<Graph>::null_vertex()).ref(),
+                           vector_property_map(num_vertices(g), v_index, std::size_t{0}).ref(), v_index);
 }
 
 template <typename Graph, typename ComponentMap, typename ComponentLists>

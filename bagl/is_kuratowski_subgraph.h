@@ -200,17 +200,18 @@ bool is_kuratowski_subgraph(const Graph& g, ForwardIterator begin, ForwardIterat
 
   if (target_graph == detail::tg_k_5) {
     auto vm_ident = identity_property_map{};
-    return isomorphism(k_5, contracted_graph,
-                       vector_property_map(num_vertices(k_5), vm_ident, graph_traits<small_graph_t>::null_vertex()),
-                       make_degree_invariant(k_5, vm_ident), make_degree_invariant(contracted_graph, vm_ident), 0,
-                       vm_ident, vm_ident);
+    return isomorphism(
+        k_5, contracted_graph,
+        vector_property_map(num_vertices(k_5), vm_ident, graph_traits<small_graph_t>::null_vertex()).ref(),
+        make_degree_invariant(k_5, vm_ident), make_degree_invariant(contracted_graph, vm_ident), 0, vm_ident, vm_ident);
   } else  // target_graph == tg_k_3_3
   {
     auto vm_ident = identity_property_map{};
-    return isomorphism(k_3_3, contracted_graph,
-                       vector_property_map(num_vertices(k_3_3), vm_ident, graph_traits<small_graph_t>::null_vertex()),
-                       make_degree_invariant(k_3_3, vm_ident), make_degree_invariant(contracted_graph, vm_ident), 0,
-                       vm_ident, vm_ident);
+    return isomorphism(
+        k_3_3, contracted_graph,
+        vector_property_map(num_vertices(k_3_3), vm_ident, graph_traits<small_graph_t>::null_vertex()).ref(),
+        make_degree_invariant(k_3_3, vm_ident), make_degree_invariant(contracted_graph, vm_ident), 0, vm_ident,
+        vm_ident);
   }
 }
 

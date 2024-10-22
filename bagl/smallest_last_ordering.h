@@ -106,8 +106,9 @@ void smallest_last_vertex_ordering(const G& g, Order order, Degree degree, Marke
 template <concepts::VertexListGraph G, concepts::WritablePropertyMap<std::size_t> Order>
 requires concepts::AdjacencyGraph<G> && concepts::IncidenceGraph<G>
 void smallest_last_vertex_ordering(const G& g, Order order) {
-  smallest_last_vertex_ordering(g, order, vector_property_map(num_vertices(g), get(vertex_index, g), std::size_t{0}),
-                                vector_property_map(num_vertices(g), get(vertex_index, g), std::size_t{0}));
+  smallest_last_vertex_ordering(g, order,
+                                vector_property_map(num_vertices(g), get(vertex_index, g), std::size_t{0}).ref(),
+                                vector_property_map(num_vertices(g), get(vertex_index, g), std::size_t{0}).ref());
 }
 
 template <concepts::VertexListGraph G>

@@ -117,7 +117,7 @@ template <typename MutableGraph, typename Done>
 void betweenness_centrality_clustering(MutableGraph& g, Done done) {
   using centrality_type = typename Done::centrality_type;
   betweenness_centrality_clustering(
-      g, done, make_vector_property_map<centrality_type>(num_edges(g), get(edge_index, g)), get(vertex_index, g));
+      g, done, vector_property_map(num_edges(g), get(edge_index, g), centrality_type{}).ref(), get(vertex_index, g));
 }
 
 }  // namespace bagl

@@ -67,12 +67,13 @@ void gursoy_shortest(const Graph& g, graph_vertex_descriptor_t<Graph> s, NodeDis
   if constexpr (std::is_same_v<EdgeWeightMap, dummy_property_map>) {
     std::queue<graph_vertex_descriptor_t<Graph>> q;
     breadth_first_search(g, s, q, make_bfs_visitor(distance_recorder_on_tree_edge(node_distance), update_position),
-                         two_bit_color_map(num_vertices(g), get(vertex_index, g)));
+                         two_bit_color_map(num_vertices(g), get(vertex_index, g)).ref());
   } else {
     dijkstra_shortest_paths(
-        g, s, vector_property_map(num_vertices(g), get(vertex_index, g), graph_traits<Graph>::null_vertex()),
-        vector_property_map(num_vertices(g), get(vertex_index, g), property_traits_value_t<NodeDistanceMap>{}), weight,
-        get(vertex_index, g), make_dijkstra_visitor(distance_recorder_on_edge_relaxed(node_distance), update_position));
+        g, s, vector_property_map(num_vertices(g), get(vertex_index, g), graph_traits<Graph>::null_vertex()).ref(),
+        vector_property_map(num_vertices(g), get(vertex_index, g), property_traits_value_t<NodeDistanceMap>{}).ref(),
+        weight, get(vertex_index, g),
+        make_dijkstra_visitor(distance_recorder_on_edge_relaxed(node_distance), update_position));
   }
 }
 
@@ -102,7 +103,7 @@ void gursoy_atun_step(const G& g, const Topology& space, PositionMap position, d
   try {
     gursoy_atun_detail::gursoy_shortest(
         g, min_distance_loc, node_distance,
-        gursoy_atun_detail::update_position_visitor{position, node_distance, &space, input_point, diameter,
+        gursoy_atun_detail::update_position_visitor{position, node_distance.ref(), &space, input_point, diameter,
                                                     learning_constant, std::exp(-1. / (2 * diameter * diameter))},
         weight);
   } catch (const gursoy_atun_detail::over_distance_limit&) {
@@ -118,8 +119,6 @@ void gursoy_atun_refine(const G& g, const Topology& space, PositionMap position,
                         VertexIndexMap vertex_index_map, EdgeWeightMap weight) {
   double diameter_ratio = diameter_final / diameter_initial;
   double learning_constant_ratio = learning_constant_final / learning_constant_initial;
-  auto distance_from_input = vector_property_map(num_vertices(g), vertex_index_map, double{0.0});
-  auto node_distance = vector_property_map(num_vertices(g), vertex_index_map, int{0});
   for (int round = 0; round < nsteps; ++round) {
     double part_done = static_cast<double>(round) / (nsteps - 1);
     double diameter = diameter_initial * std::pow(diameter_ratio, part_done);

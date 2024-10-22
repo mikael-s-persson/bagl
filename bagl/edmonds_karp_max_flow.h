@@ -15,6 +15,7 @@
 #include "bagl/graph_traits.h"
 #include "bagl/properties.h"
 #include "bagl/property_map.h"
+#include "bagl/two_bit_color_map.h"
 #include "bagl/vector_property_map.h"
 
 namespace bagl {
@@ -72,7 +73,7 @@ auto edmonds_karp_max_flow(const G& g, graph_vertex_descriptor_t<G> src, graph_v
                            ReverseEdgeMap rev,           // get(edge_reverse, g)
                            PredEdgeMap pred) {
   return edmonds_karp_max_flow(g, src, sink, cap, res, rev,
-                               two_bit_color_map(num_vertices_or_zero(g), get(vertex_index, g)), pred);
+                               two_bit_color_map(num_vertices_or_zero(g), get(vertex_index, g)).ref(), pred);
 }
 
 template <concepts::IncidenceGraph G, concepts::ReadableEdgePropertyMap<G> CapacityEdgeMap,
@@ -86,8 +87,8 @@ auto edmonds_karp_max_flow(const G& g, graph_vertex_descriptor_t<G> src, graph_v
                            PredEdgeMap pred) {
   using FlowValue = property_traits_value_t<CapacityEdgeMap>;
   return edmonds_karp_max_flow(g, src, sink, cap,
-                               vector_property_map(num_vertices_or_zero(g), get(vertex_index, g), FlowValue{}), rev,
-                               color, pred);
+                               vector_property_map(num_vertices_or_zero(g), get(vertex_index, g), FlowValue{}).ref(),
+                               rev, color, pred);
 }
 
 template <concepts::IncidenceGraph G, concepts::ReadableEdgePropertyMap<G> CapacityEdgeMap,
@@ -99,8 +100,8 @@ auto edmonds_karp_max_flow(const G& g, graph_vertex_descriptor_t<G> src, graph_v
                            PredEdgeMap pred) {
   using FlowValue = property_traits_value_t<CapacityEdgeMap>;
   return edmonds_karp_max_flow(g, src, sink, cap,
-                               vector_property_map(num_vertices_or_zero(g), get(vertex_index, g), FlowValue{}), rev,
-                               two_bit_color_map(num_vertices_or_zero(g), get(vertex_index, g)), pred);
+                               vector_property_map(num_vertices_or_zero(g), get(vertex_index, g), FlowValue{}).ref(),
+                               rev, two_bit_color_map(num_vertices_or_zero(g), get(vertex_index, g)).ref(), pred);
 }
 
 template <concepts::IncidenceGraph G, concepts::ReadableVertexPropertyMap<G> VertexIndexMap,
@@ -113,8 +114,9 @@ auto edmonds_karp_max_flow(const G& g, graph_vertex_descriptor_t<G> src, graph_v
                            ReverseEdgeMap rev,      // get(edge_reverse, g)
                            PredEdgeMap pred) {
   using FlowValue = property_traits_value_t<CapacityEdgeMap>;
-  return edmonds_karp_max_flow(g, src, sink, cap, vector_property_map(num_vertices_or_zero(g), v_index, FlowValue{}),
-                               rev, two_bit_color_map(num_vertices_or_zero(g), v_index), pred);
+  return edmonds_karp_max_flow(g, src, sink, cap,
+                               vector_property_map(num_vertices_or_zero(g), v_index, FlowValue{}).ref(), rev,
+                               two_bit_color_map(num_vertices_or_zero(g), v_index).ref(), pred);
 }
 
 template <concepts::IncidenceGraph G, concepts::ReadableEdgePropertyMap<G> CapacityEdgeMap,
@@ -125,9 +127,9 @@ auto edmonds_karp_max_flow(const G& g, graph_vertex_descriptor_t<G> src, graph_v
   using FlowValue = property_traits_value_t<CapacityEdgeMap>;
   using Edge = graph_edge_descriptor_t<G>;
   return edmonds_karp_max_flow(g, src, sink, cap,
-                               vector_property_map(num_vertices_or_zero(g), get(vertex_index, g), FlowValue{}), rev,
-                               two_bit_color_map(num_vertices_or_zero(g), get(vertex_index, g)),
-                               vector_property_map(num_vertices_or_zero(g), get(vertex_index, g), Edge{}));
+                               vector_property_map(num_vertices_or_zero(g), get(vertex_index, g), FlowValue{}).ref(),
+                               rev, two_bit_color_map(num_vertices_or_zero(g), get(vertex_index, g)).ref(),
+                               vector_property_map(num_vertices_or_zero(g), get(vertex_index, g), Edge{}).ref());
 }
 
 template <concepts::IncidenceGraph G, concepts::ReadableVertexPropertyMap<G> VertexIndexMap,
@@ -138,9 +140,10 @@ auto edmonds_karp_max_flow(const G& g, graph_vertex_descriptor_t<G> src, graph_v
                            ReverseEdgeMap rev) {    // get(edge_reverse, g)
   using FlowValue = property_traits_value_t<CapacityEdgeMap>;
   using Edge = graph_edge_descriptor_t<G>;
-  return edmonds_karp_max_flow(g, src, sink, cap, vector_property_map(num_vertices_or_zero(g), v_index, FlowValue{}),
-                               rev, two_bit_color_map(num_vertices_or_zero(g), v_index),
-                               vector_property_map(num_vertices_or_zero(g), v_index, Edge{}));
+  return edmonds_karp_max_flow(g, src, sink, cap,
+                               vector_property_map(num_vertices_or_zero(g), v_index, FlowValue{}).ref(), rev,
+                               two_bit_color_map(num_vertices_or_zero(g), v_index).ref(),
+                               vector_property_map(num_vertices_or_zero(g), v_index, Edge{}).ref());
 }
 
 }  // namespace bagl

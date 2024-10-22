@@ -121,7 +121,7 @@ bool is_bipartite(const G& g, const IndexMap index_map, PartitionMap partition_m
   // Call dfs
   try {
     depth_first_search(g, make_dfs_visitor(bipartite_detail::bipartition_visitor(partition_map)),
-                       make_vector_property_map(num_vertices(g), index_map, default_color_type::white_color));
+                       vector_property_map(num_vertices(g), index_map, default_color_type::white_color).ref());
   } catch (const bipartite_detail::bipartite_visitor_error<Vertex>&) {
     return false;
   }
@@ -135,7 +135,7 @@ bool is_bipartite(const G& g, const IndexMap index_map, PartitionMap partition_m
 // Returns true if and only if the given graph is bipartite.
 template <concepts::VertexListGraph G, concepts::ReadableVertexPropertyMap<G> IndexMap>
 bool is_bipartite(const G& g, const IndexMap index_map) {
-  return is_bipartite(g, index_map, make_one_bit_color_map(num_vertices(g), index_map));
+  return is_bipartite(g, index_map, one_bit_color_map(num_vertices(g), index_map).ref());
 }
 
 // Checks a given graph for bipartiteness. The graph must
@@ -178,8 +178,8 @@ OutputIterator find_odd_cycle(const G& g, IndexMap index_map, PartitionMap parti
   try {
     depth_first_search(g,
                        make_dfs_visitor(bipartite_detail::bipartition_visitor(partition_map),
-                                        predecessor_recorder_on_tree_edge(predecessor_map)),
-                       make_vector_property_map(num_vertices(g), index_map, default_color_type::white_color));
+                                        predecessor_recorder_on_tree_edge(predecessor_map.ref())),
+                       vector_property_map(num_vertices(g), index_map, default_color_type::white_color).ref());
   } catch (const bipartite_detail::bipartite_visitor_error<Vertex>& error) {
     using Path = std::vector<Vertex>;
 
@@ -230,7 +230,7 @@ OutputIterator find_odd_cycle(const G& g, IndexMap index_map, PartitionMap parti
 template <concepts::VertexListGraph G, concepts::ReadableVertexPropertyMap<G> IndexMap,
           std::output_iterator<graph_vertex_descriptor_t<G>> OutputIterator>
 OutputIterator find_odd_cycle(const G& g, const IndexMap index_map, OutputIterator result) {
-  return find_odd_cycle(g, index_map, make_one_bit_color_map(num_vertices(g), index_map), result);
+  return find_odd_cycle(g, index_map, one_bit_color_map(num_vertices(g), index_map).ref(), result);
 }
 
 // Checks a given graph for bipartiteness. If the graph is not bipartite, a

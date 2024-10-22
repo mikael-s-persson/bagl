@@ -72,7 +72,7 @@ void write_graphviz(std::ostream& out, const Graph& g, const dynamic_properties&
 template <concepts::VertexListGraph Graph>
 void write_graphviz(std::ostream& out, const Graph& g, const dynamic_properties& dp,
                     const std::string& node_id_prefix = "node_") {
-  auto node_id_pmap = transform_value_property_map{
+  auto node_id_pmap = transform_property_map{
       [node_id_prefix](std::size_t i) { return node_id_prefix + std::to_string(i); }, get(vertex_index, g)};
   write_graphviz_dp(out, g, dp, "node_id_prefixed_vindex", node_id_pmap);
 }
@@ -92,7 +92,7 @@ void write_graphviz(std::ostream& out, const Graph& g,
                     graphviz_attr_writer epw = default_writer{},
                     graphviz_attr_writer gpw = default_writer{},
                     const std::string& node_id_prefix = "node_") {
-  auto node_id_pmap = transform_value_property_map{
+  auto node_id_pmap = transform_property_map{
       [node_id_prefix](std::size_t i) { return node_id_prefix + std::to_string(i); }, get(vertex_index, g)};
   write_graphviz(out, g, vpw, epw, gpw, "node_id_prefixed_vindex", node_id_pmap);
 }

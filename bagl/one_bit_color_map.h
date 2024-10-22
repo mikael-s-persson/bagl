@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
 #include <limits>
 #include <memory>
 
@@ -26,43 +27,41 @@ struct color_traits<one_bit_color_type> {
   static one_bit_color_type black() { return one_bit_color_type::not_white; }
 };
 
-template <typename IndexMap = identity_property_map>
-struct one_bit_color_map {
-  static constexpr int bits_per_char = std::numeric_limits<std::uint8_t>::digits;
-  std::size_t n;
-  IndexMap index;
-  std::shared_ptr<std::uint8_t[]> data;
+struct one_bit_color_proxy {
+  static constexpr std::uint8_t bits_per_char = std::numeric_limits<std::uint8_t>::digits;
+  static constexpr std::size_t byte_index(std::size_t i) { return i / bits_per_char; }
+  static constexpr std::uint8_t bit_offset(std::size_t i) { return static_cast<std::uint8_t>(i % bits_per_char); }
 
-  using value_type = one_bit_color_type;
-  using reference = void;
+  operator one_bit_color_type() const { return static_cast<one_bit_color_type>(((*byte_ptr) >> offset) & 1); }
+  const one_bit_color_proxy& operator=(one_bit_color_type c) const {
+    (*byte_ptr) = static_cast<std::uint8_t>(((*byte_ptr) & ~(1 << offset)) | (static_cast<std::uint8_t>(c) << offset));
+    return *this;
+  }
 
-  explicit one_bit_color_map(std::size_t a_n, const IndexMap& a_index = IndexMap())
-      : n(a_n), index(a_index), data(new std::uint8_t[(n + bits_per_char - 1) / bits_per_char]()) {}
+  std::uint8_t* byte_ptr = nullptr;
+  std::uint8_t offset = 0;
 };
 
-template <typename Key, concepts::ReadablePropertyMap<Key> IndexMap>
-auto get(const one_bit_color_map<IndexMap>& pm, const Key& key) {
-  constexpr int bits_per_char = one_bit_color_map<IndexMap>::bits_per_char;
-  auto i = get(pm.index, key);
-  assert(i < pm.n);
-  return static_cast<one_bit_color_type>((pm.data.get()[i / bits_per_char] >> (i % bits_per_char)) & 1);
-}
+template <typename IndexMap = identity_property_map>
+struct one_bit_color_map : property_store_helper<one_bit_color_map<IndexMap>> {
+  IndexMap index;
+  std::vector<std::uint8_t> data;
 
-template <typename Key, concepts::ReadablePropertyMap<Key> IndexMap>
-void put(const one_bit_color_map<IndexMap>& pm, const Key& key, one_bit_color_type value) {
-  constexpr int bits_per_char = one_bit_color_map<IndexMap>::bits_per_char;
-  auto i = get(pm.index, key);
-  assert(i < pm.n);
-  const std::size_t byte_num = i / bits_per_char;
-  const std::size_t bit_position = (i % bits_per_char);
-  pm.data.get()[byte_num] = static_cast<std::uint8_t>((pm.data.get()[byte_num] & ~(1 << bit_position)) |
-                                                      (static_cast<std::uint8_t>(value) << bit_position));
-}
+  using value_type = one_bit_color_type;
 
-template <typename IndexMap>
-auto make_one_bit_color_map(std::size_t n, const IndexMap& index_map) {
-  return one_bit_color_map<IndexMap>(n, index_map);
-}
+  explicit one_bit_color_map(std::size_t a_n, IndexMap a_index = IndexMap())
+      : index(std::move(a_index)), data(one_bit_color_proxy::byte_index(a_n) + 1, 0) {}
+
+  template <typename Key>
+  one_bit_color_proxy operator[](Key&& k) {
+    auto i = get(index, std::forward<Key>(k));
+    std::size_t bi = one_bit_color_proxy::byte_index(i);
+    if (bi >= data.size()) [[unlikely]] {
+      data.resize(bi + 1, 0);
+    }
+    return one_bit_color_proxy(&data[bi], one_bit_color_proxy::bit_offset(i));
+  }
+};
 
 }  // namespace bagl
 

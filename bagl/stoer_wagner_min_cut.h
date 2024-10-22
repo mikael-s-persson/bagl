@@ -16,7 +16,6 @@
 #include "bagl/exception.h"
 #include "bagl/graph_traits.h"
 #include "bagl/maximum_adjacency_search.h"
-#include "bagl/one_bit_color_map.h"
 #include "bagl/property_map.h"
 #include "bagl/vector_property_map.h"
 
@@ -215,10 +214,13 @@ template <concepts::VertexListGraph G, concepts::ReadableEdgePropertyMap<G> Weig
           concepts::KeyedUpdatableQueue KeyedUpdatablePriorityQueue>
 requires concepts::IncidenceGraph<G> &&
     std::convertible_to<graph_vertex_descriptor_t<G>, property_traits_value_t<VertexAssignmentMap>>
-        property_traits_value_t<WeightMap> stoer_wagner_min_cut(const G& g, WeightMap weights,
-            ParityMap parities,                 // dummy_property_map()
-            VertexAssignmentMap assignments,    // vector_property_map(num_vertices(g), get(vertex_index, g), graph_traits<G>::null_vertex())
-            KeyedUpdatablePriorityQueue& pq) {  // make_d_ary_heap_indirect<graph_vertex_descriptor_t<G>, 4>(..., std::greater<>())
+        property_traits_value_t<WeightMap> stoer_wagner_min_cut(
+            const G& g, WeightMap weights,
+            ParityMap parities,               // dummy_property_map()
+            VertexAssignmentMap assignments,  // vector_property_map(num_vertices(g), get(vertex_index, g),
+                                              // graph_traits<G>::null_vertex()).ref()
+            KeyedUpdatablePriorityQueue&
+                pq) {  // make_d_ary_heap_indirect<graph_vertex_descriptor_t<G>, 4>(..., std::greater<>())
   static_assert(is_undirected_graph_v<G>);
 
   std::size_t n = num_vertices(g);
@@ -237,8 +239,8 @@ template <concepts::VertexListGraph G, concepts::ReadableEdgePropertyMap<G> Weig
 requires concepts::IncidenceGraph<G> property_traits_value_t<WeightMap> stoer_wagner_min_cut(
     const G& g, WeightMap weights, ParityMap parities, KeyedUpdatablePriorityQueue& pq) {
   return stoer_wagner_min_cut(
-      g, weights, parities, vector_property_map(num_vertices(g), get(vertex_index, g), graph_traits<G>::null_vertex()),
-      pq);
+      g, weights, parities,
+      vector_property_map(num_vertices(g), get(vertex_index, g), graph_traits<G>::null_vertex()).ref(), pq);
 }
 
 template <concepts::VertexListGraph G, concepts::ReadableEdgePropertyMap<G> WeightMap,
@@ -254,7 +256,7 @@ template <concepts::VertexListGraph G, concepts::ReadableEdgePropertyMap<G> Weig
 requires concepts::IncidenceGraph<G> property_traits_value_t<WeightMap> stoer_wagner_min_cut(
     const G& g, WeightMap weights, ParityMap parities, KeyedUpdatablePriorityQueue& pq, VertexIndexMap v_index) {
   return stoer_wagner_min_cut(g, weights, parities,
-                              vector_property_map(num_vertices(g), v_index, graph_traits<G>::null_vertex()), pq);
+                              vector_property_map(num_vertices(g), v_index, graph_traits<G>::null_vertex()).ref(), pq);
 }
 
 template <concepts::VertexListGraph G, concepts::ReadableEdgePropertyMap<G> WeightMap,
@@ -262,7 +264,7 @@ template <concepts::VertexListGraph G, concepts::ReadableEdgePropertyMap<G> Weig
 requires concepts::IncidenceGraph<G> property_traits_value_t<WeightMap> stoer_wagner_min_cut(
     const G& g, WeightMap weights, KeyedUpdatablePriorityQueue& pq, VertexIndexMap v_index) {
   return stoer_wagner_min_cut(g, weights, dummy_property_map(),
-                              vector_property_map(num_vertices(g), v_index, graph_traits<G>::null_vertex()), pq);
+                              vector_property_map(num_vertices(g), v_index, graph_traits<G>::null_vertex()).ref(), pq);
 }
 
 template <concepts::VertexListGraph G, concepts::ReadableEdgePropertyMap<G> WeightMap,
@@ -272,9 +274,10 @@ requires concepts::IncidenceGraph<G> property_traits_value_t<WeightMap> stoer_wa
                                                                                              ParityMap parities,
                                                                                              VertexIndexMap v_index) {
   using weight_type = property_traits_value_t<WeightMap>;
-  auto pq = make_d_ary_heap_indirect<graph_vertex_descriptor_t<G>, 4>(
-      vector_property_map(num_vertices(g), v_index, weight_type{}),
-      vector_property_map(num_vertices(g), v_index, std::size_t{0}), std::greater<>());
+  auto prio = vector_property_map(num_vertices(g), v_index, weight_type{});
+  auto index_in_heap = vector_property_map(num_vertices(g), v_index, std::size_t{0});
+  auto pq =
+      make_d_ary_heap_indirect<graph_vertex_descriptor_t<G>, 4>(prio.ref(), index_in_heap.ref(), std::greater<>());
   return stoer_wagner_min_cut(g, weights, parities, pq, v_index);
 }
 

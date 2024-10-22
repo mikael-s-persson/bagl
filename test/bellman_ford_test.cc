@@ -47,7 +47,7 @@ TEST(BellmanFordSearchTest, Search) {
     // Print problem definition if any checks fail.
     SCOPED_TRACE(print_problem_def());
 
-    bellman_ford_shortest_paths(g, default_bellman_visitor(), start, num_vertices(g), weight, pm, dm);
+    bellman_ford_shortest_paths(g, default_bellman_visitor(), start, num_vertices(g), weight, pm.ref(), dm.ref());
     for (auto v : vertices(g)) {
       if (pm[v] == v) {
         EXPECT_EQ(v, start);
@@ -99,8 +99,8 @@ TEST(BellmanFordSearchTest, CompareToDijkstra) {
 
     // call astar named parameter interface
 
-    bellman_ford_shortest_paths(g, default_bellman_visitor(), start, num_vertices(g), weight, pm, dm);
-    dijkstra_shortest_paths(g, start, djpm, djdm, weight, idx, default_dijkstra_visitor());
+    bellman_ford_shortest_paths(g, default_bellman_visitor(), start, num_vertices(g), weight, pm.ref(), dm.ref());
+    dijkstra_shortest_paths(g, start, djpm.ref(), djdm.ref(), weight, idx, default_dijkstra_visitor());
 
     for (auto u : vertices(g)) {
       EXPECT_EQ(pm[u], djpm[u]);

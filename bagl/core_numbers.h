@@ -7,10 +7,10 @@
 
 #include <concepts>
 
-#include "bagl/single_property_map.h"
 #include "bagl/d_ary_heap.h"
 #include "bagl/graph_concepts.h"
 #include "bagl/graph_traits.h"
+#include "bagl/single_property_map.h"
 #include "bagl/visitors.h"
 
 // History
@@ -97,8 +97,7 @@ void compute_in_degree_map(const G& g, CoreMap d, EdgeWeightMap wm) {
 
 // the version for weighted graphs is a little different
 template <concepts::IncidenceGraph G, concepts::ReadWriteVertexPropertyMap<G> CoreMap,
-          concepts::ReadableEdgePropertyMap<G> EdgeWeightMap, typename MutableQueue,
-          concepts::CoreNumbersVisitor<G> V>
+          concepts::ReadableEdgePropertyMap<G> EdgeWeightMap, typename MutableQueue, concepts::CoreNumbersVisitor<G> V>
 property_traits_value_t<CoreMap> core_numbers_impl(const G& g, CoreMap c, EdgeWeightMap wm, MutableQueue& q, V vis) {
   property_traits_value_t<CoreMap> v_cn = {};
   while (!q.empty()) {
@@ -126,13 +125,13 @@ property_traits_value_t<CoreMap> core_numbers_impl(const G& g, CoreMap c, EdgeWe
 }
 
 template <concepts::VertexListGraph G, concepts::ReadWriteVertexPropertyMap<G> CoreMap,
-          concepts::ReadableEdgePropertyMap<G> EdgeWeightMap,
-          concepts::ReadWriteVertexPropertyMap<G> IndexMap, concepts::CoreNumbersVisitor<G> V>
+          concepts::ReadableEdgePropertyMap<G> EdgeWeightMap, concepts::ReadWriteVertexPropertyMap<G> IndexMap,
+          concepts::CoreNumbersVisitor<G> V>
 property_traits_value_t<CoreMap> core_numbers_dispatch(const G& g, CoreMap c, EdgeWeightMap wm, IndexMap im, V vis) {
   // build the mutable queue
   using Vertex = graph_vertex_descriptor_t<G>;
   auto index_in_heap = make_vector_property_map<std::size_t>(im);
-  auto q = make_d_ary_heap_indirect<Vertex, 4>(c, index_in_heap);
+  auto q = make_d_ary_heap_indirect<Vertex, 4>(c, index_in_heap.ref());
 
   for (auto v : vertices(g)) {
     q.push(v);
@@ -232,7 +231,7 @@ template <concepts::IncidenceGraph G, concepts::ReadWriteVertexPropertyMap<G> Co
 property_traits_value_t<CoreMap> core_numbers(const G& g, CoreMap c, V vis) {
   core_numbers_detail::compute_in_degree_map(g, c, single_property_map<property_traits_value_t<CoreMap>>(1));
   return core_numbers_detail::core_numbers_impl(
-      g, c, make_vector_property_map<std::size_t>(num_vertices(g), get(vertex_index, g)), vis);
+      g, c, make_vector_property_map<std::size_t>(num_vertices(g), get(vertex_index, g)).ref(), vis);
 }
 
 // non-named paramter version for the unweighted case
@@ -243,8 +242,7 @@ property_traits_value_t<CoreMap> core_numbers(const G& g, CoreMap c) {
 
 // non-named parameter version for the weighted case
 template <concepts::IncidenceGraph G, concepts::ReadWriteVertexPropertyMap<G> CoreMap,
-          concepts::ReadableEdgePropertyMap<G> EdgeWeightMap,
-          concepts::ReadWriteVertexPropertyMap<G> VertexIndexMap,
+          concepts::ReadableEdgePropertyMap<G> EdgeWeightMap, concepts::ReadWriteVertexPropertyMap<G> VertexIndexMap,
           concepts::CoreNumbersVisitor<G> V>
 requires concepts::VertexListGraph<G> property_traits_value_t<CoreMap> core_numbers(const G& g, CoreMap c,
                                                                                     EdgeWeightMap wm,

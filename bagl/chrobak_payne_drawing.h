@@ -47,14 +47,14 @@ void chrobak_payne_straight_line_drawing(const G& g, PlanarEmbedding embedding, 
   const Vertex null_v = graph_traits<G>::null_vertex();
 
   const std::size_t n_verts = num_vertices(g);
-  auto left = make_vector_property_map(n_verts, vm, null_v);
-  auto right = make_vector_property_map(n_verts, vm, null_v);
-  auto seen_as_right = make_vector_property_map(n_verts, vm, std::size_t{0});
-  auto seen = make_vector_property_map(n_verts, vm, std::size_t{0});
-  auto delta_x = make_vector_property_map(n_verts, vm, std::size_t{0});
-  auto y = make_vector_property_map(n_verts, vm, std::size_t{0});
-  auto x = make_vector_property_map(n_verts, vm, std::size_t{0});
-  auto installed = make_vector_property_map(n_verts, vm, false);
+  auto left = vector_property_map(n_verts, vm, null_v);
+  auto right = vector_property_map(n_verts, vm, null_v);
+  auto seen_as_right = vector_property_map(n_verts, vm, std::size_t{0});
+  auto seen = vector_property_map(n_verts, vm, std::size_t{0});
+  auto delta_x = vector_property_map(n_verts, vm, std::size_t{0});
+  auto y = vector_property_map(n_verts, vm, std::size_t{0});
+  auto x = vector_property_map(n_verts, vm, std::size_t{0});
+  auto installed = vector_property_map(n_verts, vm, false);
 
   std::size_t timestamp = 1;
   std::vector<Vertex> installed_neighbors;
@@ -164,7 +164,7 @@ void chrobak_payne_straight_line_drawing(const G& g, PlanarEmbedding embedding, 
     installed[v] = true;
   }
 
-  chrobak_payne_detail::accumulate_offsets(*ordering.begin(), 0, g, x, delta_x, left, right);
+  chrobak_payne_detail::accumulate_offsets(*ordering.begin(), 0, g, x.ref(), delta_x.ref(), left.ref(), right.ref());
 
   for (auto v : vertices(g)) {
     drawing[v].x = x[v];

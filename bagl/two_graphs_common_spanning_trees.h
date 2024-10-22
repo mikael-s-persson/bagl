@@ -159,9 +159,9 @@ void rec_two_graphs_common_spanning_trees(const Graph& i_g, const VertexIndex& i
     put(av_g_in_l, v_g_id_to_edge[j], true);
 
     undirected_dfs(filtered_graph(i_g, in_l_edge_status(ai_g_in_l)), make_dfs_visitor(cycle_finder(&i_g_buf)),
-                   i_g_vertex_color, i_g_edge_color);
+                   i_g_vertex_color.ref(), i_g_edge_color.ref());
     undirected_dfs(filtered_graph(v_g, in_l_edge_status(av_g_in_l)), make_dfs_visitor(cycle_finder(&v_g_buf)),
-                   v_g_vertex_color, v_g_edge_color);
+                   v_g_vertex_color.ref(), v_g_edge_color.ref());
 
     if (i_g_buf.empty() && v_g_buf.empty()) {
       in_l[j] = true;
@@ -190,9 +190,9 @@ void rec_two_graphs_common_spanning_trees(const Graph& i_g, const VertexIndex& i
     put(av_g_in_l, v_g_id_to_edge[j], true);
 
     undirected_dfs(filtered_graph(i_g, in_l_edge_status(ai_g_in_l)), make_dfs_visitor(cycle_finder(&i_g_buf)),
-                   i_g_vertex_color, i_g_edge_color);
+                   i_g_vertex_color.ref(), i_g_edge_color.ref());
     undirected_dfs(filtered_graph(v_g, in_l_edge_status(av_g_in_l)), make_dfs_visitor(cycle_finder(&v_g_buf)),
-                   v_g_vertex_color, v_g_edge_color);
+                   v_g_vertex_color.ref(), v_g_edge_color.ref());
 
     if (!i_g_buf.empty() || !v_g_buf.empty()) {
       i_g_buf.clear();
@@ -208,8 +208,8 @@ void rec_two_graphs_common_spanning_trees(const Graph& i_g, const VertexIndex& i
   }
 
   // REC
-  rec_two_graphs_common_spanning_trees(i_g, i_g_vindex, i_g_id_to_edge, i_g_eindex, ai_g_in_l, di_g, v_g, v_g_vindex,
-                                       v_g_id_to_edge, v_g_eindex, ai_g_in_l, dv_g, func, in_l);
+  rec_two_graphs_common_spanning_trees(i_g, i_g_vindex, i_g_id_to_edge, i_g_eindex, ai_g_in_l.ref(), di_g, v_g,
+                                       v_g_vindex, v_g_id_to_edge, v_g_eindex, ai_g_in_l.ref(), dv_g, func, in_l);
 
   while (!i_g_buf_copy.empty()) {
     put(di_g, i_g_buf_copy.back(), false);
@@ -238,11 +238,11 @@ void rec_two_graphs_common_spanning_trees(const Graph& i_g, const VertexIndex& i
   auto i_g_low_map = vector_property_map(num_vertices(i_g), i_g_vindex, int{0});
   auto v_g_low_map = vector_property_map(num_vertices(v_g), v_g_vindex, int{0});
 
-  bridges_visitor i_g_vis(i_g_tree_map, i_g_pred_map, i_g_dist_map, i_g_low_map, i_g_buf);
-  bridges_visitor v_g_vis(v_g_tree_map, v_g_pred_map, v_g_dist_map, v_g_low_map, v_g_buf);
+  bridges_visitor i_g_vis(i_g_tree_map.ref(), i_g_pred_map.ref(), i_g_dist_map.ref(), i_g_low_map.ref(), i_g_buf);
+  bridges_visitor v_g_vis(v_g_tree_map.ref(), v_g_pred_map.ref(), v_g_dist_map.ref(), v_g_low_map.ref(), v_g_buf);
 
-  undirected_dfs(filtered_graph(i_g, deleted_edge_status(di_g)), i_g_vis, i_g_vertex_color, i_g_edge_color);
-  undirected_dfs(filtered_graph(v_g, deleted_edge_status(dv_g)), v_g_vis, v_g_vertex_color, v_g_edge_color);
+  undirected_dfs(filtered_graph(i_g, deleted_edge_status(di_g)), i_g_vis, i_g_vertex_color.ref(), i_g_edge_color.ref());
+  undirected_dfs(filtered_graph(v_g, deleted_edge_status(dv_g)), v_g_vis, v_g_vertex_color.ref(), v_g_edge_color.ref());
 
   found = false;
   std::vector<edge_descriptor> i_g_buf_tmp;
@@ -256,10 +256,10 @@ void rec_two_graphs_common_spanning_trees(const Graph& i_g, const VertexIndex& i
     put(ai_g_in_l, i_g_buf.back(), true);
     put(av_g_in_l, v_g_id_to_edge[get(i_g_eindex, i_g_buf.back())], true);
 
-    undirected_dfs(filtered_graph(i_g, in_l_edge_status(ai_g_in_l)), make_dfs_visitor(cycle_finder(&i_g_buf_tmp)),
-                   i_g_vertex_color, i_g_edge_color);
-    undirected_dfs(filtered_graph(v_g, in_l_edge_status(av_g_in_l)), make_dfs_visitor(cycle_finder(&v_g_buf_tmp)),
-                   v_g_vertex_color, v_g_edge_color);
+    undirected_dfs(filtered_graph(i_g, in_l_edge_status(ai_g_in_l.ref())), make_dfs_visitor(cycle_finder(&i_g_buf_tmp)),
+                   i_g_vertex_color.ref(), i_g_edge_color.ref());
+    undirected_dfs(filtered_graph(v_g, in_l_edge_status(av_g_in_l.ref())), make_dfs_visitor(cycle_finder(&v_g_buf_tmp)),
+                   v_g_vertex_color.ref(), v_g_edge_color.ref());
 
     if (!i_g_buf_tmp.empty() || !v_g_buf_tmp.empty()) {
       found = true;
@@ -282,10 +282,10 @@ void rec_two_graphs_common_spanning_trees(const Graph& i_g, const VertexIndex& i
     put(av_g_in_l, v_g_buf.back(), true);
     put(ai_g_in_l, i_g_id_to_edge[get(i_g_eindex, v_g_buf.back())], true);
 
-    undirected_dfs(filtered_graph(i_g, in_l_edge_status(ai_g_in_l)), make_dfs_visitor(cycle_finder(&i_g_buf_tmp)),
-                   i_g_vertex_color, i_g_edge_color);
-    undirected_dfs(filtered_graph(v_g, in_l_edge_status(av_g_in_l)), make_dfs_visitor(cycle_finder(&v_g_buf_tmp)),
-                   v_g_vertex_color, v_g_edge_color);
+    undirected_dfs(filtered_graph(i_g, in_l_edge_status(ai_g_in_l.ref())), make_dfs_visitor(cycle_finder(&i_g_buf_tmp)),
+                   i_g_vertex_color.ref(), i_g_edge_color.ref());
+    undirected_dfs(filtered_graph(v_g, in_l_edge_status(av_g_in_l.ref())), make_dfs_visitor(cycle_finder(&v_g_buf_tmp)),
+                   v_g_vertex_color.ref(), v_g_edge_color.ref());
 
     if (!i_g_buf_tmp.empty() || !v_g_buf_tmp.empty()) {
       found = true;
@@ -318,8 +318,8 @@ void rec_two_graphs_common_spanning_trees(const Graph& i_g, const VertexIndex& i
     }
 
     // REC
-    rec_two_graphs_common_spanning_trees(i_g, i_g_vindex, i_g_id_to_edge, i_g_eindex, ai_g_in_l, di_g, v_g, v_g_vindex,
-                                         v_g_id_to_edge, v_g_eindex, ai_g_in_l, dv_g, func, in_l);
+    rec_two_graphs_common_spanning_trees(i_g, i_g_vindex, i_g_id_to_edge, i_g_eindex, ai_g_in_l.ref(), di_g, v_g,
+                                         v_g_vindex, v_g_id_to_edge, v_g_eindex, ai_g_in_l.ref(), dv_g, func, in_l);
 
     while (!i_g_buf.empty()) {
       in_l[get(i_g_eindex, i_g_buf.back())] = false;
@@ -386,16 +386,18 @@ void two_graphs_common_spanning_trees(const Graph& i_g, VertexIndex i_g_vindex, 
   auto i_g_low_map = vector_property_map(num_vertices(i_g), i_g_vindex, int{0});
   auto v_g_low_map = vector_property_map(num_vertices(v_g), v_g_vindex, int{0});
 
-  common_trees_detail::bridges_visitor i_g_vis(i_g_tree_map, i_g_pred_map, i_g_dist_map, i_g_low_map, i_g_buf);
-  common_trees_detail::bridges_visitor v_g_vis(v_g_tree_map, v_g_pred_map, v_g_dist_map, v_g_low_map, v_g_buf);
+  common_trees_detail::bridges_visitor i_g_vis(i_g_tree_map.ref(), i_g_pred_map.ref(), i_g_dist_map.ref(),
+                                               i_g_low_map.ref(), i_g_buf);
+  common_trees_detail::bridges_visitor v_g_vis(v_g_tree_map.ref(), v_g_pred_map.ref(), v_g_dist_map.ref(),
+                                               v_g_low_map.ref(), v_g_buf);
 
   auto i_g_vertex_color = vector_property_map(num_vertices(i_g), i_g_vindex, default_color_type::white_color);
   auto i_g_edge_color = vector_property_map(num_edges(i_g), i_g_eindex, default_color_type::white_color);
   auto v_g_vertex_color = vector_property_map(num_vertices(v_g), v_g_vindex, default_color_type::white_color);
   auto v_g_edge_color = vector_property_map(num_edges(v_g), v_g_eindex, default_color_type::white_color);
 
-  undirected_dfs(i_g, i_g_vis, i_g_vertex_color, i_g_edge_color);
-  undirected_dfs(v_g, v_g_vis, v_g_vertex_color, v_g_edge_color);
+  undirected_dfs(i_g, i_g_vis, i_g_vertex_color.ref(), i_g_edge_color.ref());
+  undirected_dfs(v_g, v_g_vis, v_g_vertex_color.ref(), v_g_edge_color.ref());
 
   while (!i_g_buf.empty()) {
     in_l[get(i_g_eindex, i_g_buf.back())] = true;
@@ -419,10 +421,12 @@ void two_graphs_common_spanning_trees(const Graph& i_g, VertexIndex i_g_vindex, 
     }
   }
 
-  undirected_dfs(filtered_graph(i_g, common_trees_detail::in_l_edge_status(ai_g_in_l)),
-                 make_dfs_visitor(common_trees_detail::cycle_finder(&i_g_buf)), i_g_vertex_color, i_g_edge_color);
-  undirected_dfs(filtered_graph(v_g, common_trees_detail::in_l_edge_status(av_g_in_l)),
-                 make_dfs_visitor(common_trees_detail::cycle_finder(&v_g_buf)), v_g_vertex_color, v_g_edge_color);
+  undirected_dfs(filtered_graph(i_g, common_trees_detail::in_l_edge_status(ai_g_in_l.ref())),
+                 make_dfs_visitor(common_trees_detail::cycle_finder(&i_g_buf)), i_g_vertex_color.ref(),
+                 i_g_edge_color.ref());
+  undirected_dfs(filtered_graph(v_g, common_trees_detail::in_l_edge_status(av_g_in_l.ref())),
+                 make_dfs_visitor(common_trees_detail::cycle_finder(&v_g_buf)), v_g_vertex_color.ref(),
+                 v_g_edge_color.ref());
 
   if (!i_g_buf.empty() || !v_g_buf.empty()) {
     return;
@@ -438,10 +442,12 @@ void two_graphs_common_spanning_trees(const Graph& i_g, VertexIndex i_g_vindex, 
     put(ai_g_in_l, i_g_id_to_edge[j], true);
     put(av_g_in_l, v_g_id_to_edge[j], true);
 
-    undirected_dfs(filtered_graph(i_g, common_trees_detail::in_l_edge_status(ai_g_in_l)),
-                   make_dfs_visitor(common_trees_detail::cycle_finder(&i_g_buf)), i_g_vertex_color, i_g_edge_color);
-    undirected_dfs(filtered_graph(v_g, common_trees_detail::in_l_edge_status(av_g_in_l)),
-                   make_dfs_visitor(common_trees_detail::cycle_finder(&v_g_buf)), v_g_vertex_color, v_g_edge_color);
+    undirected_dfs(filtered_graph(i_g, common_trees_detail::in_l_edge_status(ai_g_in_l.ref())),
+                   make_dfs_visitor(common_trees_detail::cycle_finder(&i_g_buf)), i_g_vertex_color.ref(),
+                   i_g_edge_color.ref());
+    undirected_dfs(filtered_graph(v_g, common_trees_detail::in_l_edge_status(av_g_in_l.ref())),
+                   make_dfs_visitor(common_trees_detail::cycle_finder(&v_g_buf)), v_g_vertex_color.ref(),
+                   v_g_edge_color.ref());
 
     if (!i_g_buf.empty() || !v_g_buf.empty()) {
       i_g_buf.clear();
@@ -458,17 +464,19 @@ void two_graphs_common_spanning_trees(const Graph& i_g, VertexIndex i_g_vindex, 
 
   auto i_g_com_map = vector_property_map(num_vertices(i_g), i_g_vindex, int{0});
   auto v_g_com_map = vector_property_map(num_vertices(v_g), v_g_vindex, int{0});
-  cc += connected_components(filtered_graph(i_g, common_trees_detail::deleted_edge_status(di_g)), i_g_com_map);
-  cc += connected_components(filtered_graph(v_g, common_trees_detail::deleted_edge_status(dv_g)), v_g_com_map);
+  cc += connected_components(filtered_graph(i_g, common_trees_detail::deleted_edge_status(di_g.ref())),
+                             i_g_com_map.ref());
+  cc += connected_components(filtered_graph(v_g, common_trees_detail::deleted_edge_status(dv_g.ref())),
+                             v_g_com_map.ref());
 
   if (cc != 2) {
     return;
   }
 
   // REC
-  common_trees_detail::rec_two_graphs_common_spanning_trees(i_g, i_g_vindex, i_g_id_to_edge, i_g_eindex, ai_g_in_l,
-                                                            di_g, v_g, v_g_vindex, v_g_id_to_edge, v_g_eindex,
-                                                            ai_g_in_l, dv_g, func, in_l);
+  common_trees_detail::rec_two_graphs_common_spanning_trees(
+      i_g, i_g_vindex, i_g_id_to_edge, i_g_eindex, ai_g_in_l.ref(), di_g.ref(), v_g, v_g_vindex, v_g_id_to_edge,
+      v_g_eindex, ai_g_in_l.ref(), dv_g.ref(), func, in_l);
 }
 
 template <concepts::EdgeListGraph Graph, concepts::ReadableVertexIndexMap<Graph> VertexIndex,
@@ -523,7 +531,8 @@ void two_graphs_common_spanning_trees(const Graph& i_g, VertexIndex i_g_vindex, 
     put(v_g_o, get(v_g_eindex, e), e);
   }
 
-  two_graphs_common_spanning_trees(i_g, i_g_vindex, i_g_o, i_g_eindex, v_g, v_g_vindex, v_g_o, v_g_eindex, func, in_l);
+  two_graphs_common_spanning_trees(i_g, i_g_vindex, i_g_o.ref(), i_g_eindex, v_g, v_g_vindex, v_g_o.ref(), v_g_eindex,
+                                   func, in_l);
 }
 
 template <concepts::EdgeListGraph Graph, concepts::ReadableVertexIndexMap<Graph> VertexIndex, typename Func,

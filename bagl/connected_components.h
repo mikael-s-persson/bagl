@@ -66,7 +66,7 @@ property_traits_value_t<ComponentMap> connected_components(const G& g, Component
 
 template <concepts::VertexListGraph G, concepts::WritableVertexPropertyMap<G> ComponentMap>
 property_traits_value_t<ComponentMap> connected_components(const G& g, ComponentMap c) {
-  return connected_components(g, c, two_bit_color_map(num_vertices(g), get(vertex_index, g)));
+  return connected_components(g, c, two_bit_color_map(num_vertices(g), get(vertex_index, g)).ref());
 }
 
 }  // namespace bagl

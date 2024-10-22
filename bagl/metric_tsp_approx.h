@@ -129,7 +129,7 @@ void metric_tsp_approx_from_vertex(const G& g, graph_vertex_descriptor_t<G> star
   auto pred_pmap = make_vector_property_map<GVertex>(num_vertices(g), indexmap);
 
   // Compute a spanning tree over the in put g.
-  prim_minimum_spanning_tree(g, pred_pmap, root_vertex(start).vertex_index_map(indexmap).weight_map(weightmap));
+  prim_minimum_spanning_tree(g, pred_pmap.ref(), root_vertex(start).vertex_index_map(indexmap).weight_map(weightmap));
 
   // Build a MST using the predecessor map from prim mst
   MSTImpl mst{num_vertices(g)};
