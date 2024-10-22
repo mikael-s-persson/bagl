@@ -8,7 +8,6 @@
 #include <limits>
 #include <type_traits>
 
-#include "bagl/constant_property_map.h"
 #include "bagl/graph_traits.h"
 #include "bagl/null_property_map.h"
 #include "bagl/numeric_values.h"
@@ -319,7 +318,7 @@ class in_degree_property_map : public put_get_helper<in_degree_property_map<G>> 
 // graph.
 template <typename PropertyGraph, std::random_access_iterator RAIter>
 auto make_iterator_vertex_map(RAIter iter, const PropertyGraph& g) {
-  return make_iterator_property_map(iter, get(vertex_index, g));
+  return iterator_property_map(iter, get(vertex_index, g));
 }
 
 // Use this next function when vertex_descriptor is known to be an
@@ -327,7 +326,7 @@ auto make_iterator_vertex_map(RAIter iter, const PropertyGraph& g) {
 //
 template <std::random_access_iterator RAIter>
 auto make_iterator_vertex_map(RAIter iter) {
-  return make_iterator_property_map(iter, identity_property_map());
+  return iterator_property_map(iter, identity_property_map());
 }
 
 template <typename PropertyGraph, typename RAContainer>

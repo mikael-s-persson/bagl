@@ -114,7 +114,7 @@ template <concepts::VertexListGraph G>
 requires concepts::AdjacencyGraph<G> && concepts::IncidenceGraph<G> std::vector<graph_vertex_descriptor_t<G>>
 smallest_last_vertex_ordering(const G& g) {
   std::vector<graph_vertex_descriptor_t<G>> o(num_vertices(g));
-  smallest_last_vertex_ordering(g, make_iterator_property_map(o.begin(), typed_identity_property_map<std::size_t>()));
+  smallest_last_vertex_ordering(g, iterator_property_map(o.begin(), identity_property_map()));
   return o;
 }
 

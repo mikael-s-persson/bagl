@@ -35,11 +35,11 @@ class indexed_vertex_properties {
   const Property& operator[](Descriptor v) const { return vertex_properties_[get(vertex_index, derived(), v)]; }
 
   auto get_vertex_bundle(const IndexMap& index_map = IndexMap()) {
-    return make_iterator_property_map(vertex_properties_.begin(), index_map);
+    return iterator_property_map(vertex_properties_.begin(), index_map);
   }
 
   auto get_vertex_bundle(const IndexMap& index_map = IndexMap()) const {
-    return make_iterator_property_map(vertex_properties_.begin(), index_map);
+    return iterator_property_map(vertex_properties_.begin(), index_map);
   }
 
  protected:
@@ -109,11 +109,11 @@ class indexed_edge_properties {
   const Property& operator[](Descriptor v) const { return edge_properties_[get(edge_index, derived(), v)]; }
 
   auto get_edge_bundle(const IndexMap& index_map = IndexMap()) {
-    return make_iterator_property_map(edge_properties_.begin(), index_map);
+    return iterator_property_map(edge_properties_.begin(), index_map);
   }
 
   auto get_edge_bundle(const IndexMap& index_map = IndexMap()) const {
-    return make_iterator_property_map(edge_properties_.begin(), index_map);
+    return iterator_property_map(edge_properties_.begin(), index_map);
   }
 
  protected:

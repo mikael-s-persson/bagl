@@ -500,11 +500,10 @@ bool kamada_kawai_spring_layout(const Graph& g, PositionMap position, WeightMap 
 
   std::vector<weight_vec> distance(n, weight_vec(n));
   std::vector<weight_vec> spring_strength(n, weight_vec(n));
-  std::vector<point_difference_type> partial_derivatives(n);
 
   return kamada_kawai_spring_layout(
       g, position, weight, topology, edge_or_side_length, done, spring_constant, index, distance.begin(),
-      spring_strength.begin(), make_iterator_property_map(partial_derivatives.begin(), index, point_difference_type()));
+      spring_strength.begin(), vector_property_map(n, index, point_difference_type()));
 }
 
 /**

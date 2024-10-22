@@ -1026,8 +1026,8 @@ struct property_map<BAGL_CSR_GRAPH_TYPE, edge_all_t,
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
 struct property_map<BAGL_CSR_GRAPH_TYPE, graph_all_t,
                     std::enable_if_t<!distributed_detail::is_distributed_selector_v<Vertex>>> {
-  using type = ref_property_map<typename BAGL_CSR_GRAPH_TYPE::graph_property_type>;
-  using const_type = ref_property_map<const typename BAGL_CSR_GRAPH_TYPE::graph_property_type>;
+  using type = single_ref_property_map<typename BAGL_CSR_GRAPH_TYPE::graph_property_type>;
+  using const_type = single_ref_property_map<const typename BAGL_CSR_GRAPH_TYPE::graph_property_type>;
 };
 
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>

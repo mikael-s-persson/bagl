@@ -6,7 +6,7 @@
 #include <iostream>
 #include <vector>
 
-#include "bagl/constant_property_map.h"
+#include "bagl/single_property_map.h"
 #include "bagl/directed_graph.h"
 #include "bagl/floyd_warshall_shortest.h"
 #include "bagl/graph_traits.h"
@@ -39,7 +39,6 @@ void build_graph(Graph& g, std::vector<graph_vertex_descriptor_t<Graph>>& v) {
 TEST(ClosenessCentrality, UndirectedGraph) {
   using Graph = undirected_graph<>;
   using Vertex = graph_vertex_descriptor_t<Graph>;
-  using Edge = graph_edge_descriptor_t<Graph>;
 
   Graph g;
   std::vector<Vertex> v(N);
@@ -52,7 +51,7 @@ TEST(ClosenessCentrality, UndirectedGraph) {
     dm[u] = vector_property_map(num_vertices(g), get(vertex_index, g), int{0});
   }
 
-  auto wm = constant_property_map<Edge, int>(1);
+  auto wm = single_property_map(1);
 
   floyd_warshall_all_pairs_shortest_paths(g, dm, wm);
   all_closeness_centralities(g, dm, cm);
@@ -67,7 +66,6 @@ TEST(ClosenessCentrality, UndirectedGraph) {
 TEST(ClosenessCentrality, DirectedGraph) {
   using Graph = directed_graph<>;
   using Vertex = graph_vertex_descriptor_t<Graph>;
-  using Edge = graph_edge_descriptor_t<Graph>;
 
   Graph g;
   std::vector<Vertex> v(N);
@@ -80,7 +78,7 @@ TEST(ClosenessCentrality, DirectedGraph) {
     dm[u] = vector_property_map(num_vertices(g), get(vertex_index, g), int{0});
   }
 
-  auto wm = constant_property_map<Edge, int>(1);
+  auto wm = single_property_map(1);
 
   floyd_warshall_all_pairs_shortest_paths(g, dm, wm);
   all_closeness_centralities(g, dm, cm);

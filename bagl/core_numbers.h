@@ -7,7 +7,7 @@
 
 #include <concepts>
 
-#include "bagl/constant_property_map.h"
+#include "bagl/single_property_map.h"
 #include "bagl/d_ary_heap.h"
 #include "bagl/graph_concepts.h"
 #include "bagl/graph_traits.h"
@@ -230,7 +230,7 @@ property_traits_value_t<CoreMap> core_numbers_impl(const G& g, CoreMap c, Positi
 template <concepts::IncidenceGraph G, concepts::ReadWriteVertexPropertyMap<G> CoreMap,
           concepts::CoreNumbersVisitor<G> V>
 property_traits_value_t<CoreMap> core_numbers(const G& g, CoreMap c, V vis) {
-  core_numbers_detail::compute_in_degree_map(g, c, constant_property_map<void, property_traits_value_t<CoreMap>>(1));
+  core_numbers_detail::compute_in_degree_map(g, c, single_property_map<property_traits_value_t<CoreMap>>(1));
   return core_numbers_detail::core_numbers_impl(
       g, c, make_vector_property_map<std::size_t>(num_vertices(g), get(vertex_index, g)), vis);
 }

@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "bagl/breadth_first_search.h"
-#include "bagl/constant_property_map.h"
 #include "bagl/d_ary_heap.h"
 #include "bagl/exception.h"
 #include "bagl/function_property_map.h"

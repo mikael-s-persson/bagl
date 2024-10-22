@@ -17,7 +17,6 @@ template <typename T, typename IndexMap = identity_property_map>
 class vector_property_map : public put_get_helper<vector_property_map<T, IndexMap>> {
  public:
   using value_type = T;
-  using reference = decltype(std::declval<std::vector<T>>()[std::declval<property_traits_value_t<IndexMap>>()]);
 
   explicit vector_property_map(IndexMap index = IndexMap(), T default_value = T{})
       : store_(std::make_shared<std::vector<T>>()), index_(std::move(index)), default_value_(std::move(default_value)) {}
@@ -37,7 +36,7 @@ class vector_property_map : public put_get_helper<vector_property_map<T, IndexMa
   const IndexMap& get_index_map() const { return index_; }
 
   template <typename Key>
-  reference operator[](const Key& v) const {
+  decltype(auto) operator[](const Key& v) const {
     auto i = get(index_, v);
     if (static_cast<std::size_t>(i) >= store_->size()) {
       store_->resize(i + 1, default_value_);
