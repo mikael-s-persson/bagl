@@ -17,32 +17,15 @@ namespace bagl {
 //=========================================================================
 // property_traits class
 
-BAGL_GRAPH_HAS_TRAIT_MEMBER(key_type, void)
 BAGL_GRAPH_HAS_TRAIT_MEMBER(value_type, void)
-BAGL_GRAPH_HAS_TRAIT_MEMBER(reference, void)
-
-template <class PA>
-constexpr bool is_property_map_v = has_key_type_v<PA>&& has_value_type_v<PA>&& has_reference_v<PA>;
 
 template <typename PA>
-struct default_property_traits {
-  using key_type = get_key_type_or_not<PA>;
+struct property_traits {
   using value_type = get_value_type_or_not<PA>;
-  using reference = get_reference_or_not<PA>;
 };
 
-struct null_property_traits {};
-
-template <typename PA>
-struct property_traits : std::conditional_t<is_property_map_v<PA>, default_property_traits<PA>, null_property_traits> {
-};
-
-template <typename PA>
-using property_traits_key_t = typename property_traits<PA>::key_type;
 template <typename PA>
 using property_traits_value_t = typename property_traits<PA>::value_type;
-template <typename PA>
-using property_traits_reference_t = typename property_traits<PA>::reference;
 
 //=========================================================================
 // property_traits specialization for pointers
@@ -51,13 +34,11 @@ template <class T>
 struct property_traits<T*> {
   using value_type = T;
   using reference = value_type&;
-  using key_type = std::ptrdiff_t;
 };
 template <class T>
 struct property_traits<const T*> {
   using value_type = T;
   using reference = const value_type&;
-  using key_type = std::ptrdiff_t;
 };
 
 // V must be convertible to T
@@ -113,7 +94,6 @@ concept PropertyComparator = requires(Func f, const property_traits_value_t<PMap
 
 template <typename KeyArchetype, typename ValueArchetype>
 struct readable_property_map_archetype {
-  using key_type = KeyArchetype;
   using value_type = ValueArchetype;
   using reference = const ValueArchetype&;
 };
@@ -124,7 +104,6 @@ V get(const readable_property_map_archetype<K, V>& /*unused*/, const K& /*unused
 
 template <typename KeyArchetype, typename ValueArchetype>
 struct writable_property_map_archetype {
-  using key_type = KeyArchetype;
   using value_type = ValueArchetype;
   using reference = void;
 };
@@ -134,27 +113,24 @@ void put(const writable_property_map_archetype<K, V>& /*unused*/, const K& /*unu
 template <typename KeyArchetype, typename ValueArchetype>
 struct read_write_property_map_archetype : readable_property_map_archetype<KeyArchetype, ValueArchetype>,
                                            writable_property_map_archetype<KeyArchetype, ValueArchetype> {
-  using key_type = KeyArchetype;
   using value_type = ValueArchetype;
   using reference = const ValueArchetype&;
 };
 
 template <typename KeyArchetype, typename ValueArchetype>
 struct lvalue_property_map_archetype : readable_property_map_archetype<KeyArchetype, ValueArchetype> {
-  using key_type = KeyArchetype;
   using value_type = ValueArchetype;
   using reference = const ValueArchetype&;
-  const value_type& operator[](const key_type& /*unused*/) const { return value; }
+  const value_type& operator[](const KeyArchetype& /*unused*/) const { return value; }
   value_type value{};
 };
 
 template <typename KeyArchetype, typename ValueArchetype>
 struct mutable_lvalue_property_map_archetype : readable_property_map_archetype<KeyArchetype, ValueArchetype>,
                                                writable_property_map_archetype<KeyArchetype, ValueArchetype> {
-  using key_type = KeyArchetype;
   using value_type = ValueArchetype;
   using reference = ValueArchetype&;
-  value_type& operator[](const key_type& /*unused*/) const { return value; }
+  value_type& operator[](const KeyArchetype& /*unused*/) const { return value; }
   mutable value_type value{};
 };
 
@@ -180,16 +156,18 @@ void put(const put_get_helper<PropertyMap>& pa, const K& k, U&& u) {
 // Adapter to turn a RandomAccessIterator into a property map
 
 template <std::random_access_iterator RandomAccessIterator, typename IndexMap>
-requires concepts::ReadablePropertyMap<IndexMap, property_traits_key_t<IndexMap>>
 class iterator_property_map : public put_get_helper<iterator_property_map<RandomAccessIterator, IndexMap>> {
  public:
-  using key_type = property_traits_key_t<IndexMap>;
   using reference = decltype(*std::declval<RandomAccessIterator>());
   using value_type = std::decay_t<reference>;
 
   explicit iterator_property_map(RandomAccessIterator iter = RandomAccessIterator(), IndexMap index = IndexMap())
       : iter_(std::move(iter)), index_(std::move(index)) {}
-  reference operator[](const key_type& k) const { return *(iter_ + get(index_, k)); }
+
+  template <typename Key>
+  reference operator[](const Key& k) const {
+    return *(iter_ + get(index_, k));
+  }
 
  protected:
   RandomAccessIterator iter_;
@@ -197,16 +175,13 @@ class iterator_property_map : public put_get_helper<iterator_property_map<Random
 };
 
 template <std::random_access_iterator RAIter, typename IndexMap>
-requires concepts::ReadablePropertyMap<IndexMap, property_traits_key_t<IndexMap>>
 auto make_iterator_property_map(RAIter iter, IndexMap id) {
   return iterator_property_map<RAIter, IndexMap>(std::move(iter), std::move(id));
 }
 
 template <std::random_access_iterator RandomAccessIterator, typename IndexMap>
-requires concepts::ReadablePropertyMap<IndexMap, property_traits_key_t<IndexMap>>
 class safe_iterator_property_map : public put_get_helper<safe_iterator_property_map<RandomAccessIterator, IndexMap>> {
  public:
-  using key_type = property_traits_key_t<IndexMap>;
   using reference = decltype(*std::declval<RandomAccessIterator>());
   using value_type = std::decay_t<reference>;
 
@@ -214,7 +189,9 @@ class safe_iterator_property_map : public put_get_helper<safe_iterator_property_
                              IndexMap index = IndexMap())
       : iter_(std::move(first)), n_(n), index_(std::move(index)) {}
   safe_iterator_property_map() = default;
-  reference operator[](const key_type& k) const {
+
+  template <typename Key>
+  reference operator[](const Key& k) const {
     assert(get(index_, k) < n_);
     return *(iter_ + get(index_, k));
   }
@@ -227,7 +204,6 @@ class safe_iterator_property_map : public put_get_helper<safe_iterator_property_
 };
 
 template <std::random_access_iterator RAIter, typename IndexMap>
-requires concepts::ReadablePropertyMap<IndexMap, property_traits_key_t<IndexMap>>
 auto make_safe_iterator_property_map(RAIter iter, property_traits_value_t<IndexMap> n, IndexMap id) {
   return safe_iterator_property_map<RAIter, IndexMap>(std::move(iter), n, std::move(id));
 }
@@ -241,12 +217,15 @@ class associative_property_map : public put_get_helper<associative_property_map<
   using C = UniquePairAssociativeContainer;
 
  public:
-  using key_type = typename C::key_type;
-  using reference = decltype(std::declval<C>()[std::declval<key_type>()]);
-  using value_type = std::decay_t<reference>;
+  using value_type = typename C::mapped_type;
+  using reference = value_type&;
   associative_property_map() : c_(nullptr) {}
   explicit associative_property_map(C& c) : c_(&c) {}
-  reference operator[](const key_type& k) const { return (*c_)[k]; }
+
+  template <typename Key>
+  reference operator[](const Key& k) const {
+    return (*c_)[k];
+  }
 
  private:
   C* c_;
@@ -263,12 +242,15 @@ class const_associative_property_map
   using C = UniquePairAssociativeContainer;
 
  public:
-  using key_type = typename C::key_type;
-  using reference = decltype(std::declval<const C&>().find(std::declval<key_type>())->second);
-  using value_type = std::decay_t<reference>;
+  using value_type = typename C::mapped_type;
+  using reference = const value_type&;
   const_associative_property_map() : c_(nullptr) {}
   explicit const_associative_property_map(const C& c) : c_(&c) {}
-  reference operator[](const key_type& k) const { return c_->find(k)->second; }
+
+  template <typename Key>
+  reference operator[](const Key& k) const {
+    return c_->find(k)->second;
+  }
 
  private:
   const C* c_;
@@ -282,14 +264,13 @@ auto make_assoc_property_map(const UniquePairAssociativeContainer& c) {
 //=========================================================================
 // A property map that always returns the same object by value.
 //
-template <typename ValueType, typename KeyType = void>
+template <typename ValueType>
 class static_property_map : public put_get_helper<static_property_map<ValueType>> {
   ValueType value_;
 
  public:
-  using key_type = KeyType;
   using value_type = ValueType;
-  using reference = ValueType;
+  using reference = const ValueType&;
   explicit static_property_map(ValueType v) : value_(std::move(v)) {}
 
   template <typename T>
@@ -298,20 +279,19 @@ class static_property_map : public put_get_helper<static_property_map<ValueType>
   }
 };
 
-template <typename KeyType, typename U>
+template <typename U>
 auto make_static_property_map(U&& v) {
-  return static_property_map<std::decay_t<U>, KeyType>(std::forward<U>(v));
+  return static_property_map<std::decay_t<U>>(std::forward<U>(v));
 }
 
 //=========================================================================
 // A property map that always returns a reference to the same object.
 //
-template <typename KeyType, typename ValueType>
-class ref_property_map : public put_get_helper<ref_property_map<KeyType, ValueType>> {
+template <typename ValueType>
+class ref_property_map : public put_get_helper<ref_property_map<ValueType>> {
   ValueType* value_;
 
  public:
-  using key_type = KeyType;
   using value_type = ValueType;
   using reference = ValueType&;
   explicit ref_property_map(ValueType& v) : value_(&v) {}
@@ -326,11 +306,10 @@ class ref_property_map : public put_get_helper<ref_property_map<KeyType, ValueTy
 // A generalized identity property map
 template <typename T>
 struct typed_identity_property_map : public put_get_helper<typed_identity_property_map<T>> {
-  using key_type = T;
   using value_type = T;
   using reference = T;
 
-  reference operator[](key_type v) const { return v; }
+  T operator[](T v) const { return v; }
 };
 
 //=========================================================================
@@ -352,7 +331,6 @@ struct dummy_pmap_reference {
 
 class dummy_property_map : public put_get_helper<dummy_property_map> {
  public:
-  using key_type = void;
   using value_type = int;
   using reference = property_map_detail::dummy_pmap_reference;
   template <typename T>

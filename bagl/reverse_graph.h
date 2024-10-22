@@ -198,21 +198,25 @@ struct reverse_graph_edge_property_map {
   PM underlying_pm_;
 
  public:
-  using key_type = reverse_graph_edge_descriptor<property_traits_key_t<PM>>;
   using value_type = property_traits_value_t<PM>;
-  using reference = property_traits_reference_t<PM>;
 
   explicit reverse_graph_edge_property_map(const PM& pm) : underlying_pm_(pm) {}
 
-  friend reference get(const reverse_graph_edge_property_map& m, const key_type& e) {
+  template <typename Key>
+  friend decltype(auto) get(const reverse_graph_edge_property_map& m, const reverse_graph_edge_descriptor<Key>& e) {
     return get(m.underlying_pm_, e.underlying_descx_);
   }
 
-  friend void put(const reverse_graph_edge_property_map& m, const key_type& e, const value_type& v) {
+  template <typename Key>
+  friend void put(const reverse_graph_edge_property_map& m, const reverse_graph_edge_descriptor<Key>& e,
+                  const value_type& v) {
     put(m.underlying_pm_, e.underlying_descx_, v);
   }
 
-  reference operator[](const key_type& k) const { return (this->underlying_pm_)[k.underlying_descx_]; }
+  template <typename Key>
+  decltype(auto) operator[](const reverse_graph_edge_descriptor<Key>& k) const {
+    return (this->underlying_pm_)[k.underlying_descx_];
+  }
 };
 
 }  // namespace reverse_graph_detail
@@ -281,7 +285,6 @@ E get(underlying_edge_desc_map_type<E> m, const reverse_graph_edge_descriptor<E>
 
 template <typename E>
 struct property_traits<reverse_graph_detail::underlying_edge_desc_map_type<E>> {
-  using key_type = reverse_graph_detail::reverse_graph_edge_descriptor<E>;
   using value_type = E;
   using reference = const E&;
 };

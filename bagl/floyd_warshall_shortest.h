@@ -29,8 +29,7 @@ using property_matrix_value_t = property_traits_value_t<property_traits_value_t<
 
 template <concepts::VertexListGraph G, typename DistanceMatrix,
           concepts::PropertyComparator<property_traits_value_t<DistanceMatrix>> Compare,
-          concepts::PropertyCombinator<property_traits_value_t<DistanceMatrix>> Combine, typename Infinity,
-          typename Zero>
+          concepts::PropertyCombinator<property_traits_value_t<DistanceMatrix>> Combine>
 bool floyd_warshall_dispatch(const G& g, DistanceMatrix& d, const Compare& compare, const Combine& combine,
                              property_matrix_value_t<DistanceMatrix> inf,
                              property_matrix_value_t<DistanceMatrix> zero) {

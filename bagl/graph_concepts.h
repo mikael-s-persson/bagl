@@ -223,13 +223,13 @@ BAGL_GRAPH_HAS_TRAIT_MEMBER(result_type, void)
 }  // namespace graph_concepts_detail
 
 template <typename M, typename G>
-concept DegreeMeasure = requires(const M& m, const G& g, graph_concepts_detail::get_vertex_type_or_not<M> v) {
-  { m(v, g) } -> std::convertible_to<graph_concepts_detail::get_degree_type_or_not<M>>;
+concept DegreeMeasure = requires(const M& m, const G& g, graph_vertex_descriptor_t<G> v) {
+  { m(v, g) } -> std::integral;
 };
 
-template <typename M, typename G>
-concept DistanceMeasure = requires(const M& m, const G& g, graph_concepts_detail::get_distance_type_or_not<M> d) {
-  { m(d, g) } -> std::convertible_to<graph_concepts_detail::get_result_type_or_not<M>>;
+template <typename M, typename G, typename D>
+concept DistanceMeasure = requires(const M& m, const G& g, D d) {
+  { m(d, g) } -> std::regular;
 };
 
 }  // namespace bagl::concepts

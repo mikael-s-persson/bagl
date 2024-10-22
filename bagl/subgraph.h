@@ -626,16 +626,15 @@ class subgraph_global_property_map : public put_get_helper<subgraph_global_prope
 
  public:
   using value_type = typename Traits::value_type;
-  using key_type = typename Traits::key_type;
-  using reference = typename Traits::reference;
 
   subgraph_global_property_map() = default;
 
   subgraph_global_property_map(GraphPtr g, Tag tag) : m_g(g), m_tag(tag) {}
 
-  reference operator[](key_type e) const {
+  template <typename Key>
+  decltype(auto) operator[](const Key& e) const {
     PropertyMap pmap = get(m_tag, m_g->root().m_graph);
-    return m_g->is_root() ? pmap[e] : pmap[m_g->local_to_global(e)];
+    return pmap[m_g->is_root() ? e : m_g->local_to_global(e)];
   }
 
   GraphPtr m_g;
@@ -649,8 +648,6 @@ class subgraph_local_property_map : public put_get_helper<subgraph_local_propert
 
  public:
   using value_type = typename Traits::value_type;
-  using key_type = typename Traits::key_type;
-  using reference = typename Traits::reference;
 
   using tag = Tag;
   using pmap = PropertyMap;
@@ -659,7 +656,8 @@ class subgraph_local_property_map : public put_get_helper<subgraph_local_propert
 
   subgraph_local_property_map(GraphPtr g, Tag tag) : m_g(g), m_tag(tag) {}
 
-  reference operator[](key_type e) const {
+  template <typename Key>
+  decltype(auto) operator[](const Key& e) const {
     // Get property map on the underlying graph.
     PropertyMap pmap = get(m_tag, m_g->m_graph);
     return pmap[e];

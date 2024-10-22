@@ -924,7 +924,6 @@ struct csr_property_map_helper {};
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Tag>
 struct csr_property_map_helper<BAGL_CSR_GRAPH_TYPE, Tag, vertex_property_tag> {
   using all_tag = vertex_all_t;
-  using key_type = property_traits_key_t<property_map_t<BAGL_CSR_GRAPH_TYPE, vertex_all_t>>;
   using plist_type = VertexProperty;
   using all_type = property_map_t<BAGL_CSR_GRAPH_TYPE, vertex_all_t>;
   using all_const_type = property_map_const_t<BAGL_CSR_GRAPH_TYPE, vertex_all_t>;
@@ -936,7 +935,6 @@ struct csr_property_map_helper<BAGL_CSR_GRAPH_TYPE, Tag, vertex_property_tag> {
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Tag>
 struct csr_property_map_helper<BAGL_CSR_GRAPH_TYPE, Tag, edge_property_tag> {
   using all_tag = edge_all_t;
-  using key_type = property_traits_key_t<property_map_t<BAGL_CSR_GRAPH_TYPE, edge_all_t>>;
   using plist_type = EdgeProperty;
   using all_type = property_map_t<BAGL_CSR_GRAPH_TYPE, edge_all_t>;
   using all_const_type = property_map_const_t<BAGL_CSR_GRAPH_TYPE, edge_all_t>;
@@ -948,7 +946,6 @@ struct csr_property_map_helper<BAGL_CSR_GRAPH_TYPE, Tag, edge_property_tag> {
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Tag>
 struct csr_property_map_helper<BAGL_CSR_GRAPH_TYPE, Tag, graph_property_tag> {
   using all_tag = graph_all_t;
-  using key_type = BAGL_CSR_GRAPH_TYPE*;
   using plist_type = GraphProperty;
   using all_type = property_map_t<BAGL_CSR_GRAPH_TYPE, graph_all_t>;
   using all_const_type = property_map_const_t<BAGL_CSR_GRAPH_TYPE, graph_all_t>;
@@ -976,22 +973,22 @@ decltype(auto) get(Tag tag, const BAGL_CSR_GRAPH_TYPE& g) {
       tag, get(typename property_map<BAGL_CSR_GRAPH_TYPE, Tag>::all_tag(), g));
 }
 
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Tag>
-decltype(auto) get(Tag tag, BAGL_CSR_GRAPH_TYPE& g, typename property_map<BAGL_CSR_GRAPH_TYPE, Tag>::key_type k) {
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Tag, typename Key>
+decltype(auto) get(Tag tag, BAGL_CSR_GRAPH_TYPE& g, const Key& k) {
   using all_tag = typename property_map<BAGL_CSR_GRAPH_TYPE, Tag>::all_tag;
   using outer_pm = typename property_map<BAGL_CSR_GRAPH_TYPE, all_tag>::type;
   return lookup_one_property<property_traits_value_t<outer_pm>, Tag>::lookup(get(all_tag(), g, k), tag);
 }
 
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Tag>
-decltype(auto) get(Tag tag, const BAGL_CSR_GRAPH_TYPE& g, typename property_map<BAGL_CSR_GRAPH_TYPE, Tag>::key_type k) {
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Tag, typename Key>
+decltype(auto) get(Tag tag, const BAGL_CSR_GRAPH_TYPE& g, const Key& k) {
   using all_tag = typename property_map<BAGL_CSR_GRAPH_TYPE, Tag>::all_tag;
   using outer_pm = typename property_map<BAGL_CSR_GRAPH_TYPE, all_tag>::type;
   return lookup_one_property<const property_traits_value_t<outer_pm>, Tag>::lookup(get(all_tag(), g, k), tag);
 }
 
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Tag>
-void put(Tag tag, BAGL_CSR_GRAPH_TYPE& g, typename property_map<BAGL_CSR_GRAPH_TYPE, Tag>::key_type k,
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Tag, typename Key>
+void put(Tag tag, BAGL_CSR_GRAPH_TYPE& g, const Key& k,
          lookup_one_property_t<typename property_map<BAGL_CSR_GRAPH_TYPE, Tag>::plist_type, Tag> val) {
   using all_tag = typename property_map<BAGL_CSR_GRAPH_TYPE, Tag>::all_tag;
   lookup_one_property<typename property_map<BAGL_CSR_GRAPH_TYPE, Tag>::plist_type, Tag>::lookup(get(all_tag(), g, k),
@@ -1029,8 +1026,8 @@ struct property_map<BAGL_CSR_GRAPH_TYPE, edge_all_t,
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
 struct property_map<BAGL_CSR_GRAPH_TYPE, graph_all_t,
                     std::enable_if_t<!distributed_detail::is_distributed_selector_v<Vertex>>> {
-  using type = ref_property_map<BAGL_CSR_GRAPH_TYPE*, typename BAGL_CSR_GRAPH_TYPE::graph_property_type>;
-  using const_type = ref_property_map<BAGL_CSR_GRAPH_TYPE*, const typename BAGL_CSR_GRAPH_TYPE::graph_property_type>;
+  using type = ref_property_map<typename BAGL_CSR_GRAPH_TYPE::graph_property_type>;
+  using const_type = ref_property_map<const typename BAGL_CSR_GRAPH_TYPE::graph_property_type>;
 };
 
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>

@@ -116,6 +116,12 @@ struct property_kind {
 template <typename PropertyTag>
 using property_kind_t = typename property_kind<PropertyTag>::type;
 
+template <typename PropertyTag>
+constexpr bool is_vertex_property_kind_v = std::is_same_v<property_kind_t<PropertyTag>, vertex_property_tag>;
+template <typename PropertyTag>
+constexpr bool is_edge_property_kind_v = std::is_same_v<property_kind_t<PropertyTag>, edge_property_tag>;
+template <typename PropertyTag>
+constexpr bool is_graph_property_kind_v = std::is_same_v<property_kind_t<PropertyTag>, graph_property_tag>;
 
 // Some standard properties defined independently:
 struct vertex_all_t {

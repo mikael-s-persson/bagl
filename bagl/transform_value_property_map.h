@@ -16,11 +16,13 @@ template <typename Func, typename PM>
 class transform_value_property_map : public put_get_helper<transform_value_property_map<Func, PM>> {
  public:
   using self = transform_value_property_map<Func, PM>;
-  using key_type = property_traits_key_t<PM>;
 
   transform_value_property_map(Func f, PM pm) : f_(f), pm_(pm) {}
 
-  decltype(auto) operator[](const key_type& k) const { return f_(get(pm_, k)); }
+  template <typename Key>
+  decltype(auto) operator[](const Key& k) const {
+    return f_(get(pm_, k));
+  }
 
   using reference = decltype(std::declval<Func>()(std::declval<property_traits_value_t<PM>>()));
   using value_type = std::remove_cv_t<std::remove_reference_t<reference>>;

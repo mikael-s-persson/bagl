@@ -16,7 +16,6 @@ namespace bagl {
 template <typename T, typename IndexMap = identity_property_map>
 class vector_property_map : public put_get_helper<vector_property_map<T, IndexMap>> {
  public:
-  using key_type = property_traits_key_t<IndexMap>;
   using value_type = T;
   using reference = decltype(std::declval<std::vector<T>>()[std::declval<property_traits_value_t<IndexMap>>()]);
 
@@ -37,7 +36,8 @@ class vector_property_map : public put_get_helper<vector_property_map<T, IndexMa
   IndexMap& get_index_map() { return index_; }
   const IndexMap& get_index_map() const { return index_; }
 
-  reference operator[](const key_type& v) const {
+  template <typename Key>
+  reference operator[](const Key& v) const {
     auto i = get(index_, v);
     if (static_cast<std::size_t>(i) >= store_->size()) {
       store_->resize(i + 1, default_value_);

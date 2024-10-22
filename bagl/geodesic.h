@@ -75,7 +75,7 @@ struct maximize {
 // discrete notions of reciprocals.
 struct reciprocal {
   template <typename T>
-  T operator()(const T& t) {
+  T operator()(const T& t) const {
     return T{1} / t;
   }
 };

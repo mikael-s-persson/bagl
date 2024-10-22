@@ -24,6 +24,7 @@
 #include <typeinfo>
 #include <unordered_map>
 
+#include "bagl/graph_traits.h"
 #include "bagl/property_map.h"
 
 namespace bagl {
@@ -111,9 +112,9 @@ namespace dynamic_pmap_detail {
 
 // dynamic_property_map_adaptor -
 //   property-map adaptor to support runtime polymorphism.
-template <typename PropertyMap>
+template <typename Key, typename PropertyMap>
 class dynamic_property_map_adaptor : public dynamic_property_map {
-  using key_type = property_traits_key_t<PropertyMap>;
+  using key_type = Key;
   using value_type = property_traits_value_t<PropertyMap>;
 
   // do_put - overloaded dispatches from the put() member function.
@@ -234,11 +235,11 @@ struct dynamic_properties {
   dynamic_properties() = default;
   explicit dynamic_properties(generate_fn_type g) : generate_fn_(std::move(g)) {}
 
-  template <typename PropertyMap>
+  template <typename Key, typename PropertyMap>
   dynamic_properties& property(std::string name, PropertyMap property_map_) {
     property_maps_.emplace(
         std::move(name),
-        std::make_shared<dynamic_pmap_detail::dynamic_property_map_adaptor<PropertyMap>>(property_map_));
+        std::make_shared<dynamic_pmap_detail::dynamic_property_map_adaptor<Key, PropertyMap>>(property_map_));
 
     return *this;
   }
@@ -246,20 +247,30 @@ struct dynamic_properties {
   // Add property maps from tags (e.g. property(vertex_index, g) == property("vertex_index", get(vertex_index, g)))
   template <typename PropertyTag, typename Graph>
   std::enable_if_t<!std::is_same_v<PropertyTag, std::string>, dynamic_properties&> property(PropertyTag property_tag, Graph&& g) {
-    return property(std::string{PropertyTag::name}, get(property_tag, std::forward<Graph>(g)));
+    if constexpr (is_vertex_property_kind_v<PropertyTag>) {
+      return property<graph_vertex_descriptor_t<Graph>>(std::string{PropertyTag::name},
+                                                        get(property_tag, std::forward<Graph>(g)));
+    } else if constexpr (is_edge_property_kind_v<PropertyTag>) {
+      return property<graph_edge_descriptor_t<Graph>>(std::string{PropertyTag::name},
+                                                      get(property_tag, std::forward<Graph>(g)));
+    } else {
+      return property<Graph*>(std::string{PropertyTag::name}, get(property_tag, std::forward<Graph>(g)));
+    }
   }
 
-  template <typename PropertyMap>
+  template <typename Key, typename PropertyMap>
   [[nodiscard]] dynamic_properties property(const std::string& name, PropertyMap property_map_) const {
     dynamic_properties result = *this;
-    result.property(name, property_map_);
+    result.property<Key>(name, property_map_);
     return result;
   }
 
   // Add property maps from tags (e.g. property(vertex_index, g) == property("vertex_index", get(vertex_index, g)))
   template <typename PropertyTag, typename Graph>
   std::enable_if_t<!std::is_same_v<PropertyTag, std::string>, dynamic_properties> property(PropertyTag property_tag, Graph&& g) const {
-    return property(std::string{PropertyTag::name}, get(property_tag, std::forward<Graph>(g)));
+    dynamic_properties result = *this;
+    result.property(property_tag, std::forward<Graph>(g));
+    return result;
   }
 
   [[nodiscard]] iterator begin() { return property_maps_.begin(); }

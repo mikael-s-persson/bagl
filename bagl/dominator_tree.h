@@ -9,6 +9,7 @@
 
 #include "bagl/depth_first_search.h"
 #include "bagl/graph_concepts.h"
+#include "bagl/graph_traits.h"
 #include "bagl/vector_property_map.h"
 
 // Dominator tree computation
@@ -23,7 +24,7 @@ class time_stamper_with_vertex_on_discover_vertex {
       : time_pa_(time_map), time_(t), v_(v) {}
 
   template <class Graph>
-  void discover_vertex(const property_traits_key_t<TimeMap>& v, const Graph& g) {
+  void discover_vertex(const graph_vertex_descriptor_t<Graph>& v, const Graph& g) {
     put(time_pa_, v, ++time_);
     v_[time_] = v;
   }

@@ -273,3 +273,21 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_test(
+    name = "bron_kerbosch_all_cliques_test",
+    srcs = [ "bron_kerbosch_all_cliques_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "closeness_centrality_test",
+    srcs = [ "closeness_centrality_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)

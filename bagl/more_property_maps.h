@@ -25,13 +25,12 @@ struct whole_bundle_property_map : public put_get_helper<whole_bundle_property_m
   using non_const_graph = std::remove_cv_t<Graph>;
   using value_type = std::conditional_t<is_vertex_bundle_v, vertex_bundle_type<non_const_graph>, std::conditional_t<is_edge_bundle_v, edge_bundle_type<non_const_graph>, graph_bundle_type<non_const_graph>>>;
   using reference = std::conditional_t<is_const_graph_v, const value_type&, value_type&>;
-  using key_type =
-      std::conditional_t<is_vertex_bundle_v, graph_vertex_descriptor_t<non_const_graph>,
-                         std::conditional_t<is_edge_bundle_v, graph_edge_descriptor_t<non_const_graph>, Graph&>>;
 
   explicit whole_bundle_property_map(Graph* pg) : pg_(pg) {}
   whole_bundle_property_map() = default;
-  reference operator[](key_type k) const {
+
+  template <typename Key>
+  reference operator[](const Key& k) const {
     if constexpr (is_vertex_bundle_v || is_edge_bundle_v) {
       return (*pg_)[k];
     } else {
@@ -54,22 +53,17 @@ struct tagged_in_property_property_map
   Graph* pg_ = nullptr;
 
  public:
-  static constexpr bool is_vertex_prop_v = std::is_same_v<property_kind_t<PropertyMapTag>, vertex_property_tag>;
-  static constexpr bool is_edge_prop_v = std::is_same_v<property_kind_t<PropertyMapTag>, edge_property_tag>;
-  static constexpr bool is_const_graph_v = std::is_const_v<Graph>;
-  using non_const_graph = std::remove_cv_t<Graph>;
   using value_type = T;
   using reference = T&;
-  using key_type =
-      std::conditional_t<is_vertex_prop_v, graph_vertex_descriptor_t<non_const_graph>,
-                         std::conditional_t<is_edge_prop_v, graph_edge_descriptor_t<non_const_graph>, Graph&>>;
 
   explicit tagged_in_property_property_map(Graph* pg, PropertyMapTag /*tag*/ = {}) : pg_(pg) {}
   tagged_in_property_property_map() = default;
-  decltype(auto) operator[](key_type k) const {
+
+  template <typename Key>
+  decltype(auto) operator[](const Key& k) const {
     if constexpr (std::is_same_v<std::remove_cv_t<value_type>, no_property>) {
       return no_property{};
-    } else if constexpr (is_vertex_prop_v || is_edge_prop_v) {
+    } else if constexpr (is_vertex_property_kind_v<PropertyMapTag> || is_edge_property_kind_v<PropertyMapTag>) {
       return get_property_value(pg_->get_property(k), PropertyMapTag{});
     } else {
       return get_property_value(k.get_property(graph_all), PropertyMapTag{});
@@ -87,15 +81,16 @@ struct propgraph_property_map : public put_get_helper<propgraph_property_map<T, 
   Graph* pg_ = nullptr;
 
  public:
-  static constexpr bool is_vertex_prop_v = std::is_same_v<property_kind_t<PropertyMapTag>, vertex_property_tag>;
   using value_type = T;
   using reference = T&;
-  using key_type =
-      std::conditional_t<is_vertex_prop_v, graph_vertex_descriptor_t<Graph>, graph_edge_descriptor_t<Graph>>;
 
   explicit propgraph_property_map(Graph* pg, PropertyMapTag /*tag*/ = {}) : pg_(pg) {}
   propgraph_property_map() = default;
-  reference operator[](key_type k) const { return get(PropertyMapTag{}, *pg_, k); }
+
+  template <typename Key>
+  reference operator[](const Key& k) const {
+    return get(PropertyMapTag{}, *pg_, k);
+  }
 };
 
 //======== Bundle-data-member property-map ==========
@@ -126,13 +121,12 @@ class bundle_member_property_map : public put_get_helper<bundle_member_property_
  public:
   using value_type = T;
   using reference = T&;
-  using key_type =
-      std::conditional_t<is_vertex_bundle_v, graph_vertex_descriptor_t<non_const_graph>,
-                         std::conditional_t<is_edge_bundle_v, graph_edge_descriptor_t<non_const_graph>, Graph&>>;
 
   bundle_member_property_map(Graph* pg, member_ptr_type mem_ptr) : pg_(pg), mem_ptr_(mem_ptr) {}
   bundle_member_property_map() = default;
-  reference operator[](key_type k) const {
+
+  template <typename Key>
+  reference operator[](const Key& k) const {
     if constexpr (is_vertex_bundle_v || is_edge_bundle_v) {
       return (*pg_)[k].*mem_ptr_;
     } else {
@@ -177,7 +171,6 @@ struct self_property_map : public subobject_put_get_helper<self_property_map<T>>
   using value_type = T;
   using reference = T&;
   using const_reference = const T&;
-  using key_type = T;
 
   self_property_map() = default;
   reference operator[](reference p) const { return p; }
@@ -201,12 +194,11 @@ class data_member_property_map : public subobject_put_get_helper<data_member_pro
   using value_type = T;
   using reference = T&;
   using const_reference = const T&;
-  using key_type = PropertyType;
 
   explicit data_member_property_map(member_ptr_type aMemPtr) : mem_ptr_(aMemPtr) {}
   data_member_property_map() = default;
-  reference operator[](key_type& p) const { return p.*mem_ptr_; }
-  const_reference operator[](const key_type& p) const { return p.*mem_ptr_; }
+  reference operator[](PropertyType& p) const { return p.*mem_ptr_; }
+  const_reference operator[](const PropertyType& p) const { return p.*mem_ptr_; }
 };
 
 // This property-map class can be used to map an object (by reference) to one
@@ -219,9 +211,8 @@ class data_member_property_map<const T, const PropertyType>
   using value_type = T;
   using reference = const T&;
   using const_reference = const T&;
-  using key_type = const PropertyType;
 
-  using member_ptr_type = T key_type::*;
+  using member_ptr_type = T PropertyType::*;
   using self = data_member_property_map<const T, const PropertyType>;
 
  private:
@@ -230,7 +221,7 @@ class data_member_property_map<const T, const PropertyType>
  public:
   explicit data_member_property_map(member_ptr_type aMemPtr) : mem_ptr_(aMemPtr) {}
   data_member_property_map() = default;
-  reference operator[](key_type& p) const { return p.*mem_ptr_; }
+  reference operator[](PropertyType& p) const { return p.*mem_ptr_; }
 };
 
 //======== Composite property-map ==========
@@ -245,32 +236,23 @@ class composite_property_map {
   InputMap prop_in;
 
   using value_type = property_traits_value_t<OutputMap>;
-  using key_type = std::remove_cv_t<property_traits_key_t<InputMap>>;
-  using reference = property_traits_reference_t<OutputMap>;
-  using const_reference = const reference;
 
   explicit composite_property_map(OutputMap aPropOut, InputMap aPropIn = {}) : prop_out(aPropOut), prop_in(aPropIn) {}
   composite_property_map() = default;
 
-  reference operator[](const key_type& k) const { return prop_out[prop_in[k]]; }
-  reference operator[](key_type& k) const { return prop_out[prop_in[k]]; }
+  template <typename Key>
+  decltype(auto) operator[](Key& k) const {
+    return prop_out[prop_in[k]];
+  }
 };
 
-template <typename OutputMap, typename InputMap>
-auto get(const composite_property_map<OutputMap, InputMap>& m,
-         const typename composite_property_map<OutputMap, InputMap>::key_type& p) {
+template <typename OutputMap, typename InputMap, typename Key>
+auto get(const composite_property_map<OutputMap, InputMap>& m, const Key& p) {
   return m.prop_out[m.prop_in[p]];
 }
 
-template <typename OutputMap, typename InputMap, typename V>
-void put(const composite_property_map<OutputMap, InputMap>& m,
-         const typename composite_property_map<OutputMap, InputMap>::key_type& p, V&& value) {
-  put(m.prop_out, m.prop_in[p], std::forward<V>(value));
-}
-
-template <typename OutputMap, typename InputMap, typename V>
-void put(const composite_property_map<OutputMap, InputMap>& m,
-         typename composite_property_map<OutputMap, InputMap>::key_type& p, V&& value) {
+template <typename OutputMap, typename InputMap, typename Key, typename V>
+void put(const composite_property_map<OutputMap, InputMap>& m, Key& p, V&& value) {
   put(m.prop_out, m.prop_in[p], std::forward<V>(value));
 }
 

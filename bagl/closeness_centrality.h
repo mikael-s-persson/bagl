@@ -17,8 +17,8 @@ struct closeness_measure : geodesic_measure<DistanceType, ResultType> {
   using base_type = geodesic_measure<DistanceType, ResultType>;
 
   template <typename Graph>
-  ResultType operator()(DistanceType d, const Graph& /*unused*/) {
-    return (d == base_type::infinite_distance()) ? base_type::zero_result() : rec(result_type(d));
+  ResultType operator()(DistanceType d, const Graph& /*unused*/) const {
+    return (d == base_type::infinite_distance()) ? base_type::zero_result() : rec(ResultType(d));
   }
   Reciprocal rec;
 };
@@ -39,14 +39,15 @@ auto measure_closeness(const Graph& /*unused*/, DistanceMap /*unused*/) {
 }
 
 template <concepts::VertexListGraph G, concepts::ReadableVertexPropertyMap<G> DistanceMap,
-          concepts::DistanceMeasure<G> Measure, typename Combinator>
+          concepts::DistanceMeasure<G, property_traits_value_t<DistanceMap>> Measure, typename Combinator>
 auto closeness_centrality(const G& g, DistanceMap dist, Measure measure, Combinator combine) {
   using Distance = property_traits_value_t<DistanceMap>;
   Distance n = combine_distances(g, dist, combine, Distance(0));
   return measure(n, g);
 }
 
-template <concepts::Graph G, concepts::ReadableVertexPropertyMap<G> DistanceMap, concepts::DistanceMeasure<G> Measure>
+template <concepts::Graph G, concepts::ReadableVertexPropertyMap<G> DistanceMap,
+          concepts::DistanceMeasure<G, property_traits_value_t<DistanceMap>> Measure>
 auto closeness_centrality(const G& g, DistanceMap dist, Measure measure) {
   return closeness_centrality(g, dist, measure, std::plus<>());
 }
@@ -62,7 +63,8 @@ T closeness_centrality(const G& g, DistanceMap dist) {
 }
 
 template <concepts::VertexListGraph G, concepts::ReadableVertexPropertyMap<G> DistanceMatrixMap,
-          concepts::WritableVertexPropertyMap<G> CentralityMap, concepts::DistanceMeasure<G> Measure>
+          concepts::WritableVertexPropertyMap<G> CentralityMap,
+          concepts::DistanceMeasure<G, property_traits_value_t<property_traits_value_t<DistanceMatrixMap>>> Measure>
 requires concepts::ReadableVertexPropertyMap<property_traits_value_t<DistanceMatrixMap>, G>
 void all_closeness_centralities(const G& g, DistanceMatrixMap dist, CentralityMap cent, Measure measure) {
   for (auto v : vertices(g)) {

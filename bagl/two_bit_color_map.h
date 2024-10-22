@@ -36,7 +36,6 @@ struct two_bit_color_map {
 
   static constexpr int bits_per_char = std::numeric_limits<std::uint8_t>::digits;
   static constexpr int elements_per_char = bits_per_char / 2;
-  using key_type = property_traits_key_t<IndexMap>;
   using value_type = two_bit_color_type;
   using reference = void;
 
@@ -44,8 +43,8 @@ struct two_bit_color_map {
       : n(a_n), index(a_index), data(new std::uint8_t[(n + elements_per_char - 1) / elements_per_char]()) {}
 };
 
-template <typename IndexMap>
-two_bit_color_type get(const two_bit_color_map<IndexMap>& pm, property_traits_key_t<IndexMap> key) {
+template <typename Key, concepts::ReadablePropertyMap<Key> IndexMap>
+two_bit_color_type get(const two_bit_color_map<IndexMap>& pm, const Key& key) {
   static constexpr int elements_per_char = two_bit_color_map<IndexMap>::elements_per_char;
   auto i = get(pm.index, key);
   assert(i < pm.n);
@@ -54,8 +53,8 @@ two_bit_color_type get(const two_bit_color_map<IndexMap>& pm, property_traits_ke
   return two_bit_color_type((pm.data.get()[byte_num] >> bit_position) & 3);
 }
 
-template <typename IndexMap>
-void put(const two_bit_color_map<IndexMap>& pm, property_traits_key_t<IndexMap> key, two_bit_color_type value) {
+template <typename Key, concepts::ReadablePropertyMap<Key> IndexMap>
+void put(const two_bit_color_map<IndexMap>& pm, const Key& key, two_bit_color_type value) {
   static constexpr int elements_per_char = two_bit_color_map<IndexMap>::elements_per_char;
   auto i = get(pm.index, key);
   assert(i < pm.n);

@@ -21,16 +21,6 @@
 
 namespace bagl {
 
-// Swap two elements in a property map without assuming they model
-// LvaluePropertyMap -- currently not used
-template <typename PropMap>
-void property_map_swap(PropMap prop_map, const property_traits_key_t<PropMap>& ka,
-                       const property_traits_key_t<PropMap>& kb) {
-  auto va = get(prop_map, ka);
-  put(prop_map, ka, get(prop_map, kb));
-  put(prop_map, kb, std::move(va));
-}
-
 // D-ary heap using an indirect compare operator (use identity_property_map
 // as DistanceMap to get a direct compare operator).  This heap appears to be
 // commonly used for Dijkstra's algorithm for its good practical performance

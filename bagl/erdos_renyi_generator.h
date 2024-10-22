@@ -24,29 +24,30 @@ namespace bagl {
 template <typename RandomGenerator, typename Graph>
 class erdos_renyi_iterator {
   using directed_category = graph_directed_category_t<Graph>;
-  using vertices_size_type = graph_vertices_size_type_t<Graph>;
-  using edges_size_type = graph_edges_size_type_t<Graph>;
   using self = erdos_renyi_iterator<RandomGenerator, Graph>;
 
   static constexpr bool is_undirected = std::is_base_of_v<undirected_tag, directed_category>;
 
  public:
-  using value_type = std::pair<graph_vertices_size_type_t<Graph>, graph_vertices_size_type_t<Graph> >;
+  using value_type = std::pair<std::size_t, std::size_t>;
   using reference = const value_type&;
   using pointer = const value_type*;
   using difference_type = std::ptrdiff_t;
   using iterator_category = std::input_iterator_tag;
 
   erdos_renyi_iterator() = default;
-  erdos_renyi_iterator(RandomGenerator gen, vertices_size_type n, double fraction = 0.0, bool allow_self_loops = false)
-      : gen_(std::move(gen)), n_(n), edges_(edges_size_type(fraction * n * n)), allow_self_loops_(allow_self_loops) {
+  erdos_renyi_iterator(RandomGenerator gen, std::size_t n, double fraction = 0.0, bool allow_self_loops = false)
+      : gen_(std::move(gen)),
+        n_(n),
+        edges_(static_cast<std::size_t>(fraction * n * n)),
+        allow_self_loops_(allow_self_loops) {
     if constexpr (is_undirected) {
       edges_ = edges_ / 2;
     }
     next();
   }
 
-  erdos_renyi_iterator(RandomGenerator gen, vertices_size_type n, edges_size_type m, bool allow_self_loops = false)
+  erdos_renyi_iterator(RandomGenerator gen, std::size_t n, std::size_t m, bool allow_self_loops = false)
       : gen_(std::move(gen)), n_(n), edges_(m), allow_self_loops_(allow_self_loops) {
     next();
   }
@@ -64,12 +65,12 @@ class erdos_renyi_iterator {
     ++(*this);
     return t;
   }
-  bool operator==(const self& x) { return edges_ == x.edges_; }
-  bool operator!=(const self& x) { return edges_ != x.edges_; }
+  bool operator==(const self& x) const { return edges_ == x.edges_; }
+  bool operator!=(const self& x) const { return edges_ != x.edges_; }
 
  private:
   void next() {
-    std::uniform_int_distribution<vertices_size_type> rand_vertex(0, n_ - 1);
+    std::uniform_int_distribution<std::size_t> rand_vertex(0, n_ - 1);
     current_.first = rand_vertex(gen_);
     do {
       current_.second = rand_vertex(gen_);
@@ -77,23 +78,21 @@ class erdos_renyi_iterator {
   }
 
   RandomGenerator gen_;
-  vertices_size_type n_ = 0;
-  edges_size_type edges_ = 0;
+  std::size_t n_ = 0;
+  std::size_t edges_ = 0;
   bool allow_self_loops_ = false;
-  std::pair<vertices_size_type, vertices_size_type> current_ = {0, 0};
+  std::pair<std::size_t, std::size_t> current_ = {0, 0};
 };
 
 template <typename RandomGenerator, typename Graph>
 class sorted_erdos_renyi_iterator {
   using directed_category = graph_directed_category_t<Graph>;
-  using vertices_size_type = graph_vertices_size_type_t<Graph>;
-  using edges_size_type = graph_edges_size_type_t<Graph>;
   using self = sorted_erdos_renyi_iterator<RandomGenerator, Graph>;
 
   static constexpr bool is_undirected = std::is_base_of_v<undirected_tag, directed_category>;
 
  public:
-  using value_type = std::pair<graph_vertices_size_type_t<Graph>, graph_vertices_size_type_t<Graph> >;
+  using value_type = std::pair<std::size_t, std::size_t>;
   using reference = const value_type&;
   using pointer = const value_type*;
   using difference_type = std::ptrdiff_t;
@@ -104,7 +103,7 @@ class sorted_erdos_renyi_iterator {
   // NOTE: The default probability has been changed to be the same as that
   // used by the geometic distribution. It was previously 0.0, which would
   // cause an assertion.
-  sorted_erdos_renyi_iterator(RandomGenerator gen, vertices_size_type n, double prob = 0.5, bool loops = false)
+  sorted_erdos_renyi_iterator(RandomGenerator gen, std::size_t n, double prob = 0.5, bool loops = false)
       : gen_(std::move(gen)), rand_vertex_(1. - prob), n_(n), allow_self_loops_(loops), prob_(prob) {
     if (prob != 0.0) {
       src_ = 0;
@@ -116,8 +115,8 @@ class sorted_erdos_renyi_iterator {
   reference operator*() const { return current_; }
   pointer operator->() const { return &current_; }
 
-  bool operator==(const self& x) { return src_ == x.src_ && tgt_index_ == x.tgt_index_; }
-  bool operator!=(const self& x) { return !(*this == x); }
+  bool operator==(const self& x) const { return src_ == x.src_ && tgt_index_ == x.tgt_index_; }
+  bool operator!=(const self& x) const { return !(*this == x); }
 
   self& operator++() {
     next();
@@ -139,17 +138,17 @@ class sorted_erdos_renyi_iterator {
     // bernoulli_distribution would need to be run until it returns true.
     // Thus, this distribution can be used to step through the edges
     // which are actually present.
-    assert(src_ != std::numeric_limits<vertices_size_type>::max());
+    assert(src_ != std::numeric_limits<std::size_t>::max());
     assert(src_ != n_);
     while (src_ != n_) {
-      vertices_size_type increment = rand_vertex_(gen_);
+      std::size_t increment = rand_vertex_(gen_);
       size_t tgt_index_limit = (is_undirected ? src_ + 1 : n_) + (allow_self_loops_ ? 0 : -1);
       if (tgt_index_ + increment >= tgt_index_limit) {
         // Overflowed this source; go to the next one and try again.
         ++src_;
         // This bias is because the geometric distribution always
         // returns values >=1, and we want to allow 0 as a valid target.
-        tgt_index_ = vertices_size_type(-1);
+        tgt_index_ = std::numeric_limits<std::size_t>::max();
         continue;
       }
 
@@ -159,17 +158,17 @@ class sorted_erdos_renyi_iterator {
       break;
     }
     if (src_ == n_) {
-      src_ = std::numeric_limits<vertices_size_type>::max();
+      src_ = std::numeric_limits<std::size_t>::max();
     }
   }
 
   RandomGenerator gen_;
-  std::geometric_distribution<vertices_size_type> rand_vertex_{0.5};
-  vertices_size_type n_ = 0;
+  std::geometric_distribution<std::size_t> rand_vertex_{0.5};
+  std::size_t n_ = 0;
   bool allow_self_loops_ = false;
-  vertices_size_type src_ = std::numeric_limits<vertices_size_type>::max();
-  vertices_size_type tgt_index_ = vertices_size_type{-1};
-  std::pair<vertices_size_type, vertices_size_type> current_ = {0, 0};
+  std::size_t src_ = std::numeric_limits<std::size_t>::max();
+  std::size_t tgt_index_ = std::numeric_limits<std::size_t>::max();
+  std::pair<std::size_t, std::size_t> current_ = {0, 0};
   double prob_ = 0.5;
 };
 

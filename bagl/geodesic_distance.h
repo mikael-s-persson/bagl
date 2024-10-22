@@ -64,15 +64,16 @@ auto measure_graph_mean_geodesic(const Graph&, DistanceMap) {
 }
 
 template <concepts::VertexListGraph G, concepts::ReadableVertexPropertyMap<G> DistanceMap,
-          concepts::DistanceMeasure<G> Measure, concepts::PropertyCombinator<DistanceMap> Combine>
+          concepts::DistanceMeasure<G, property_traits_value_t<DistanceMap>> Measure,
+          concepts::PropertyCombinator<DistanceMap> Combine>
 auto mean_geodesic(const G& g, DistanceMap dist, Measure measure, Combine combine) {
-  using Distance = typename Measure::distance_type;
+  using Distance = property_traits_value_t<DistanceMap>;
   Distance n = combine_distances(g, dist, combine, Distance(0));
   return measure(n, g);
 }
 
 template <concepts::VertexListGraph G, concepts::ReadableVertexPropertyMap<G> DistanceMap,
-          concepts::DistanceMeasure<G> Measure>
+          concepts::DistanceMeasure<G, property_traits_value_t<DistanceMap>> Measure>
 auto mean_geodesic(const G& g, DistanceMap dist, Measure measure) {
   using Distance = typename Measure::distance_type;
   return mean_geodesic(g, dist, measure, std::plus<Distance>());
@@ -89,7 +90,8 @@ T mean_geodesic(const G& g, DistanceMap dist) {
 }
 
 template <concepts::VertexListGraph G, concepts::ReadableVertexPropertyMap<G> DistanceMatrixMap,
-          concepts::WritableVertexPropertyMap<G> GeodesicMap, concepts::DistanceMeasure<G> Measure>
+          concepts::WritableVertexPropertyMap<G> GeodesicMap,
+          concepts::DistanceMeasure<G, property_traits_value_t<property_traits_value_t<DistanceMatrixMap>>> Measure>
 property_traits_value_t<GeodesicMap> all_mean_geodesics(const G& g, DistanceMatrixMap dist, GeodesicMap geo,
                                                         Measure measure) {
   using Result = typename Measure::result_type;
@@ -126,11 +128,10 @@ property_traits_value_t<GeodesicMap> all_mean_geodesics(const G& g, DistanceMatr
 }
 
 template <concepts::VertexListGraph G, concepts::ReadableVertexPropertyMap<G> GeodesicMap,
-          concepts::DistanceMeasure<G> Measure>
+          concepts::DistanceMeasure<G, property_traits_value_t<GeodesicMap>> Measure>
 auto small_world_distance(const G& g, GeodesicMap geo, Measure measure) {
-  using Result = typename Measure::result_type;
-
-  Result sum = combine_distances(g, geo, std::plus<Result>(), Result(0));
+  using Distance = property_traits_value_t<GeodesicMap>;
+  auto sum = combine_distances(g, geo, std::plus<>(), Distance(0));
   return measure(sum, g);
 }
 

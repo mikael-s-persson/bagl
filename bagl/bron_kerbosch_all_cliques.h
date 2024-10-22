@@ -17,7 +17,7 @@ namespace bagl {
 
 namespace concepts {
 template <typename V, typename Clique, typename G>
-concept CliqueVisitor = std::copy_constructible<V> && requires(const V& vis, const Clique& c, G& g) {
+concept CliqueVisitor = std::copy_constructible<V> && requires(V& vis, const Clique& c, G& g) {
   vis.clique(c, g);
 };
 }  // namespace concepts
@@ -208,12 +208,12 @@ void bron_kerbosch_all_cliques(const G& g, V vis, std::size_t min) {
 
 // NOTE: By default the minimum number of vertices per clique is set at 2
 // because singleton cliques aren't really very interesting.
-template <typename G, typename Visitor>
-void bron_kerbosch_all_cliques(const G& g, Visitor vis) {
+template <concepts::IncidenceGraph G, concepts::CliqueVisitor<std::vector<graph_vertex_descriptor_t<G>>, G> V>
+void bron_kerbosch_all_cliques(const G& g, V vis) {
   bron_kerbosch_all_cliques(g, vis, 2);
 }
 
-template <typename G>
+template <concepts::IncidenceGraph G>
 std::size_t bron_kerbosch_clique_number(const G& g) {
   std::size_t ret = 0;
   bron_kerbosch_all_cliques(g, find_max_clique(ret));

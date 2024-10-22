@@ -33,7 +33,6 @@ struct one_bit_color_map {
   IndexMap index;
   std::shared_ptr<std::uint8_t[]> data;
 
-  using key_type = property_traits_key_t<IndexMap>;
   using value_type = one_bit_color_type;
   using reference = void;
 
@@ -41,16 +40,16 @@ struct one_bit_color_map {
       : n(a_n), index(a_index), data(new std::uint8_t[(n + bits_per_char - 1) / bits_per_char]()) {}
 };
 
-template <typename IndexMap>
-auto get(const one_bit_color_map<IndexMap>& pm, property_traits_key_t<IndexMap> key) {
+template <typename Key, concepts::ReadablePropertyMap<Key> IndexMap>
+auto get(const one_bit_color_map<IndexMap>& pm, const Key& key) {
   constexpr int bits_per_char = one_bit_color_map<IndexMap>::bits_per_char;
   auto i = get(pm.index, key);
   assert(i < pm.n);
   return static_cast<one_bit_color_type>((pm.data.get()[i / bits_per_char] >> (i % bits_per_char)) & 1);
 }
 
-template <typename IndexMap>
-void put(const one_bit_color_map<IndexMap>& pm, property_traits_key_t<IndexMap> key, one_bit_color_type value) {
+template <typename Key, concepts::ReadablePropertyMap<Key> IndexMap>
+void put(const one_bit_color_map<IndexMap>& pm, const Key& key, one_bit_color_type value) {
   constexpr int bits_per_char = one_bit_color_map<IndexMap>::bits_per_char;
   auto i = get(pm.index, key);
   assert(i < pm.n);
