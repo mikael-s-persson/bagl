@@ -4,7 +4,6 @@
 #ifndef BAGL_BAGL_GEODESIC_DISTANCE_H_
 #define BAGL_BAGL_GEODESIC_DISTANCE_H_
 
-#include "bagl/exterior_property.h"
 #include "bagl/geodesic.h"
 #include "bagl/graph_concepts.h"
 #include "bagl/property_map.h"

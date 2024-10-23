@@ -6,10 +6,11 @@
 #include <iostream>
 #include <vector>
 
-#include "bagl/single_property_map.h"
 #include "bagl/directed_graph.h"
 #include "bagl/floyd_warshall_shortest.h"
 #include "bagl/graph_traits.h"
+#include "bagl/matrix_property_map.h"
+#include "bagl/single_property_map.h"
 #include "bagl/undirected_graph.h"
 #include "bagl/vector_property_map.h"
 #include "gmock/gmock.h"
@@ -45,16 +46,11 @@ TEST(ClosenessCentrality, UndirectedGraph) {
   build_graph(g, v);
 
   auto cm = vector_property_map(num_vertices(g), get(vertex_index, g), double{0.0});
-  auto dm = vector_property_map(num_vertices(g), get(vertex_index, g),
-                                vector_property_map(num_vertices(g), get(vertex_index, g), int{0}));
-  for (auto u : vertices(g)) {
-    dm[u] = vector_property_map(num_vertices(g), get(vertex_index, g), int{0});
-  }
-
+  auto dm = matrix_property_store(num_vertices(g), get(vertex_index, g), int{0});
   auto wm = single_property_map(1);
 
-  floyd_warshall_all_pairs_shortest_paths(g, dm, wm);
-  all_closeness_centralities(g, dm, cm);
+  floyd_warshall_all_pairs_shortest_paths(g, dm.ref(), wm);
+  all_closeness_centralities(g, dm.ref(), cm.ref());
 
   EXPECT_THAT(cm[v[0]], ::testing::DoubleEq(1.0 / 5.0));
   EXPECT_THAT(cm[v[1]], ::testing::DoubleEq(1.0 / 7.0));
@@ -72,16 +68,11 @@ TEST(ClosenessCentrality, DirectedGraph) {
   build_graph(g, v);
 
   auto cm = vector_property_map(num_vertices(g), get(vertex_index, g), double{0.0});
-  auto dm = vector_property_map(num_vertices(g), get(vertex_index, g),
-                                vector_property_map(num_vertices(g), get(vertex_index, g), int{0}));
-  for (auto u : vertices(g)) {
-    dm[u] = vector_property_map(num_vertices(g), get(vertex_index, g), int{0});
-  }
-
+  auto dm = matrix_property_store(num_vertices(g), get(vertex_index, g), int{0});
   auto wm = single_property_map(1);
 
-  floyd_warshall_all_pairs_shortest_paths(g, dm, wm);
-  all_closeness_centralities(g, dm, cm);
+  floyd_warshall_all_pairs_shortest_paths(g, dm.ref(), wm);
+  all_closeness_centralities(g, dm.ref(), cm.ref());
 
   EXPECT_THAT(cm[v[0]], ::testing::DoubleEq(0.0));
   EXPECT_THAT(cm[v[1]], ::testing::DoubleEq(0.0));

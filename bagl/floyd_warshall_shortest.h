@@ -27,12 +27,12 @@ T min_with_compare(const T& x, const T& y, const BinaryPredicate& compare) {
 template <typename M>
 using property_matrix_value_t = property_traits_value_t<property_traits_value_t<M>>;
 
-template <concepts::VertexListGraph G, typename DistanceMatrix,
-          concepts::PropertyComparator<property_traits_value_t<DistanceMatrix>> Compare,
-          concepts::PropertyCombinator<property_traits_value_t<DistanceMatrix>> Combine>
-bool floyd_warshall_dispatch(const G& g, DistanceMatrix& d, const Compare& compare, const Combine& combine,
-                             property_matrix_value_t<DistanceMatrix> inf,
-                             property_matrix_value_t<DistanceMatrix> zero) {
+template <concepts::VertexListGraph G, typename DistanceMatrixMap,
+          concepts::PropertyComparator<property_traits_value_t<DistanceMatrixMap>> Compare,
+          concepts::PropertyCombinator<property_traits_value_t<DistanceMatrixMap>> Combine>
+bool floyd_warshall_dispatch(const G& g, DistanceMatrixMap d, const Compare& compare, const Combine& combine,
+                             property_matrix_value_t<DistanceMatrixMap> inf,
+                             property_matrix_value_t<DistanceMatrixMap> zero) {
   for (auto k : vertices(g)) {
     for (auto i : vertices(g)) {
       if (d[i][k] != inf) {
@@ -54,30 +54,31 @@ bool floyd_warshall_dispatch(const G& g, DistanceMatrix& d, const Compare& compa
 }
 }  // namespace floyd_warshall_detail
 
-template <concepts::VertexListGraph G, typename DistanceMatrix,
-          concepts::PropertyComparator<property_traits_value_t<DistanceMatrix>> Compare,
-          concepts::PropertyCombinator<property_traits_value_t<DistanceMatrix>> Combine>
+template <concepts::VertexListGraph G, typename DistanceMatrixMap,
+          concepts::PropertyComparator<property_traits_value_t<DistanceMatrixMap>> Compare,
+          concepts::PropertyCombinator<property_traits_value_t<DistanceMatrixMap>> Combine>
 bool floyd_warshall_initialized_all_pairs_shortest_paths(
-    const G& g, DistanceMatrix& d, Compare compare, Combine combine,
-    floyd_warshall_detail::property_matrix_value_t<DistanceMatrix> inf,
-    floyd_warshall_detail::property_matrix_value_t<DistanceMatrix> zero) {
+    const G& g, DistanceMatrixMap d, Compare compare, Combine combine,
+    floyd_warshall_detail::property_matrix_value_t<DistanceMatrixMap> inf,
+    floyd_warshall_detail::property_matrix_value_t<DistanceMatrixMap> zero) {
   return floyd_warshall_detail::floyd_warshall_dispatch(g, d, compare, combine, inf, zero);
 }
 
-template <concepts::VertexListGraph G, typename DistanceMatrix>
-bool floyd_warshall_initialized_all_pairs_shortest_paths(const G& g, DistanceMatrix& d) {
-  using D = floyd_warshall_detail::property_matrix_value_t<DistanceMatrix>;
+template <concepts::VertexListGraph G, typename DistanceMatrixMap>
+bool floyd_warshall_initialized_all_pairs_shortest_paths(const G& g, DistanceMatrixMap d) {
+  using D = floyd_warshall_detail::property_matrix_value_t<DistanceMatrixMap>;
   return floyd_warshall_detail::floyd_warshall_dispatch(g, d, std::less<>(), closed_plus<>(),
                                                         numeric_values<D>::infinity(), numeric_values<D>::zero());
 }
 
-template <concepts::VertexAndEdgeListGraph G, typename DistanceMatrix, concepts::ReadableEdgePropertyMap<G> WeightMap,
-          concepts::PropertyComparator<property_traits_value_t<DistanceMatrix>> Compare,
-          concepts::PropertyCombinator<property_traits_value_t<DistanceMatrix>> Combine>
-bool floyd_warshall_all_pairs_shortest_paths(const G& g, DistanceMatrix& d, const WeightMap& w, Compare compare,
+template <concepts::VertexAndEdgeListGraph G, typename DistanceMatrixMap,
+          concepts::ReadableEdgePropertyMap<G> WeightMap,
+          concepts::PropertyComparator<property_traits_value_t<DistanceMatrixMap>> Compare,
+          concepts::PropertyCombinator<property_traits_value_t<DistanceMatrixMap>> Combine>
+bool floyd_warshall_all_pairs_shortest_paths(const G& g, DistanceMatrixMap d, const WeightMap& w, Compare compare,
                                              Combine combine,
-                                             floyd_warshall_detail::property_matrix_value_t<DistanceMatrix> inf,
-                                             floyd_warshall_detail::property_matrix_value_t<DistanceMatrix> zero) {
+                                             floyd_warshall_detail::property_matrix_value_t<DistanceMatrixMap> inf,
+                                             floyd_warshall_detail::property_matrix_value_t<DistanceMatrixMap> zero) {
   for (auto u : vertices(g)) {
     for (auto v : vertices(g)) {
       d[u][v] = inf;
@@ -111,9 +112,10 @@ bool floyd_warshall_all_pairs_shortest_paths(const G& g, DistanceMatrix& d, cons
   return floyd_warshall_detail::floyd_warshall_dispatch(g, d, compare, combine, inf, zero);
 }
 
-template <concepts::VertexAndEdgeListGraph G, typename DistanceMatrix, concepts::ReadableEdgePropertyMap<G> WeightMap>
-bool floyd_warshall_all_pairs_shortest_paths(const G& g, DistanceMatrix& d, const WeightMap& w) {
-  using D = floyd_warshall_detail::property_matrix_value_t<DistanceMatrix>;
+template <concepts::VertexAndEdgeListGraph G, typename DistanceMatrixMap,
+          concepts::ReadableEdgePropertyMap<G> WeightMap>
+bool floyd_warshall_all_pairs_shortest_paths(const G& g, DistanceMatrixMap d, const WeightMap& w) {
+  using D = floyd_warshall_detail::property_matrix_value_t<DistanceMatrixMap>;
   return floyd_warshall_all_pairs_shortest_paths(g, d, w, std::less<>(), closed_plus<>(), numeric_values<D>::infinity(),
                                                  numeric_values<D>::zero());
 }
