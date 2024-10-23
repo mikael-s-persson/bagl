@@ -1,4 +1,5 @@
 // Copyright (C) Vladimir Prus 2003.
+// Copyright 2024 Mikael Persson - Modernized to C++20
 
 #include "bagl/copy.h"
 

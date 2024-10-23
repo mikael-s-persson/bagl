@@ -37,7 +37,7 @@ namespace concepts {
 
 template <typename V, typename G>
 concept CoreNumbersVisitor = std::copy_constructible<V> &&
-    requires(const V& vis, const G& g, graph_vertex_descriptor_t<G> u, graph_edge_descriptor_t<G> e) {
+    requires(V& vis, const G& g, graph_vertex_descriptor_t<G> u, graph_edge_descriptor_t<G> e) {
   vis.examine_edge(e, g);
   vis.examine_vertex(u, g);
   vis.finish_vertex(u, g);
@@ -70,9 +70,13 @@ class core_numbers_visitor {
   Visitors vis_;
 };
 
-template <class Visitors>
-auto make_core_numbers_visitor(Visitors vis) {
-  return core_numbers_visitor<Visitors>(vis);
+template <typename... Visitors>
+auto make_core_numbers_visitor(Visitors&&... vis) {
+  if constexpr (sizeof...(Visitors) == 0) {
+    return core_numbers_visitor<>();
+  } else {
+    return core_numbers_visitor(std::tuple<std::decay_t<Visitors>...>(std::forward<Visitors>(vis)...));
+  }
 }
 
 using default_core_numbers_visitor = core_numbers_visitor<>;
@@ -146,12 +150,13 @@ template <concepts::VertexListGraph G, concepts::ReadWriteVertexPropertyMap<G> C
           concepts::ReadWriteVertexPropertyMap<G> PositionMap, concepts::CoreNumbersVisitor<G> V>
 property_traits_value_t<CoreMap> core_numbers_impl(const G& g, CoreMap c, PositionMap pos, V vis) {
   using Vertex = graph_vertex_descriptor_t<G>;
+  using CoreValue = property_traits_value_t<CoreMap>;
 
   // store the vertex core numbers
-  property_traits_value_t<CoreMap> v_cn = {};
+  CoreValue v_cn = {};
 
   // compute the maximum degree (degrees are in the coremap)
-  std::size_t max_deg = 0;
+  CoreValue max_deg = {};
   for (auto v : vertices(g)) {
     max_deg = std::max(max_deg, get(c, v));
   }
