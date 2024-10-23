@@ -24,7 +24,7 @@ std::size_t count_edges(const G& g, graph_vertex_descriptor_t<G> u, graph_vertex
 
 template <concepts::AdjacencyGraph G, typename Vertex>
 std::size_t num_paths_through_vertex(const G& g, Vertex v) {
-  const std::size_t k = num_adjacent_vertices(v, g);
+  const std::size_t k = out_degree(v, g);
   if constexpr (is_undirected_graph_v<G>) {
     return (k * (k - 1)) / 2;
   } else {
@@ -44,16 +44,15 @@ std::size_t num_triangles_on_vertex(const G& g, graph_vertex_descriptor_t<G> v) 
   return count;
 }
 
-template <typename T, concepts::AdjacencyGraph G>
-T clustering_coefficient(const G& g, graph_vertex_descriptor_t<G> v) {
-  const T zero = T{0};
-  const T routes = T{num_paths_through_vertex(g, v)};
-  return (routes > zero) ? T{num_triangles_on_vertex(g, v)} / routes : zero;
+template <concepts::AdjacencyGraph G, typename T>
+T clustering_coefficient(const G& g, graph_vertex_descriptor_t<G> v, T zero) {
+  const T routes = static_cast<T>(num_paths_through_vertex(g, v));
+  return (routes > zero) ? static_cast<T>(num_triangles_on_vertex(g, v)) / routes : zero;
 }
 
 template <concepts::AdjacencyGraph G>
 double clustering_coefficient(const G& g, graph_vertex_descriptor_t<G> v) {
-  return clustering_coefficient<double>(g, v);
+  return clustering_coefficient(g, v, double{0});
 }
 
 template <concepts::VertexListGraph G, concepts::WritableVertexPropertyMap<G> ClusteringMap>
@@ -62,11 +61,11 @@ property_traits_value_t<ClusteringMap> all_clustering_coefficients(const G& g, C
 
   Coefficient sum = Coefficient{0};
   for (auto v : vertices(g)) {
-    const auto cc = clustering_coefficient<Coefficient>(g, v);
+    const auto cc = clustering_coefficient(g, v, Coefficient{0});
     put(cm, v, cc);
     sum += cc;
   }
-  return sum / Coefficient{num_vertices(g)};
+  return sum / static_cast<Coefficient>(num_vertices(g));
 }
 
 template <concepts::VertexListGraph G, concepts::ReadableVertexPropertyMap<G> ClusteringMap>
@@ -77,7 +76,7 @@ property_traits_value_t<ClusteringMap> mean_clustering_coefficient(const G& g, C
   for (auto v : vertices(g)) {
     cc += get(cm, v);
   }
-  return cc / Coefficient{num_vertices(g)};
+  return cc / static_cast<Coefficient>(num_vertices(g));
 }
 
 }  // namespace bagl
