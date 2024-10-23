@@ -146,22 +146,22 @@ class filtered_graph : public filtered_graph_base<Graph> {
   using traversal_category = graph_traversal_category_t<Graph>;
 
   // IncidenceGraph requirements
-  auto out_edges(vertex_descriptor u) const {
+  auto get_out_edges(vertex_descriptor u) const {
     return out_edges(u, this->g_) | std::views::filter(OutEdgePred{edge_pred_, vertex_pred_, *this});
   }
   using degree_size_type = graph_degree_size_type_t<Graph>;
 
   // BidirectionalGraph requirements
-  auto in_edges(vertex_descriptor u) const {
+  auto get_in_edges(vertex_descriptor u) const {
     return in_edges(u, this->g_) | std::views::filter(InEdgePred{edge_pred_, vertex_pred_, *this});
   }
 
   // VertexListGraph requirements
-  auto vertices() const { return vertices(this->g_) | std::views::filter(vertex_pred_); }
+  auto get_vertices() const { return vertices(this->g_) | std::views::filter(vertex_pred_); }
   using vertices_size_type = graph_vertices_size_type_t<Graph>;
 
   // EdgeListGraph requirements
-  auto edges() const { return edges(this->g_) | std::views::filter(EdgePred{edge_pred_, vertex_pred_, *this}); }
+  auto get_edges() const { return edges(this->g_) | std::views::filter(EdgePred{edge_pred_, vertex_pred_, *this}); }
   using edges_size_type = graph_edges_size_type_t<Graph>;
 
   using graph_tag = filtered_graph_tag;
@@ -216,12 +216,12 @@ auto make_filtered_graph(const Graph& g, EdgePredicate ep, VertexPredicate vp) {
 
 template <typename G, typename EP, typename VP>
 auto vertices(const filtered_graph<G, EP, VP>& g) {
-  return g.vertices();
+  return g.get_vertices();
 }
 
 template <typename G, typename EP, typename VP>
 auto edges(const filtered_graph<G, EP, VP>& g) {
-  return g.edges();
+  return g.get_edges();
 }
 
 // An alternative for num_vertices() and num_edges() would be to
@@ -259,7 +259,7 @@ auto target(graph_edge_descriptor_t<G> e, const filtered_graph_base<G>& g) {
 
 template <typename G, typename EP, typename VP>
 auto out_edges(graph_vertex_descriptor_t<G> u, const filtered_graph<G, EP, VP>& g) {
-  return g.out_edges(u);
+  return g.get_out_edges(u);
 }
 
 template <typename G, typename EP, typename VP>
@@ -274,7 +274,7 @@ auto adjacent_vertices(graph_vertex_descriptor_t<G> u, const filtered_graph<G, E
 
 template <typename G, typename EP, typename VP>
 auto in_edges(graph_vertex_descriptor_t<G> u, const filtered_graph<G, EP, VP>& g) {
-  return g.in_edges(u);
+  return g.get_in_edges(u);
 }
 
 template <typename G, typename EP, typename VP>

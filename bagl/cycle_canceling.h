@@ -25,8 +25,8 @@ namespace bagl {
 namespace cycle_detail {
 
 template <typename PredEdgeMap, typename Vertex>
-class record_edge_map_and_cycle_vertex : public predecessor_recorder_on_tree_edge<PredEdgeMap> {
-  using Base = predecessor_recorder_on_tree_edge<PredEdgeMap>;
+class record_edge_map_and_cycle_vertex : public edge_predecessor_recorder_on_edge_relaxed<PredEdgeMap> {
+  using Base = edge_predecessor_recorder_on_edge_relaxed<PredEdgeMap>;
 
  public:
   record_edge_map_and_cycle_vertex(PredEdgeMap pred, Vertex& v) : Base(pred), v_(&v) {}
@@ -67,18 +67,24 @@ void cycle_canceling(const Graph& g,
   using Edge = graph_edge_descriptor_t<ResGraph>;
   using Vertex = graph_vertex_descriptor_t<ResGraph>;
 
+  std::size_t n = num_vertices(g);
   for (auto v : vertices(g)) {
     put(pred, v, Edge());
     put(distance, v, 0);
   }
 
-  std::size_t n = num_vertices(g);
   Vertex cycle_start;
+  std::size_t countdown = n;
 
   while (!bellman_ford_shortest_paths(
       gres, make_bellman_visitor(cycle_detail::record_edge_map_and_cycle_vertex<Pred, Vertex>(pred, cycle_start)), n,
-      weight, get(vertex_predecessor, gres), distance)) {
+      weight, null_property_map<Vertex>(), distance)) {
     augment_detail::augment(g, cycle_start, cycle_start, pred, residual_capacity, rev);
+    if (--countdown == 0) {
+      // Crash in debug, or return.
+      assert(false);
+      return;
+    }
 
     for (auto v : vertices(g)) {
       put(pred, v, Edge());

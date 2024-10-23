@@ -9,6 +9,17 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "min_cost_max_flow_utils",
+    srcs = [],
+    hdrs = [ "min_cost_max_flow_utils.h", ],
+    testonly = True,
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
 cc_test(
     name = "adjacency_list_concepts_test",
     srcs = [ "adjacency_list_concepts_test.cc", ],
@@ -193,6 +204,7 @@ cc_library(
     name = "new_york_state_map",
     srcs = [ "new_york_state_map.cc", ],
     hdrs = [ "new_york_state_map.h", ],
+    testonly = True,
     deps = [
         "//bagl",
         "@com_google_googletest//:gtest",
@@ -323,6 +335,16 @@ cc_test(
     name = "cuthill_mckee_ordering_test",
     srcs = [ "cuthill_mckee_ordering_test.cc", ],
     deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "cycle_canceling_test",
+    srcs = [ "cycle_canceling_test.cc", ],
+    deps = [
+        ":min_cost_max_flow_utils",
         "//bagl",
         "@com_google_googletest//:gtest_main",
     ],

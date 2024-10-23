@@ -47,8 +47,8 @@ auto edmonds_karp_max_flow(const G& g, graph_vertex_descriptor_t<G> src, graph_v
 
   put(color, sink, Color::gray());
   while (get(color, sink) != Color::white()) {
-    std::queue<graph_vertex_descriptor_t<G>> q;
-    breadth_first_search(augment_detail::residual_graph(g, res), src, q,
+    buffer_queue<graph_vertex_descriptor_t<G>> q;
+    breadth_first_search(augment_detail::residual_graph(g, res), std::ranges::single_view{src}, q,
                          make_bfs_visitor(edge_predecessor_recorder_on_tree_edge(pred)), color);
     if (get(color, sink) != Color::white()) {
       augment_detail::augment(g, src, sink, pred, res, rev);

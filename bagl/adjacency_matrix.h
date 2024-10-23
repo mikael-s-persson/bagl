@@ -670,7 +670,7 @@ struct adj_matrix_property_selector {
     using value_type = typename property_value<Property, Tag>::type;
 
     using type = tagged_in_property_property_map<value_type, Graph, Tag>;
-    using const_type = tagged_in_property_property_map<const value_type, const Graph, Tag>;
+    using const_type = tagged_in_property_property_map<value_type, const Graph, Tag>;
   };
 };
 
