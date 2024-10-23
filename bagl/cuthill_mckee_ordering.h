@@ -12,6 +12,8 @@
 #include "bagl/depth_first_search.h"
 #include "bagl/detail/sparse_ordering.h"
 #include "bagl/graph_utility.h"
+#include "bagl/properties.h"
+#include "bagl/vector_property_map.h"
 
 // (Reverse) Cuthill-McKee Algorithm for matrix reordering
 
@@ -70,7 +72,7 @@ OutputIterator cuthill_mckee_ordering(const G& g, std::deque<graph_vertex_descri
     vertex_queue.pop_front();
 
     // call BFS with visitor
-    breadth_first_visit(g, s, q, vis, color);
+    breadth_first_visit(g, std::ranges::single_view{s}, q, vis, color);
   }
   return permutation;
 }
@@ -128,7 +130,8 @@ OutputIterator cuthill_mckee_ordering(const G& g, OutputIterator permutation, Ve
     return permutation;
   }
 
-  return cuthill_mckee_ordering(g, permutation, two_bit_color_map(num_vertices(g), index_map).ref(),
+  return cuthill_mckee_ordering(g, permutation,
+                                vector_property_map(num_vertices(g), index_map, default_color_type::white_color).ref(),
                                 out_degree_property_map(g));
 }
 

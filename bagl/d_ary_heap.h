@@ -6,6 +6,7 @@
 #define BAGL_BAGL_D_ARY_HEAP_H_
 
 #include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <limits>
 #include <span>

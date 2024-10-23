@@ -97,6 +97,8 @@ class rcm_queue : public std::queue<Vertex, Container> {
 template <typename Tp, typename Container = std::deque<Tp> >
 class sparse_ordering_queue : public std::queue<Tp, Container> {
  public:
+  decltype(auto) top() const { return this->front(); }
+  decltype(auto) top() { return this->front(); }
   auto begin() { return this->c.begin(); }
   auto rbegin() { return this->c.rbegin(); }
   auto end() { return this->c.end(); }

@@ -680,6 +680,69 @@ void put(T Bundle::*p, BAGL_ADJACENCY_LIST& g, const Key& k, T&& val) {
   (g[k]).*p = std::forward<T>(val);
 }
 
+template <BAGL_ADJACENCY_LIST_ARGS>
+struct property_map<BAGL_ADJACENCY_LIST, vertex_degree_t> {
+  using type = degree_property_map<BAGL_ADJACENCY_LIST>;
+  using const_type = degree_property_map<BAGL_ADJACENCY_LIST>;
+};
+
+template <BAGL_ADJACENCY_LIST_ARGS>
+auto get(vertex_degree_t /*unused*/, BAGL_ADJACENCY_LIST& g) {
+  return property_map_t<BAGL_ADJACENCY_LIST, vertex_degree_t>{g};
+}
+
+template <BAGL_ADJACENCY_LIST_ARGS>
+auto get(vertex_degree_t /*unused*/, const BAGL_ADJACENCY_LIST& g) {
+  return property_map_const_t<BAGL_ADJACENCY_LIST, vertex_degree_t>{g};
+}
+
+template <BAGL_ADJACENCY_LIST_ARGS, typename Key>
+auto get(vertex_degree_t /*unused*/, const BAGL_ADJACENCY_LIST& g, const Key& k) {
+  return degree(k, g);
+}
+
+template <BAGL_ADJACENCY_LIST_ARGS>
+struct property_map<BAGL_ADJACENCY_LIST, vertex_out_degree_t> {
+  using type = degree_property_map<BAGL_ADJACENCY_LIST>;
+  using const_type = degree_property_map<BAGL_ADJACENCY_LIST>;
+};
+
+template <BAGL_ADJACENCY_LIST_ARGS>
+auto get(vertex_out_degree_t /*unused*/, BAGL_ADJACENCY_LIST& g) {
+  return property_map_t<BAGL_ADJACENCY_LIST, vertex_out_degree_t>{g};
+}
+
+template <BAGL_ADJACENCY_LIST_ARGS>
+auto get(vertex_out_degree_t /*unused*/, const BAGL_ADJACENCY_LIST& g) {
+  return property_map_const_t<BAGL_ADJACENCY_LIST, vertex_out_degree_t>{g};
+}
+
+template <BAGL_ADJACENCY_LIST_ARGS, typename Key>
+auto get(vertex_out_degree_t /*unused*/, const BAGL_ADJACENCY_LIST& g, const Key& k) {
+  return out_degree(k, g);
+}
+
+template <BAGL_ADJACENCY_LIST_ARGS>
+struct property_map<BAGL_ADJACENCY_LIST, vertex_in_degree_t> {
+  using type = degree_property_map<BAGL_ADJACENCY_LIST>;
+  using const_type = degree_property_map<BAGL_ADJACENCY_LIST>;
+};
+
+template <BAGL_ADJACENCY_LIST_ARGS>
+auto get(vertex_in_degree_t /*unused*/, BAGL_ADJACENCY_LIST& g) {
+  return property_map_t<BAGL_ADJACENCY_LIST, vertex_in_degree_t>{g};
+}
+
+template <BAGL_ADJACENCY_LIST_ARGS>
+auto get(vertex_in_degree_t /*unused*/, const BAGL_ADJACENCY_LIST& g) {
+  return property_map_const_t<BAGL_ADJACENCY_LIST, vertex_in_degree_t>{g};
+}
+
+template <BAGL_ADJACENCY_LIST_ARGS, typename Key>
+auto get(vertex_in_degree_t /*unused*/, const BAGL_ADJACENCY_LIST& g, const Key& k) {
+  return in_degree(k, g);
+}
+
 /***********************************************************************************************
  *                             Property Maps (from tags)
  * ********************************************************************************************/

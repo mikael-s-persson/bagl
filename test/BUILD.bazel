@@ -318,3 +318,12 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_test(
+    name = "cuthill_mckee_ordering_test",
+    srcs = [ "cuthill_mckee_ordering_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
