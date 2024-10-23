@@ -117,7 +117,7 @@ struct default_edge_copier {
       : edge_all_map1(get(edge_all, g1)), edge_all_map2(get(edge_all, g2)) {}
 
   template <typename Edge1, typename Edge2>
-  void operator()(const Edge1& e1, Edge2& e2) const {
+  void operator()(const Edge1& e1, const Edge2& e2) const {
     put(edge_all_map2, e2, get(edge_all_map1, e1));
   }
   property_map_const_t<Graph1, edge_all_t> edge_all_map1;
@@ -130,7 +130,7 @@ struct default_vertex_copier {
       : vertex_all_map1(get(vertex_all, g1)), vertex_all_map2(get(vertex_all, g2)) {}
 
   template <typename Vertex1, typename Vertex2>
-  void operator()(const Vertex1& v1, Vertex2& v2) const {
+  void operator()(const Vertex1& v1, const Vertex2& v2) const {
     put(vertex_all_map2, v2, get(vertex_all_map1, v1));
   }
   property_map_const_t<Graph1, vertex_all_t> vertex_all_map1;
