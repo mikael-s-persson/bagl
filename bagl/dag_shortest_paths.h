@@ -27,7 +27,7 @@ void dag_shortest_paths(const G& g, graph_vertex_descriptor_t<G> start,
                         ColorMap color,        // get(vertex_color, g) or
                                                // two_bit_color_map(num_vertices(g), get(vertex_index, g)).ref()
                         PredecessorMap pred,   // get(vertex_predecessor, g)
-                        V vis,                 // default_dfs_visitor()
+                        V vis,                 // default_dijkstra_visitor()
                         Compare compare, Combine combine, property_traits_value_t<DistanceMap> inf,
                         property_traits_value_t<DistanceMap> zero) {
   std::vector<graph_vertex_descriptor_t<G>> rev_topo_order;
