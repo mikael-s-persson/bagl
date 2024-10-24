@@ -11,12 +11,12 @@ namespace bagl {
 
 template <concepts::IncidenceGraph Graph>
 struct influence_measure {
-  auto operator()(graph_vertex_descriptor_t<Graph> v, const Graph& g) { return out_degree(v, g); }
+  auto operator()(graph_vertex_descriptor_t<Graph> v, const Graph& g) const { return out_degree(v, g); }
 };
 
 template <concepts::BidirectionalGraph Graph>
 struct prestige_measure {
-  auto operator()(graph_vertex_descriptor_t<Graph> v, const Graph& g) { return in_degree(v, g); }
+  auto operator()(graph_vertex_descriptor_t<Graph> v, const Graph& g) const { return in_degree(v, g); }
 };
 
 template <concepts::Graph Graph, concepts::DegreeMeasure<Graph> Measure>
