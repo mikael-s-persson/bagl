@@ -67,7 +67,7 @@ class disjoint_sets {
   Vertex find_set(Vertex x) { return rep_(parent_, x); }
 
   template <std::ranges::input_range VRange>
-  std::size_t count_sets(const VRange& v_rg) {
+  std::size_t count_sets(VRange& v_rg) {
     std::size_t count = 0;
     for (Vertex v : v_rg) {
       if (get(parent_, v) == v) {
@@ -78,14 +78,14 @@ class disjoint_sets {
   }
 
   template <std::ranges::input_range VRange>
-  void normalize_sets(const VRange& v_rg) {
+  void normalize_sets(VRange& v_rg) {
     for (Vertex v : v_rg) {
       disjoint_sets_detail::normalize_node(parent_, v);
     }
   }
 
   template <std::ranges::input_range VRange>
-  void compress_sets(const VRange& v_rg) {
+  void compress_sets(VRange& v_rg) {
     for (Vertex v : v_rg) {
       disjoint_sets_detail::find_representative_with_full_compression(parent_, v);
     }
@@ -135,28 +135,28 @@ class disjoint_sets_with_storage {
     return id_to_vertex_[rep_(parent_.data(), get(id_, x))];
   }
 
-  template <class ElementIterator>
-  std::size_t count_sets(ElementIterator first, ElementIterator last) {
+  template <std::ranges::input_range IRange>
+  std::size_t count_sets(IRange& i_rg) {
     std::size_t count = 0;
-    for (; first != last; ++first) {
-      if (parent_[*first] == *first) {
+    for (auto i : i_rg) {
+      if (parent_[i] == i) {
         ++count;
       }
     }
     return count;
   }
 
-  template <class ElementIterator>
-  void normalize_sets(ElementIterator first, ElementIterator last) {
-    for (; first != last; ++first) {
-      disjoint_sets_detail::normalize_node(parent_.data(), *first);
+  template <std::ranges::input_range IRange>
+  void normalize_sets(IRange& i_rg) {
+    for (auto i : i_rg) {
+      disjoint_sets_detail::normalize_node(parent_.data(), i);
     }
   }
 
-  template <class ElementIterator>
-  void compress_sets(ElementIterator first, ElementIterator last) {
-    for (; first != last; ++first) {
-      disjoint_sets_detail::find_representative_with_full_compression(parent_.data(), *first);
+  template <std::ranges::input_range IRange>
+  void compress_sets(IRange& i_rg) {
+    for (auto i : i_rg) {
+      disjoint_sets_detail::find_representative_with_full_compression(parent_.data(), i);
     }
   }
 
