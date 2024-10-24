@@ -349,3 +349,13 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_test(
+    name = "howard_cycle_ratio_test",
+    srcs = [ "howard_cycle_ratio_test.cc", ],
+    deps = [
+        "//bagl",
+        "//bagl:graphviz",
+        "@com_google_googletest//:gtest_main",
+    ],
+)

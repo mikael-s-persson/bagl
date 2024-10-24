@@ -44,6 +44,21 @@ Value read_value(const std::string& value) {
 }
 
 template <>
+inline float read_value<float>(const std::string& value) {
+  return std::stof(value);
+}
+template <>
+inline double read_value<double>(const std::string& value) {
+  return std::stod(value);
+}
+
+template <>
+inline bool read_value<bool>(const std::string& value) {
+  // Any other ways to say true?
+  return value == "true" || value == "True" || value == "TRUE" || value == "1";
+}
+
+template <>
 inline std::string read_value<std::string>(const std::string& value) {
   return value;
 }
@@ -60,10 +75,10 @@ class dynamic_property_map {  // NOLINT
  public:
   virtual ~dynamic_property_map() = default;
 
-  [[nodiscard]] virtual std::any get(const std::any& key) = 0;
+  [[nodiscard]] virtual std::any get_value(const std::any& key) = 0;
   [[nodiscard]] virtual std::string get_string(const std::any& key) = 0;
-  virtual void put(const std::any& key, const std::any& value) = 0;
-  virtual void put(const std::any& key, const std::string& value) = 0;
+  virtual void put_value(const std::any& key, const std::any& value) = 0;
+  virtual void put_value(const std::any& key, const std::string& value) = 0;
   [[nodiscard]] virtual const std::type_info& key() const = 0;
   [[nodiscard]] virtual bool is_key_of_type(const std::type_info& info) const = 0;
   [[nodiscard]] virtual const std::type_info& value() const = 0;
@@ -141,7 +156,7 @@ class dynamic_property_map_adaptor : public dynamic_property_map {
  public:
   explicit dynamic_property_map_adaptor(PropertyMap property_map) : property_map_(std::move(property_map)) {}
 
-  [[nodiscard]] auto get_value(const std::any& in_key) {
+  [[nodiscard]] auto get_value_impl(const std::any& in_key) {
     if constexpr (std::is_pointer_v<key_type>) {
       // Handle both const T* and T*.
       using non_const_key = std::remove_cv_t<std::remove_pointer_t<key_type>>;
@@ -160,24 +175,22 @@ class dynamic_property_map_adaptor : public dynamic_property_map {
     }
   }
 
-  [[nodiscard]] std::any get(const std::any& in_key) override {
-    return get_value(in_key);
-  }
+  [[nodiscard]] std::any get_value(const std::any& in_key) override { return get_value_impl(in_key); }
 
   [[nodiscard]] std::string get_string(const std::any& in_key) override {
     std::ostringstream out;
-    out << get_value(in_key);
+    out << get_value_impl(in_key);
     return out.str();
   }
 
-  void put(const std::any& in_key, const std::any& in_value) override {
+  void put_value(const std::any& in_key, const std::any& in_value) override {
     if constexpr (!concepts::WritablePropertyMap<PropertyMap, key_type>) {
       throw dynamic_const_put_error();
     } else {
       do_put(in_key, in_value);
     }
   }
-  void put(const std::any& in_key, const std::string& in_value) override {
+  void put_value(const std::any& in_key, const std::string& in_value) override {
     if constexpr (!concepts::WritablePropertyMap<PropertyMap, key_type>) {
       throw dynamic_const_put_error();
     } else {
@@ -244,18 +257,26 @@ struct dynamic_properties {
     return *this;
   }
 
-  // Add property maps from tags (e.g. property(vertex_index, g) == property("vertex_index", get(vertex_index, g)))
+  // Add property maps from tags:
+  // property(name, vertex_index, g) == property<vertex_descriptor>(name, get(vertex_index, g))
   template <typename PropertyTag, typename Graph>
-  std::enable_if_t<!std::is_same_v<PropertyTag, std::string>, dynamic_properties&> property(PropertyTag property_tag, Graph&& g) {
+  std::enable_if_t<!std::is_same_v<PropertyTag, std::string>, dynamic_properties&> property(std::string name,
+                                                                                            PropertyTag property_tag,
+                                                                                            Graph&& g) {
     if constexpr (is_vertex_property_kind_v<PropertyTag>) {
-      return property<graph_vertex_descriptor_t<Graph>>(std::string{PropertyTag::name},
-                                                        get(property_tag, std::forward<Graph>(g)));
+      return property<graph_vertex_descriptor_t<Graph>>(std::move(name), get(property_tag, std::forward<Graph>(g)));
     } else if constexpr (is_edge_property_kind_v<PropertyTag>) {
-      return property<graph_edge_descriptor_t<Graph>>(std::string{PropertyTag::name},
-                                                      get(property_tag, std::forward<Graph>(g)));
+      return property<graph_edge_descriptor_t<Graph>>(std::move(name), get(property_tag, std::forward<Graph>(g)));
     } else {
-      return property<Graph*>(std::string{PropertyTag::name}, get(property_tag, std::forward<Graph>(g)));
+      return property<Graph*>(std::move(name), get(property_tag, std::forward<Graph>(g)));
     }
+  }
+  // Add property maps from tags:
+  // property(vertex_index, g) == property<vertex_descriptor>("vertex_index", get(vertex_index, g))
+  template <typename PropertyTag, typename Graph>
+  std::enable_if_t<!std::is_same_v<PropertyTag, std::string>, dynamic_properties&> property(PropertyTag property_tag,
+                                                                                            Graph&& g) {
+    return property(std::string{PropertyTag::name}, property_tag, std::forward<Graph>(g));
   }
 
   template <typename Key, typename PropertyMap>
@@ -265,11 +286,23 @@ struct dynamic_properties {
     return result;
   }
 
-  // Add property maps from tags (e.g. property(vertex_index, g) == property("vertex_index", get(vertex_index, g)))
+  // Add property maps from tags:
+  // property(name, vertex_index, g) == property<vertex_descriptor>(name, get(vertex_index, g))
   template <typename PropertyTag, typename Graph>
-  std::enable_if_t<!std::is_same_v<PropertyTag, std::string>, dynamic_properties> property(PropertyTag property_tag, Graph&& g) const {
+  std::enable_if_t<!std::is_same_v<PropertyTag, std::string>, dynamic_properties> property(std::string name,
+                                                                                           PropertyTag property_tag,
+                                                                                           Graph&& g) const {
     dynamic_properties result = *this;
     result.property(property_tag, std::forward<Graph>(g));
+    return result;
+  }
+  // Add property maps from tags:
+  // property(vertex_index, g) == property<vertex_descriptor>("vertex_index", get(vertex_index, g))
+  template <typename PropertyTag, typename Graph>
+  std::enable_if_t<!std::is_same_v<PropertyTag, std::string>, dynamic_properties> property(PropertyTag property_tag,
+                                                                                           Graph&& g) const {
+    dynamic_properties result = *this;
+    result.property(std::string{PropertyTag::name}, property_tag, std::forward<Graph>(g));
     return result;
   }
 
@@ -304,12 +337,12 @@ bool put(const std::string& name, dynamic_properties& dp, const Key& key, const 
   for (auto [i, i_end] = dp.equal_range(name); i != i_end; ++i) {
     if constexpr (std::is_same_v<Key, std::any>) {
       if (i->second->is_key_of_type(key.type())) {
-        i->second->put(key, value);
+        i->second->put_value(key, value);
         return true;
       }
     } else {
       if (i->second->is_key_of_type(typeid(key))) {
-        i->second->put(key, value);
+        i->second->put_value(key, value);
         return true;
       }
     }
@@ -317,7 +350,7 @@ bool put(const std::string& name, dynamic_properties& dp, const Key& key, const 
 
   auto new_map = dp.generate(name, key, value);
   if (new_map != nullptr) {
-    new_map->put(key, value);
+    new_map->put_value(key, value);
     dp.insert(name, std::move(new_map));
     return true;
   }
@@ -329,11 +362,11 @@ Value get(const std::string& name, const dynamic_properties& dp, const Key& key)
   for (auto [i, i_end] = dp.equal_range(name); i != i_end; ++i) {
     if constexpr (std::is_same_v<Key, std::any>) {
       if (i->second->is_key_of_type(key.type())) {
-        return std::any_cast<Value>(i->second->get(key));
+        return std::any_cast<Value>(i->second->get_value(key));
       }
     } else {
       if (i->second->is_key_of_type(typeid(key))) {
-        return std::any_cast<Value>(i->second->get(key));
+        return std::any_cast<Value>(i->second->get_value(key));
       }
     }
   }
@@ -345,11 +378,11 @@ Value get(const std::string& name, const dynamic_properties& dp, const Key& key,
   for (auto [i, i_end] = dp.equal_range(name); i != i_end; ++i) {
     if constexpr (std::is_same_v<Key, std::any>) {
       if (i->second->is_key_of_type(key.type())) {
-        return std::any_cast<Value>(i->second->get(key));
+        return std::any_cast<Value>(i->second->get_value(key));
       }
     } else {
       if (i->second->is_key_of_type(typeid(key))) {
-        return std::any_cast<Value>(i->second->get(key));
+        return std::any_cast<Value>(i->second->get_value(key));
       }
     }
   }

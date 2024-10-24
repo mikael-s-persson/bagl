@@ -290,20 +290,20 @@ struct tokenizer {
   std::regex cdata;
 
   tokenizer(const std::string& str) : begin(str.begin()), end(str.end()) {
-    // std::string end_of_token = "(?=(?:\\W))"; // SEHE: unused?
-    std::string whitespace = "(?:\\s+)";
-    std::string slash_slash_comment = "(?://.*?$)";
-    std::string slash_star_comment = "(?:/\\*.*?\\*/)";
-    std::string hash_comment = "(?:^#.*?$)";
-    std::string backslash_newline = "(?:[\\\\][\\n])";
-    stuff_to_skip = "\\A(?:" + whitespace + "|" + slash_slash_comment + "|" + slash_star_comment + "|" + hash_comment +
+    std::string whitespace = R"((?:\s+))";
+    std::string slash_slash_comment = R"((?://.*?$))";
+    std::string slash_star_comment = R"((?:/\*.*?\*/))";
+    std::string hash_comment = R"((?:^#.*?$))";
+    std::string backslash_newline = R"((?:[\\][\n]))";
+
+    stuff_to_skip = "^(?:" + whitespace + "|" + slash_slash_comment + "|" + slash_star_comment + "|" + hash_comment +
                     "|" + backslash_newline + ")*";
-    basic_id_token = "\\A([[:alpha:]_](?:\\w*))";
-    punctuation_token = "\\A([][{};=,:+()@]|[-][>-])";
-    number_token = "\\A([-]?(?:(?:\\.\\d+)|(?:\\d+(?:\\.\\d*)?)))";
-    quoted_string_token = "\\A(\"(?:[^\"\\\\]|(?:[\\\\].))*\")";
-    xml_tag_token = "\\A<(/?)(?:[^!?'\"]|(?:'[^']*?')|(?:\"[^\"]*?\"))*?(/?)>";
-    cdata = "\\A\\Q<![CDATA[\\E.*?\\Q]]>\\E";
+    basic_id_token = R"(^([[:alpha:]_](?:\w*)))";
+    punctuation_token = R"(^([\]\[{};=,:+()@]|[-][>-]))";
+    number_token = R"(^([-]?(?:(?:\.\d+)|(?:\d+(?:\.\d*)?))))";
+    quoted_string_token = R"(^("(?:[^"\\]|(?:[\\].))*"))";
+    xml_tag_token = R"(^<(/?)(?:[^!?'"]|(?:'[^']*?')|(?:"[^"]*?"))*?(/?)>)";
+    cdata = R"(^<\!\[CDATA\[.*?\]\]>)";
   }
 
   void skip() {

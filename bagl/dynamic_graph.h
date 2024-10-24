@@ -23,6 +23,7 @@ namespace bagl {
 
 class dynamic_graph_mutator {
  public:
+  dynamic_graph_mutator() = default;
   dynamic_graph_mutator(const dynamic_graph_mutator&) = delete;
   dynamic_graph_mutator(dynamic_graph_mutator&&) = delete;
   dynamic_graph_mutator& operator=(const dynamic_graph_mutator&) = delete;

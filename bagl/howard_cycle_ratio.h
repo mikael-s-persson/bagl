@@ -175,17 +175,22 @@ class mcr_howard {
     sink_ = graph_traits<Graph>().null_vertex();
     for (auto v : vertices(g_)) {
       auto eo_rg = out_edges(v, g_);
-      auto mei = std::max_element(eo_rg.begin(), eo_rg.end(),
-                                  [this](auto e1, auto e2) { return compare_(weight1_[e1], weight1_[e2]); });
-      if (mei == eo_rg.end()) {
+      if (eo_rg.empty()) {
         if (sink_ == graph_traits<Graph>().null_vertex()) {
           sink_ = v;
         }
         bad_v_[v] = true;
         in_edge_list_[sink_].push_back(v);
       } else {
-        in_edge_list_[target(*mei, g_)].push_back(v);
-        policy_[v] = *mei;
+        auto ei = eo_rg.begin();
+        auto e_max = *ei;
+        for (++ei; ei != eo_rg.end(); ++ei) {
+          if (compare_(weight1_[e_max], weight1_[*ei])) {
+            e_max = *ei;
+          }
+        }
+        in_edge_list_[target(e_max, g_)].push_back(v);
+        policy_[v] = e_max;
       }
     }
   }
@@ -195,7 +200,7 @@ class mcr_howard {
    */
   void mcr_bfv(vertex_t sv, float_t cr) {
     auto vcm = iterator_property_map(color_bfs_.begin(), v_index_);
-    std::queue<vertex_t> q;
+    buffer_queue<vertex_t> q;
     vcm[sv] = my_black;
     q.push(sv);
     while (!q.empty()) {
@@ -363,7 +368,7 @@ auto optimum_cycle_ratio(const TG& g, TVIM vim, TEW1 ewm, TEW2 ew2m, EV* pcc) {
 
   mcr_howard<FT, TG, TVIM, TEW1, TEW2> obj(g, vim, ewm, ew2m, (pcc != nullptr));
   const double ocr = obj.ocr_howard();
-  if (pcc == nullptr) {
+  if (pcc != nullptr) {
     obj.get_critical_cycle(*pcc);
   }
   return ocr;
@@ -416,7 +421,7 @@ auto maximum_cycle_mean(const Graph& g, VertexIndexMap vim, EdgeWeightMap ewm,
 
 template <typename Graph, typename VertexIndexMap, typename EdgeWeightMap>
 double maximum_cycle_mean(const Graph& g, VertexIndexMap vim, EdgeWeightMap ewm,
-                          std::vector<graph_edge_descriptor_t<Graph>>* pcc = 0) {
+                          std::vector<graph_edge_descriptor_t<Graph>>* pcc = nullptr) {
   return maximum_cycle_mean(g, vim, ewm, pcc, mcr_float<>());
 }
 
