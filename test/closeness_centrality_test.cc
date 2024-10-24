@@ -20,7 +20,7 @@ namespace bagl {
 namespace {
 
 // number of vertices in the graph
-constexpr unsigned N = 5;
+constexpr std::size_t N = 5;
 
 template <typename Graph>
 void build_graph(Graph& g, std::vector<graph_vertex_descriptor_t<Graph>>& v) {
