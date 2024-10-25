@@ -36,7 +36,6 @@ class time_stamper_with_vertex_on_discover_vertex {
 };
 
 template <concepts::BidirectionalGraph Graph, concepts::ReadableVertexIndexMap<Graph> IndexMap,
-          concepts::ReadWriteVertexPropertyMap<Graph> TimeMap, concepts::ReadWriteVertexPropertyMap<Graph> PredMap,
           concepts::WritableVertexPropertyMap<Graph> DomTreePredMap>
 class dominator_visitor {
   using Vertex = graph_vertex_descriptor_t<Graph>;
@@ -56,6 +55,7 @@ class dominator_visitor {
         num_of_vertices_(num_vertices(g)),
         samedom_map(num_vertices(g), index_map, graph_traits<Graph>::null_vertex()) {}
 
+  template <concepts::ReadWriteVertexPropertyMap<Graph> TimeMap, concepts::ReadWriteVertexPropertyMap<Graph> PredMap>
   void operator()(const Vertex& n, const TimeMap& df_num_map, const PredMap& parent_map, const Graph& g) {
     if (n == entry_) {
       return;
@@ -128,6 +128,7 @@ class dominator_visitor {
 
  protected:
   // Evaluate function in Tarjan's path compression
+  template <concepts::ReadWriteVertexPropertyMap<Graph> TimeMap>
   Vertex ancestor_with_lowest_semi(const Vertex& v, const TimeMap& df_num_map) {
     const Vertex a(get(ancestor_map_, v));
 
@@ -154,7 +155,7 @@ class dominator_visitor {
   const std::size_t num_of_vertices_;
 
  public:
-  PredMap samedom_map;
+  vector_property_map<Vertex, IndexMap> samedom_map;
 };
 
 }  // namespace detail
@@ -189,8 +190,7 @@ void lengauer_tarjan_dominator_tree_without_dfs(const Graph& g, const graph_vert
   }
 
   // 1. Visit each vertex in reverse post order and calculate sdom.
-  detail::dominator_visitor<Graph, IndexMap, TimeMap, PredMap, DomTreePredMap> visitor(g, entry, index_map,
-                                                                                       dom_tree_pred_map);
+  detail::dominator_visitor visitor(g, entry, index_map, dom_tree_pred_map);
 
   for (std::size_t i = 0; i < num_of_vertices; ++i) {
     const Vertex u(vertices_by_df_num[num_of_vertices - 1 - i]);
@@ -284,8 +284,13 @@ void iterative_bit_vector_dominator_tree(const Graph& g, const graph_vertex_desc
     return;
   }
 
+  auto compare_vertices = [&index_map](const Vertex& u, const Vertex& v) {
+    return get(index_map, u) < get(index_map, v);
+  };
+  using VComp = decltype(std::cref(compare_vertices));
+
   auto v_rg = vertices(g);
-  const std::set<Vertex> N(v_rg.begin(), v_rg.end());
+  const std::set<Vertex, VComp> N(v_rg.begin(), v_rg.end(), std::cref(compare_vertices));
 
   bool change = true;
 
@@ -300,21 +305,21 @@ void iterative_bit_vector_dominator_tree(const Graph& g, const graph_vertex_desc
         continue;
       }
 
-      std::set<Vertex> T(N);
+      std::set<Vertex, VComp> T = N;
 
       for (auto e : in_edges(v, g)) {
         const Vertex p = source(e, g);
 
-        std::set<Vertex> temp_set;
+        std::set<Vertex, VComp> temp_set(std::cref(compare_vertices));
         std::set_intersection(T.begin(), T.end(), get(dom_map, p).begin(), get(dom_map, p).end(),
-                              std::inserter(temp_set, temp_set.begin()));
-        T.swap(temp_set);
+                              std::inserter(temp_set, temp_set.begin()), std::cref(compare_vertices));
+        std::swap(T, temp_set);
       }
 
       T.insert(v);
       if (T != get(dom_map, v)) {
         change = true;
-        get(dom_map, v).swap(T);
+        std::swap(get(dom_map, v), T);
       }
     }  // end of for (boost::tie(vi, viend) = vertices(g)
   }    // end of while(change)
@@ -333,7 +338,7 @@ void iterative_bit_vector_dominator_tree(const Graph& g, const graph_vertex_desc
 
     // We have to iterate through copied dominator set
     auto& dom_v = get(dom_map, v);
-    const std::set<Vertex> temp_set = dom_v;
+    const std::set<Vertex, VComp> temp_set(dom_v.begin(), dom_v.end(), std::cref(compare_vertices));
     for (auto s : temp_set) {
       const auto& dom_s = get(dom_map, s);
       for (auto t = dom_v.begin(); t != dom_v.end();) {
