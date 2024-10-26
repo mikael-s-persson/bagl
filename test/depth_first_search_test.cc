@@ -171,5 +171,33 @@ using TestGraphs = ::testing::Types<DirectedGraph, UndirectedGraph>;
 
 INSTANTIATE_TYPED_TEST_SUITE_P(DepthFirstSearch, DepthFirstSearchTest, TestGraphs);
 
+struct finish_edge_visitor {
+  int* call_count;
+  explicit finish_edge_visitor(int& count_ref) : call_count(&count_ref) {}
+  template <typename Edge, typename Graph>
+  void finish_edge(Edge, Graph&) {
+    ++(*call_count);
+  }
+};
+
+TEST(DepthFirstSearchBugs, FinishEdge) {
+  using Graph = adjacency_list<vec_s, vec_s, directed_s>;
+  using Vertex = graph_vertex_descriptor_t<Graph>;
+
+  Graph g;
+  Vertex a = add_vertex(g);
+  Vertex b = add_vertex(g);
+  Vertex c = add_vertex(g);
+
+  add_edge(a, b, g);
+  add_edge(b, c, g);
+  add_edge(c, a, g);
+  add_edge(a, c, g);
+
+  int call_count = 0;
+  depth_first_search(g, make_dfs_visitor(finish_edge_visitor(call_count)));
+  EXPECT_EQ(call_count, 4);
+}
+
 }  // namespace
 }  // namespace bagl

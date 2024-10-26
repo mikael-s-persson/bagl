@@ -78,14 +78,16 @@ bool relax(graph_edge_descriptor_t<G> e, const G& g, const WeightMap& w, Predece
 
     return false;
   }
-  if (is_undirected_graph_v<G> && compare(combine(d_v, w_e), d_u)) {
-    put(d, u, combine(d_v, w_e));
-    if (compare(get(d, u), d_u)) {
-      put(p, u, v);
-      return true;
-    }
+  if constexpr (is_undirected_graph_v<G>) {
+    if (compare(combine(d_v, w_e), d_u)) {
+      put(d, u, combine(d_v, w_e));
+      if (compare(get(d, u), d_u)) {
+        put(p, u, v);
+        return true;
+      }
 
-    return false;
+      return false;
+    }
   }
   return false;
 }

@@ -5,6 +5,8 @@
 #ifndef BAGL_BAGL_BELLMAN_FORD_SHORTEST_PATHS_H_
 #define BAGL_BAGL_BELLMAN_FORD_SHORTEST_PATHS_H_
 
+#include <iostream>
+
 #include "bagl/graph_concepts.h"
 #include "bagl/graph_traits.h"
 #include "bagl/properties.h"
@@ -110,7 +112,7 @@ template <concepts::EdgeListGraph G, concepts::BellmanFordVisitor<G> V,
           concepts::ReadWriteVertexPropertyMap<G> PredecessorMap,
           concepts::ReadWriteVertexPropertyMap<G> DistanceMap>
 bool bellman_ford_shortest_paths(G& g, V vis, std::size_t n, WeightMap weight, PredecessorMap pred, DistanceMap distance) {
-  return bellman_ford_shortest_paths(g, vis, n, weight, pred, distance, std::plus<>(), std::less<>());
+  return bellman_ford_shortest_paths(g, vis, n, weight, pred, distance, closed_plus<>(), std::less<>());
 }
 
 template <concepts::VertexAndEdgeListGraph G, concepts::BellmanFordVisitor<G> V,
@@ -134,7 +136,7 @@ template <concepts::VertexAndEdgeListGraph G, concepts::BellmanFordVisitor<G> V,
           concepts::ReadWriteVertexPropertyMap<G> DistanceMap>
 bool bellman_ford_shortest_paths(G& g, V vis, graph_vertex_descriptor_t<G> start, std::size_t n, WeightMap weight,
                                  PredecessorMap pred, DistanceMap distance) {
-  return bellman_ford_shortest_paths(g, vis, start, n, weight, pred, distance, std::plus<>(), std::less<>());
+  return bellman_ford_shortest_paths(g, vis, start, n, weight, pred, distance, closed_plus<>(), std::less<>());
 }
 
 }  // namespace bagl
