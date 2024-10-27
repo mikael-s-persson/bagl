@@ -353,20 +353,17 @@ std::size_t num_edges_or_zero(const G& g) {
 
 template <typename Graph>
 bool has_no_vertices(const Graph& g) {
-  auto [a, b] = vertices(g);
-  return (a == b);
+  return vertices(g).empty();
 }
 
 template <typename Graph>
 bool has_no_edges(const Graph& g) {
-  auto [a, b] = edges(g);
-  return (a == b);
+  return edges(g).empty();
 }
 
 template <typename Graph>
 bool has_no_out_edges(const graph_vertex_descriptor_t<Graph>& v, const Graph& g) {
-  auto [a, b] = out_edges(v, g);
-  return (a == b);
+  return out_edges(v, g).empty();
 }
 
 template <typename PropertyIn, typename PropertyOut, typename Graph>

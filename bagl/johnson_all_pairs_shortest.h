@@ -71,28 +71,28 @@ bool johnson_all_pairs_shortest_paths(const G& g1, DistanceMatrix& D, VertexID i
   // dijkstra for portability reasons.
   dummy_property_map pred;
   bellman_visitor<> bvis;
-  if (bellman_ford_shortest_paths(g2, num_vertices(g2), w, pred, d, combine, compare, bvis)) {
+  if (!bellman_ford_shortest_paths(g2, bvis, num_vertices(g2), w, pred, d, combine, compare)) {
+    return false;
+  }
+  for (auto v : vertices(g2)) {
+    put(h, v, get(d, v));
+  }
+  // Reweight the edges to remove negatives
+  for (auto e : edges(g2)) {
+    auto a = source(e, g2);
+    auto b = target(e, g2);
+    put(w_hat, e, combine((get(h, a) - get(h, b)), get(w, e)));
+  }
+  for (auto u : vertices(g2)) {
+    dijkstra_visitor<> dvis;
+    dijkstra_shortest_paths(g2, u, pred, d, w_hat, id2, compare, combine, inf, zero, dvis);
     for (auto v : vertices(g2)) {
-      put(h, v, get(d, v));
-    }
-    // Reweight the edges to remove negatives
-    for (auto e : edges(g2)) {
-      auto a = source(e, g2);
-      auto b = target(e, g2);
-      put(w_hat, e, combine((get(h, a) - get(h, b)), get(w, e)));
-    }
-    for (auto u : vertices(g2)) {
-      dijkstra_visitor<> dvis;
-      dijkstra_shortest_paths(g2, u, pred, d, w_hat, id2, compare, combine, inf, zero, dvis);
-      for (auto v : vertices(g2)) {
-        if (u != s && v != s) {
-          D[get(id2, u) - 1][get(id2, v) - 1] = combine((get(h, v) - get(h, u)), get(d, v));
-        }
+      if (u != s && v != s) {
+        D[get(id2, u) - 1][get(id2, v) - 1] = combine((get(h, v) - get(h, u)), get(d, v));
       }
     }
-    return true;
   }
-  return false;
+  return true;
 }
 
 template <concepts::VertexAndEdgeListGraph G, concepts::ReadableEdgePropertyMap<G> Weight,

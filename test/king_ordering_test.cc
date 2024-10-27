@@ -3,11 +3,9 @@
 //          Doug Gregor, D. Kevin McGrath
 // Copyright 2024 Mikael Persson - Modernized to C++20
 
-#include "bagl/cuthill_mckee_ordering.h"
+#include "bagl/king_ordering.h"
 
-#include <array>
 #include <iostream>
-#include <utility>
 #include <vector>
 
 #include "bagl/adjacency_list.h"
@@ -20,12 +18,12 @@
 namespace bagl {
 namespace {
 
-class CuthillMcKeeOrderingTest : public ::testing::Test {
+class KingOrderingTest : public ::testing::Test {
  public:
   using Graph = adjacency_list<vec_s, vec_s, undirected_s, property<vertex_color_t, default_color_type> >;
   using Vertex = graph_vertex_descriptor_t<Graph>;
 
-  CuthillMcKeeOrderingTest() : g(10) {
+  KingOrderingTest() : g(10) {
     using Pair = std::pair<std::size_t, std::size_t>;
     std::array edges = {Pair(0, 3),   // a-d
                         Pair(0, 5),   // a-f
@@ -52,16 +50,16 @@ class CuthillMcKeeOrderingTest : public ::testing::Test {
   Graph g;
 };
 
-TEST_F(CuthillMcKeeOrderingTest, StartingAtSix) {
+TEST_F(KingOrderingTest, StartingAtSix) {
   auto vindex = get(vertex_index, g);
   std::vector<Vertex> inv_perm(num_vertices(g));
   std::vector<std::size_t> perm(num_vertices(g));
   Vertex s = *std::next(vertices(g).begin(), 6);
-  // reverse cuthill_mckee_ordering
-  cuthill_mckee_ordering(g, s, inv_perm.rbegin(), get(vertex_color, g), get(vertex_degree, g));
+  // king_ordering
+  king_ordering(g, s, inv_perm.rbegin(), get(vertex_color, g), get(vertex_degree, g), get(vertex_index, g));
   std::vector<std::size_t> inv_perm_ids(num_vertices(g));
   std::transform(inv_perm.begin(), inv_perm.end(), inv_perm_ids.begin(), [&vindex](auto v) { return vindex[v]; });
-  EXPECT_THAT(inv_perm_ids, ::testing::ElementsAreArray({8, 3, 0, 9, 2, 5, 1, 4, 7, 6}));
+  EXPECT_THAT(inv_perm_ids, ::testing::ElementsAreArray({8, 9, 2, 3, 0, 1, 4, 5, 7, 6}));
 
   for (std::size_t c = 0; c != inv_perm.size(); ++c) {
     perm[vindex[inv_perm[c]]] = c;
@@ -69,13 +67,13 @@ TEST_F(CuthillMcKeeOrderingTest, StartingAtSix) {
   EXPECT_EQ(bandwidth(g, iterator_property_map(&perm[0], vindex)), 4);
 }
 
-TEST_F(CuthillMcKeeOrderingTest, StartingAtZero) {
+TEST_F(KingOrderingTest, StartingAtZero) {
   auto vindex = get(vertex_index, g);
   std::vector<Vertex> inv_perm(num_vertices(g));
   std::vector<std::size_t> perm(num_vertices(g));
   Vertex s = *vertices(g).begin();
-  // reverse cuthill_mckee_ordering
-  cuthill_mckee_ordering(g, s, inv_perm.rbegin(), get(vertex_color, g), get(vertex_degree, g));
+  // king_ordering
+  king_ordering(g, s, inv_perm.rbegin(), get(vertex_color, g), get(vertex_degree, g), get(vertex_index, g));
   std::vector<std::size_t> inv_perm_ids(num_vertices(g));
   std::transform(inv_perm.begin(), inv_perm.end(), inv_perm_ids.begin(), [&vindex](auto v) { return vindex[v]; });
   EXPECT_THAT(inv_perm_ids, ::testing::ElementsAreArray({9, 1, 4, 6, 7, 2, 8, 5, 3, 0}));
@@ -86,15 +84,15 @@ TEST_F(CuthillMcKeeOrderingTest, StartingAtZero) {
   EXPECT_EQ(bandwidth(g, iterator_property_map(&perm[0], vindex)), 4);
 }
 
-TEST_F(CuthillMcKeeOrderingTest, Basic) {
+TEST_F(KingOrderingTest, Basic) {
   auto vindex = get(vertex_index, g);
   std::vector<Vertex> inv_perm(num_vertices(g));
   std::vector<std::size_t> perm(num_vertices(g));
-  // reverse cuthill_mckee_ordering
-  cuthill_mckee_ordering(g, inv_perm.rbegin());
+  // king_ordering
+  king_ordering(g, inv_perm.rbegin());
   std::vector<std::size_t> inv_perm_ids(num_vertices(g));
   std::transform(inv_perm.begin(), inv_perm.end(), inv_perm_ids.begin(), [&vindex](auto v) { return vindex[v]; });
-  EXPECT_THAT(inv_perm_ids, ::testing::ElementsAreArray({0, 8, 5, 7, 3, 6, 4, 2, 1, 9}));
+  EXPECT_THAT(inv_perm_ids, ::testing::ElementsAreArray({8, 0, 5, 7, 3, 6, 2, 4, 1, 9}));
 
   for (std::size_t c = 0; c != inv_perm.size(); ++c) {
     perm[vindex[inv_perm[c]]] = c;

@@ -83,10 +83,8 @@ bool is_straight_line_drawing(const Graph& g, GridPositionMap drawing) {
   for (auto e : edges(g)) {
     auto s = source(e, g);
     auto t = target(e, g);
-    edge_event_queue.push_back(
-        make_tuple(e, static_cast<std::size_t>(drawing[s].x), static_cast<std::size_t>(drawing[s].y)));
-    edge_event_queue.push_back(
-        make_tuple(e, static_cast<std::size_t>(drawing[t].x), static_cast<std::size_t>(drawing[t].y)));
+    edge_event_queue.emplace_back(e, static_cast<std::size_t>(drawing[s].x), static_cast<std::size_t>(drawing[s].y));
+    edge_event_queue.emplace_back(e, static_cast<std::size_t>(drawing[t].x), static_cast<std::size_t>(drawing[t].y));
   }
 
   // Order by edge_event_queue by first, then second coordinate

@@ -15,7 +15,7 @@
 
 #include "bagl/detail/sparse_ordering.h"
 #include "bagl/graph_utility.h"
-#include "bagl/two_bit_color_map.h"
+#include "bagl/properties.h"
 #include "bagl/vector_property_map.h"
 
 // King Algorithm for matrix reordering
@@ -260,8 +260,9 @@ OutputIter king_ordering(const G& g, OutputIter permutation, VertexIndexMap inde
     return permutation;
   }
 
-  return king_ordering(g, permutation, two_bit_color_map(num_vertices(g), index_map).ref(), make_out_degree_map(g),
-                       index_map);
+  return king_ordering(g, permutation,
+                       vector_property_map(num_vertices(g), index_map, default_color_type::white_color).ref(),
+                       get(vertex_degree, g), index_map);
 }
 
 template <concepts::VertexListGraph G, std::output_iterator<graph_vertex_descriptor_t<G>> OutputIter>

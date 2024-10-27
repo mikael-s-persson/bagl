@@ -14,15 +14,16 @@ namespace bagl {
 template <typename TupleType, int N, typename PropertyMapWrapper = identity_property_map>
 struct property_map_tuple_adaptor
     : public put_get_helper<property_map_tuple_adaptor<TupleType, N, PropertyMapWrapper> > {
-  using reference = typename PropertyMapWrapper::reference;
   using value_type = typename PropertyMapWrapper::value_type;
-  using key_type = TupleType;
 
   property_map_tuple_adaptor() = default;
 
   explicit property_map_tuple_adaptor(PropertyMapWrapper wrapper_map) : wrapper_map_(wrapper_map) {}
 
-  value_type operator[](const key_type& x) const { return get(wrapper_map_, std::get<N>(x)); }
+  template <typename Key>
+  value_type operator[](Key&& x) const {
+    return get(wrapper_map_, std::get<N>(std::forward<Key>(x)));
+  }
 
   static constexpr int n = N;
   PropertyMapWrapper wrapper_map_;
