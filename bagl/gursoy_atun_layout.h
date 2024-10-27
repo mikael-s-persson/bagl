@@ -28,6 +28,7 @@
 #include "bagl/graph_traits.h"
 #include "bagl/properties.h"
 #include "bagl/property_map.h"
+#include "bagl/single_property_map.h"
 #include "bagl/topology.h"
 #include "bagl/two_bit_color_map.h"
 #include "bagl/vector_property_map.h"
@@ -63,9 +64,9 @@ struct update_position_visitor {
 
 template <typename Graph, typename NodeDistanceMap, typename UpdatePosition, typename EdgeWeightMap>
 void gursoy_shortest(const Graph& g, graph_vertex_descriptor_t<Graph> s, NodeDistanceMap node_distance,
-                     UpdatePosition& update_position, EdgeWeightMap weight) {
-  if constexpr (std::is_same_v<EdgeWeightMap, dummy_property_map>) {
-    std::queue<graph_vertex_descriptor_t<Graph>> q;
+                     UpdatePosition update_position, EdgeWeightMap weight) {
+  if constexpr (std::is_same_v<EdgeWeightMap, single_property_map<double>>) {
+    buffer_queue<graph_vertex_descriptor_t<Graph>> q;
     breadth_first_search(g, s, q, make_bfs_visitor(distance_recorder_on_tree_edge(node_distance), update_position),
                          two_bit_color_map(num_vertices(g), get(vertex_index, g)).ref());
   } else {
@@ -80,12 +81,12 @@ void gursoy_shortest(const Graph& g, graph_vertex_descriptor_t<Graph> s, NodeDis
 }  // namespace gursoy_atun_detail
 
 template <concepts::VertexListGraph G, typename Topology, concepts::ReadWriteVertexPropertyMap<G> PositionMap,
-          concepts::ReadableVertexPropertyMap<G> VertexIndexMap, typename EdgeWeightMap>
+          concepts::ReadableVertexIndexMap<G> VertexIndexMap, concepts::ReadableEdgePropertyMap<G> EdgeWeightMap>
 requires concepts::IncidenceGraph<G>
 void gursoy_atun_step(const G& g, const Topology& space, PositionMap position, double diameter,
-                      double learning_constant, VertexIndexMap vertex_index_map, EdgeWeightMap weight) {
-  auto distance_from_input = vector_property_map(num_vertices(g), vertex_index_map, double{0.0});
-  auto node_distance = vector_property_map(num_vertices(g), vertex_index_map, double{0.0});
+                      double learning_constant, VertexIndexMap vindex, EdgeWeightMap weight) {
+  auto distance_from_input = vector_property_map(num_vertices(g), vindex, double{0.0});
+  auto node_distance = vector_property_map(num_vertices(g), vindex, double{0.0});
   auto input_point = space.random_point();
   auto min_distance_loc = graph_traits<G>::null_vertex();
   double min_distance = 0.0;
@@ -102,7 +103,7 @@ void gursoy_atun_step(const G& g, const Topology& space, PositionMap position, d
   assert(!min_distance_unset);  // Graph must have at least one vertex
   try {
     gursoy_atun_detail::gursoy_shortest(
-        g, min_distance_loc, node_distance,
+        g, min_distance_loc, node_distance.ref(),
         gursoy_atun_detail::update_position_visitor{position, node_distance.ref(), &space, input_point, diameter,
                                                     learning_constant, std::exp(-1. / (2 * diameter * diameter))},
         weight);
@@ -112,42 +113,42 @@ void gursoy_atun_step(const G& g, const Topology& space, PositionMap position, d
 }
 
 template <concepts::VertexListGraph G, typename Topology, concepts::ReadWriteVertexPropertyMap<G> PositionMap,
-          concepts::ReadableVertexPropertyMap<G> VertexIndexMap, typename EdgeWeightMap>
+          concepts::ReadableVertexIndexMap<G> VertexIndexMap, concepts::ReadableEdgePropertyMap<G> EdgeWeightMap>
 requires concepts::IncidenceGraph<G>
 void gursoy_atun_refine(const G& g, const Topology& space, PositionMap position, int nsteps, double diameter_initial,
                         double diameter_final, double learning_constant_initial, double learning_constant_final,
-                        VertexIndexMap vertex_index_map, EdgeWeightMap weight) {
+                        VertexIndexMap vindex, EdgeWeightMap weight) {
   double diameter_ratio = diameter_final / diameter_initial;
   double learning_constant_ratio = learning_constant_final / learning_constant_initial;
   for (int round = 0; round < nsteps; ++round) {
     double part_done = static_cast<double>(round) / (nsteps - 1);
     double diameter = diameter_initial * std::pow(diameter_ratio, part_done);
     double learning_constant = learning_constant_initial * std::pow(learning_constant_ratio, part_done);
-    gursoy_atun_step(g, space, position, diameter, learning_constant, vertex_index_map, weight);
+    gursoy_atun_step(g, space, position, diameter, learning_constant, vindex, weight);
   }
 }
 
 template <concepts::VertexListGraph G, typename Topology, concepts::ReadWriteVertexPropertyMap<G> PositionMap,
-          concepts::ReadableVertexPropertyMap<G> VertexIndexMap, typename EdgeWeightMap>
+          concepts::ReadableVertexIndexMap<G> VertexIndexMap, concepts::ReadableEdgePropertyMap<G> EdgeWeightMap>
 requires concepts::IncidenceGraph<G>
 void gursoy_atun_layout(const G& graph, const Topology& space, PositionMap position, int nsteps,
                         double diameter_initial, double diameter_final, double learning_constant_initial,
-                        double learning_constant_final, VertexIndexMap vertex_index_map, EdgeWeightMap weight) {
+                        double learning_constant_final, VertexIndexMap vindex, EdgeWeightMap weight) {
   for (auto v : vertices(graph)) {
     put(position, v, space.random_point());
   }
   gursoy_atun_refine(graph, space, position, nsteps, diameter_initial, diameter_final, learning_constant_initial,
-                     learning_constant_final, vertex_index_map, weight);
+                     learning_constant_final, vindex, weight);
 }
 
 template <concepts::VertexListGraph G, typename Topology, concepts::ReadWriteVertexPropertyMap<G> PositionMap,
-          concepts::ReadableVertexPropertyMap<G> VertexIndexMap>
+          concepts::ReadableVertexIndexMap<G> VertexIndexMap>
 requires concepts::IncidenceGraph<G>
 void gursoy_atun_layout(const G& g, const Topology& space, PositionMap position, int nsteps, double diameter_initial,
                         double diameter_final, double learning_constant_initial, double learning_constant_final,
-                        VertexIndexMap vertex_index_map) {
+                        VertexIndexMap vindex) {
   gursoy_atun_layout(g, space, position, nsteps, diameter_initial, diameter_final, learning_constant_initial,
-                     learning_constant_final, vertex_index_map, dummy_property_map());
+                     learning_constant_final, vindex, single_property_map(double{1.0}));
 }
 
 template <concepts::VertexListGraph G, typename Topology, concepts::ReadWriteVertexPropertyMap<G> PositionMap>
@@ -168,6 +169,13 @@ void gursoy_atun_layout(const G& g, const Topology& space, PositionMap position,
 template <concepts::VertexListGraph G, typename Topology, concepts::ReadWriteVertexPropertyMap<G> PositionMap>
 requires concepts::IncidenceGraph<G>
 void gursoy_atun_layout(const G& g, const Topology& space, PositionMap position) {
+  gursoy_atun_layout(g, space, position, num_vertices(g));
+}
+
+template <concepts::VertexListGraph G, typename Topology, concepts::ReadWriteVertexPropertyMap<G> PositionMap,
+          concepts::ReadableEdgePropertyMap<G> EdgeWeightMap>
+requires concepts::IncidenceGraph<G>
+void gursoy_atun_layout(const G& g, const Topology& space, PositionMap position, EdgeWeightMap weight) {
   gursoy_atun_layout(g, space, position, num_vertices(g));
 }
 

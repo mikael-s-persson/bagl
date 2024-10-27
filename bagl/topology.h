@@ -487,6 +487,26 @@ class heart_topology {
     std::array<double, 2> values_{};
   };
 
+  using rand_t = std::uniform_real_distribution<double>;
+
+ public:
+  using point_type = point;
+
+  heart_topology() : gen_ptr_(std::make_shared<RandomNumberGenerator>()), rand_(std::make_shared<rand_t>()) {}
+
+  explicit heart_topology(RandomNumberGenerator& gen)
+      : gen_ptr_(std::make_shared<RandomNumberGenerator>(gen)), rand_(std::make_shared<rand_t>()) {}
+
+  point random_point() const {
+    point result;
+    do {
+      result[0] = (*rand_)(*gen_ptr_) *
+                  (1000 + 1000 * std::numbers::sqrt2_v<double>)-(500 + 500 * std::numbers::sqrt2_v<double>);
+      result[1] = (*rand_)(*gen_ptr_) * (2000 + 500 * (std::numbers::sqrt2_v<double> - 1)) - 2000;
+    } while (!in_heart(result));
+    return result;
+  }
+
   [[nodiscard]] bool in_heart(point p) const {
     using std::abs;
 
@@ -516,25 +536,6 @@ class heart_topology {
     double slope = (p2[1] - p1[1]) / (p2[0] - p1[0]);
     double intercept = p1[1] - p1[0] * slope;
     return (intercept <= 0);
-  }
-
-  using rand_t = std::uniform_real_distribution<double>;
-
- public:
-  using point_type = point;
-
-  heart_topology() : gen_ptr_(std::make_shared<RandomNumberGenerator>()), rand_(std::make_shared<rand_t>()) {}
-
-  explicit heart_topology(RandomNumberGenerator& gen)
-      : gen_ptr_(std::make_shared<RandomNumberGenerator>(gen)), rand_(std::make_shared<rand_t>()) {}
-
-  point random_point() const {
-    point result;
-    do {
-      result[0] = (*rand_)(*gen_ptr_) * (1000 + 1000 * std::numbers::sqrt2_v<double>)-(500 + 500 * std::numbers::sqrt2_v<double>);
-      result[1] = (*rand_)(*gen_ptr_) * (2000 + 500 * (std::numbers::sqrt2_v<double> - 1)) - 2000;
-    } while (!in_heart(result));
-    return result;
   }
 
   // Not going to provide clipping to bounding region or distance from

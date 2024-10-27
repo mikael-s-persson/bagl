@@ -26,7 +26,7 @@ class erdos_renyi_iterator {
   using directed_category = graph_directed_category_t<Graph>;
   using self = erdos_renyi_iterator<RandomGenerator, Graph>;
 
-  static constexpr bool is_undirected = std::is_base_of_v<undirected_tag, directed_category>;
+  static constexpr bool is_undirected = is_undirected_graph_v<Graph>;
 
  public:
   using value_type = std::pair<std::size_t, std::size_t>;

@@ -35,7 +35,13 @@ struct get_unique_adjacent_vertices {
   template <typename Vertex, typename Graph>
   auto operator()(Vertex v, const Graph& g) const {
     auto adj_rg = adjacent_vertices(v, g);
-    return std::set<Vertex>{adj_rg.begin(), adjacent_vertices(v, g).end()};
+    std::vector<Vertex> uniq_verts;
+    for (Vertex u : adj_rg) {
+      if (std::find(uniq_verts.begin(), uniq_verts.end(), u) == uniq_verts.end()) {
+        uniq_verts.push_back(u);
+      }
+    }
+    return uniq_verts;
   }
 };
 
@@ -56,7 +62,7 @@ bool contains(const InRange& c, const Value& v) {
  * and the vertices with an index higher than the starting vertex.
  */
 template <concepts::VertexListGraph Graph, concepts::CycleVisitor<Graph> Visitor,
-          concepts::ReadableVertexPropertyMap<Graph> VertexIndexMap, typename Stack, typename ClosedMatrix,
+          concepts::ReadableVertexIndexMap<Graph> VertexIndexMap, typename Stack, typename ClosedMatrix,
           typename GetAdjacentVertices>
 requires concepts::AdjacencyGraph<Graph>
 struct hawick_circuits_from {
@@ -96,15 +102,15 @@ struct hawick_circuits_from {
   }
 
  public:
-  hawick_circuits_from(const Graph& graph, Visitor& visitor, const VertexIndexMap& vim, Stack& stack,
-                       ClosedMatrix& closed, std::size_t n_vertices, std::size_t max_length,
-                       GetAdjacentVertices /*for deduction only*/)
+  hawick_circuits_from(const Graph& graph, Visitor& visitor, VertexIndexMap vim, Stack& stack, ClosedMatrix& closed,
+                       std::size_t n_vertices, std::size_t max_length, GetAdjacentVertices /*for deduction only*/)
       : graph_(graph),
         visitor_(visitor),
         vim_(vim),
         stack_(stack),
         closed_(closed),
         blocked_(n_vertices, vim_),
+        blocked_ref_(blocked_.ref()),
         max_length_(max_length) {
     assert(blocked_map_starts_all_unblocked());
 
@@ -133,14 +139,14 @@ struct hawick_circuits_from {
   }
 
   //! @internal Return whether a given vertex is blocked.
-  bool is_blocked(Vertex v) const { return get(blocked_, v) == blocked_true_color(); }
+  bool is_blocked(Vertex v) const { return get(blocked_ref_, v) == blocked_true_color(); }
 
   //! @internal Block a given vertex.
-  void block(Vertex v) { put(blocked_, v, blocked_true_color()); }
+  void block(Vertex v) { put(blocked_ref_, v, blocked_true_color()); }
 
   //! @internal Unblock a given vertex.
   void unblock(Vertex u) {
-    put(blocked_, u, blocked_false_color());
+    put(blocked_ref_, u, blocked_false_color());
     auto& closed_to_u = closed_[index_of(u)];
 
     while (!closed_to_u.empty()) {
@@ -223,6 +229,7 @@ struct hawick_circuits_from {
   Stack& stack_;
   ClosedMatrix& closed_;
   BlockedMap blocked_;
+  property_map_ref<BlockedMap> blocked_ref_;
   std::size_t max_length_;
 };
 
