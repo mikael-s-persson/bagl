@@ -95,88 +95,81 @@ bool same_component(Vertex u, Vertex v, DisjointSet& ds) {
 
 // Class that builds a quick-access indexed linked list that allows
 // for fast iterating through a parent component's children.
-template <typename IndexType>
 class component_index {
  private:
-  using IndexContainer = std::vector<IndexType>;
+  using IndexContainer = std::vector<std::size_t>;
 
  public:
-  using component_iterator = inc_comp_detail::component_index_iterator<typename IndexContainer::iterator>;
+  using component_iterator = inc_comp_detail::component_index_iterator<typename IndexContainer::const_iterator>;
 
-  template <typename ParentIterator, typename ElementIndexMap>
-  component_index(ParentIterator parent_start, ParentIterator parent_end, const ElementIndexMap& index_map)
-      : num_elements_(std::distance(parent_start, parent_end)),
-        components_(std::make_shared<IndexContainer>()),
-        index_list_(std::make_shared<IndexContainer>(num_elements_)) {
-    build_index_lists(parent_start, index_map);
+  template <typename ParentMap, typename VertexIndexMap, typename VertexRange>
+  component_index(ParentMap parent, VertexIndexMap vindex, VertexRange vrange) {
+    build_index_lists(parent, vindex, vrange);
 
   }  // component_index
 
-  template <typename ParentIterator>
-  component_index(ParentIterator parent_start, ParentIterator parent_end)
-      : num_elements_(std::distance(parent_start, parent_end)),
-        components_(std::make_shared<IndexContainer>()),
-        index_list_(std::make_shared<IndexContainer>(num_elements_)) {
-    build_index_lists(parent_start, identity_property_map());
+  template <typename ParentMap, typename VertexRange>
+  component_index(ParentMap parent, VertexRange vrange) {
+    build_index_lists(parent, identity_property_map(), vrange);
 
   }  // component_index
 
   // Returns the number of components
-  [[nodiscard]] std::size_t size() const { return (components_->size()); }
+  [[nodiscard]] std::size_t size() const { return (components_.size()); }
 
   // Range of component indices
-  auto components() const { return std::ranges::iota_view(IndexType{0}, IndexType{components_->size()}); }
+  auto components() const { return std::ranges::iota_view(std::size_t{0}, std::size_t{components_.size()}); }
 
   // Returns a range for the child elements of component [component_index].
-  auto component(IndexType component_index) const {
-    IndexType first_index = (*components_)[component_index];
-    return std::ranges::subrange(component_iterator(index_list_->begin(), first_index),
-                                 component_iterator(num_elements_));
+  auto component(std::size_t component_index) const {
+    std::size_t first_index = components_[component_index];
+    return std::ranges::subrange(component_iterator(index_list_.begin(), first_index),
+                                 component_iterator(index_list_.size()));
   }
 
  private:
-  template <typename ParentIterator, typename ElementIndexMap>
-  void build_index_lists(ParentIterator parent_start, const ElementIndexMap& index_map) {
-    auto index_list = index_list_->begin();
+  template <typename ParentMap, typename VertexIndexMap, typename VertexRange>
+  void build_index_lists(ParentMap parent, VertexIndexMap vindex, VertexRange vrange) {
+    std::size_t v_sz = std::distance(vrange.begin(), vrange.end());
+    index_list_.resize(v_sz);
 
     // First pass - find root elements, construct index list
-    for (IndexType element_index = 0; element_index < num_elements_; ++element_index) {
-      auto parent_element = parent_start[element_index];
-      IndexType parent_index = get(index_map, parent_element);
+    for (auto v : vrange) {
+      auto v_index = get(vindex, v);
+      auto u = parent[v];
+      auto u_index = get(vindex, u);
 
-      if (element_index != parent_index) {
-        index_list[element_index] = parent_index;
+      if (v_index != u_index) {
+        index_list_[v_index] = u_index;
       } else {
-        components_->push_back(element_index);
-
-        // m_num_elements is the linked list terminator
-        index_list[element_index] = num_elements_;
+        components_.push_back(v_index);
+        // size is the linked list terminator
+        index_list_[v_index] = v_sz;
       }
     }
 
     // Second pass - build linked list
-    for (IndexType element_index = 0; element_index < num_elements_; ++element_index) {
-      auto parent_element = parent_start[element_index];
-      IndexType parent_index = get(index_map, parent_element);
+    for (auto v : vrange) {
+      auto v_index = get(vindex, v);
+      auto u = parent[v];
+      auto u_index = get(vindex, u);
 
-      if (element_index != parent_index) {
+      if (v_index != u_index) {
         // Follow list until a component parent is found
-        while (index_list[parent_index] != num_elements_) {
-          parent_index = index_list[parent_index];
+        while (index_list_[u_index] != v_sz) {
+          u_index = index_list_[u_index];
         }
 
         // Push element to the front of the linked list
-        index_list[element_index] = index_list[parent_index];
-        index_list[parent_index] = element_index;
+        index_list_[v_index] = index_list_[u_index];
+        index_list_[u_index] = v_index;
       }
     }
-
-  }  // build_index_lists
+  }
 
  protected:
-  IndexType num_elements_;
-  std::shared_ptr<IndexContainer> components_;
-  std::shared_ptr<IndexContainer> index_list_;
+  std::vector<std::size_t> components_;
+  std::vector<std::size_t> index_list_;
 
 };  // class component_index
 
