@@ -12,6 +12,7 @@
 
 #include "bagl/graph_concepts.h"
 #include "bagl/graph_traits.h"
+#include "bagl/matrix_property_map.h"
 #include "bagl/max_cardinality_matching.h"
 #include "bagl/partial_range.h"
 #include "bagl/properties.h"
@@ -63,7 +64,7 @@ class weighted_augmenting_path_finder {
   using vertex_to_bool_map_t = map_vertex_to<bool>;
   using vertex_to_pair_map_t = map_vertex_to<std::pair<vertex_descriptor_t, vertex_descriptor_t>>;
   using vertex_to_edge_map_t = map_vertex_to<std::pair<edge_descriptor_t, bool>>;
-  using vertex_pair_to_edge_map_t = map_vertex_to<vertex_to_edge_map_t>;
+  using vertex_pair_to_edge_map_t = matrix_property_store<std::pair<edge_descriptor_t, bool>, VertexIndexMap>;
 
   class blossom {
    public:
@@ -73,6 +74,7 @@ class weighted_augmenting_path_finder {
     blossom_ptr_t father;
 
     blossom() : dual_var(0), father(blossom_ptr_t()) {}
+    virtual ~blossom() = default;
 
     // get the base vertex of a blossom by recursively getting
     // its base sub-blossom, which is always the first one in
@@ -113,9 +115,10 @@ class weighted_augmenting_path_finder {
   class trivial_blossom : public blossom {
    public:
     explicit trivial_blossom(vertex_descriptor_t v) : trivial_vertex_(v) {}
-    virtual vertex_descriptor_t get_base() const { return trivial_vertex_; }
+    ~trivial_blossom() override = default;
+    vertex_descriptor_t get_base() const override { return trivial_vertex_; }
 
-    virtual std::vector<vertex_descriptor_t> vertices() const {
+    std::vector<vertex_descriptor_t> vertices() const override {
       std::vector<vertex_descriptor_t> all_vertices;
       all_vertices.push_back(trivial_vertex_);
       return all_vertices;
@@ -146,8 +149,7 @@ class weighted_augmenting_path_finder {
         in_blossom_(num_vertices(g_), vm_, blossom_ptr_t{}),
         old_label_(num_vertices(g_), vm_,
                    std::pair(graph_traits<Graph>::null_vertex(), graph_traits<Graph>::null_vertex())),
-        critical_edge_(
-            vertex_pair_to_edge_map_t(num_vertices(g_), vm_, vertex_to_edge_map_t(num_vertices(g_), vm_, null_edge_))) {
+        critical_edge_(vertex_pair_to_edge_map_t(num_vertices(g_), vm_, null_edge_)) {
     auto max_weight = min_edge_weight;
     for (auto e : edges(g_)) {
       max_weight = std::max(max_weight, get(weight_, e));
@@ -164,7 +166,8 @@ class weighted_augmenting_path_finder {
   }
 
   // return the top blossom where v is contained inside
-  blossom_ptr_t in_top_blossom(vertex_descriptor_t v) const {
+  blossom_ptr_t in_top_blossom(vertex_descriptor_t v) {
+    assert(v != graph_traits<Graph>::null_vertex());
     blossom_ptr_t b = in_blossom_[v];
     while (b->father != blossom_ptr_t()) {
       b = b->father;
@@ -173,7 +176,7 @@ class weighted_augmenting_path_finder {
   }
 
   // check if vertex v is in blossom b
-  bool is_in_blossom(blossom_ptr_t b, vertex_descriptor_t v) const {
+  bool is_in_blossom(blossom_ptr_t b, vertex_descriptor_t v) {
     if (v == graph_traits<Graph>::null_vertex()) {
       return false;
     }
@@ -188,7 +191,7 @@ class weighted_augmenting_path_finder {
   }
 
   // return the base vertex of the top blossom that contains v
-  vertex_descriptor_t base_vertex(vertex_descriptor_t v) const { return in_top_blossom(v)->get_base(); }
+  vertex_descriptor_t base_vertex(vertex_descriptor_t v) { return in_top_blossom(v)->get_base(); }
 
   // add an existed top blossom of base vertex v into new top
   // blossom b as its sub-blossom
@@ -371,7 +374,7 @@ class weighted_augmenting_path_finder {
 
   // every edge weight is multiplied by 4 to ensure integer weights
   // throughout the algorithm if all input weights are integers
-  edge_weight_t slack(const edge_descriptor_t& e) const {
+  edge_weight_t slack(const edge_descriptor_t& e) {
     auto v = source(e, g_);
     auto w = target(e, g_);
     return dual_var_[v] + dual_var_[w] - 4 * get(weight_, e);
@@ -383,7 +386,7 @@ class weighted_augmenting_path_finder {
   // if we are, then we use old labels to backtrace and also we
   // don't jump to its base vertex when we reach an odd vertex
   std::pair<vertex_descriptor_t, vertex_state_t> parent(std::pair<vertex_descriptor_t, vertex_state_t> v,
-                                                        bool use_old = false) const {
+                                                        bool use_old = false) {
     if (v.second == vertex_state_t::even) {
       // a paranoid check: label_S shoule be the same as mate in
       // backtracing
@@ -393,7 +396,10 @@ class weighted_augmenting_path_finder {
       return {label_s_[v.first], vertex_state_t::odd};
     }
     if (v.second == vertex_state_t::odd) {
-      vertex_descriptor_t w = use_old ? old_label_[v.first].first : base_vertex(label_t_[v.first]);
+      if (use_old || label_t_[v.first] == graph_traits<Graph>::null_vertex()) {
+        return {old_label_[v.first].first, vertex_state_t::even};
+      }
+      vertex_descriptor_t w = base_vertex(label_t_[v.first]);
       return {w, vertex_state_t::even};
     }
     return {v.first, vertex_state_t::unreached};
@@ -403,17 +409,15 @@ class weighted_augmenting_path_finder {
   // return the nearest common ancestor (null_vertex if none) of v and w
   vertex_descriptor_t nearest_common_ancestor(vertex_descriptor_t v, vertex_descriptor_t w,
                                               vertex_descriptor_t& v_free_ancestor,
-                                              vertex_descriptor_t& w_free_ancestor) const {
+                                              vertex_descriptor_t& w_free_ancestor) {
     auto v_up = std::pair{v, vertex_state_t::even};
     auto w_up = std::pair{w, vertex_state_t::even};
     vertex_descriptor_t nca = graph_traits<Graph>::null_vertex();
     w_free_ancestor = graph_traits<Graph>::null_vertex();
     v_free_ancestor = graph_traits<Graph>::null_vertex();
 
-    std::vector<bool> ancestor_of_w_vector(num_vertices(g_), false);
-    std::vector<bool> ancestor_of_v_vector(num_vertices(g_), false);
-    vertex_to_bool_map_t ancestor_of_w(ancestor_of_w_vector.begin(), vm_);
-    vertex_to_bool_map_t ancestor_of_v(ancestor_of_v_vector.begin(), vm_);
+    vertex_to_bool_map_t ancestor_of_w(num_vertices(g_), vm_, false);
+    vertex_to_bool_map_t ancestor_of_v(num_vertices(g_), vm_, false);
 
     while (nca == graph_traits<Graph>::null_vertex() && (v_free_ancestor == graph_traits<Graph>::null_vertex() ||
                                                          w_free_ancestor == graph_traits<Graph>::null_vertex())) {
@@ -522,7 +526,7 @@ class weighted_augmenting_path_finder {
       if (label_s_[old_base] != old_base) {  // if old base is not exposed
         label_t_[v] = label_s_[old_base];
         outlet_[v] = old_base;
-      } else {  // if old base is exposed then new label_T[v] is not in b,
+      } else {  // if old base is exposed then new label_t_[v] is not in b,
         // we must (i) make b2 the smallest blossom containing v but not
         // as base vertex (ii) backtrace from b2's new base vertex to b
         label_t_[v] = graph_traits<Graph>::null_vertex();
@@ -677,7 +681,9 @@ class weighted_augmenting_path_finder {
     even_edges_.clear();
     for (auto u : vertices(g_)) {
       gamma_[u] = tau_[u] = pi_[u] = max_edge_weight;
-      critical_edge_[u] = vertex_to_edge_map_t(num_vertices(g_), vm_, null_edge_);
+      for (auto v : vertices(g_)) {
+        critical_edge_[u][v] = null_edge_;
+      }
 
       if (base_vertex(u) != u) {
         continue;

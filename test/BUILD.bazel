@@ -467,3 +467,17 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+
+cc_test(
+    name = "weighted_matching_test",
+    srcs = [ "weighted_matching_test.cc", ],
+    data = [
+        "testdata/weighted_matching.dat",
+        "testdata/weighted_matching_small.dat",
+    ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)

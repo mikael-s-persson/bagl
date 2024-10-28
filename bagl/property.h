@@ -4,6 +4,7 @@
 #ifndef BAGL_BAGL_PROPERTY_H_
 #define BAGL_BAGL_PROPERTY_H_
 
+#include <string_view>
 #include <type_traits>
 #include <utility>
 
