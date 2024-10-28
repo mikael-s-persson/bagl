@@ -469,6 +469,16 @@ cc_test(
 )
 
 
+
+cc_test(
+    name = "undirected_dfs_test",
+    srcs = [ "undirected_dfs_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_test(
     name = "weighted_matching_test",
     srcs = [ "weighted_matching_test.cc", ],

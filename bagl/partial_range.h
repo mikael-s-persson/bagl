@@ -7,6 +7,7 @@
 #include <iterator>
 #include <memory>
 #include <ranges>
+#include <type_traits>
 #include <utility>
 
 #include "bagl/has_trait_member.h"
@@ -26,9 +27,17 @@ class partial_view : public std::ranges::view_interface<partial_view<BaseRange>>
   using iterator = std::ranges::iterator_t<BaseRange>;
   using sentinel = std::ranges::sentinel_t<BaseRange>;
 
-  template <typename... Args>
-  explicit partial_view(Args&&... args)
-      : base_range_(make_base(std::forward<Args>(args)...)), current_begin_(get_base().begin()) {}
+  using self = partial_view<BaseRange>;
+
+  template <typename Arg0,
+            typename = std::enable_if_t<!std::is_same_v<std::remove_cv_t<std::remove_reference_t<Arg0>>, self>>>
+  explicit partial_view(Arg0&& arg0)
+      : base_range_(make_base(std::forward<Arg0>(arg0))), current_begin_(get_base().begin()) {}
+
+  template <typename Arg0, typename Arg1, typename... Args>
+  explicit partial_view(Arg0&& arg0, Arg1&& arg1, Args&&... args)
+      : base_range_(make_base(std::forward<Arg0>(arg0), std::forward<Arg1>(arg1), std::forward<Args>(args)...)),
+        current_begin_(get_base().begin()) {}
 
   explicit partial_view(BaseRange&& base_range)
       : base_range_(make_base(std::move(base_range))), current_begin_(get_base().begin()) {}
