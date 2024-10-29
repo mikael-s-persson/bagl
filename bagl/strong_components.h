@@ -93,7 +93,8 @@ auto strong_components(const Graph& g,     // Input
   property_traits_value_t<ComponentMap> total = {};
 
   std::stack<graph_vertex_descriptor_t<Graph>> s;
-  depth_first_search(g, scc_detail::tarjan_scc_visitor(comp, root, discover_time, total, s), v_index);
+  depth_first_search(g, scc_detail::tarjan_scc_visitor(comp, root, discover_time, total, s),
+                     two_bit_color_map(num_vertices(g), v_index).ref());
   return total;
 }
 

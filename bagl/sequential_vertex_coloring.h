@@ -61,7 +61,7 @@ auto sequential_vertex_coloring(const G& g, OrderPA order, ColorMap color) {
     // Mark the colors of vertices adjacent to current.
     // i can be the value for marking since i increases successively
     for (auto v : adjacent_vertices(current, g)) {
-      mark[get(color, *v)] = i;
+      mark[get(color, v)] = i;
     }
 
     // Next step is to assign the smallest un-marked color
@@ -94,7 +94,7 @@ auto sequential_vertex_coloring(const G& g, ColorMap color) {
   using Vertex = graph_vertex_descriptor_t<G>;
   auto v_rg = vertices(g);
   std::vector<Vertex> order(v_rg.begin(), v_rg.end());
-  return sequential_vertex_coloring(g, iterator_property_map(order.begin(), identity_property_map()), color);
+  return sequential_vertex_coloring(g, iterator_property_map(order.begin(), get(vertex_index, g)), color);
 }
 
 }  // namespace bagl

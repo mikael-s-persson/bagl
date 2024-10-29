@@ -469,6 +469,42 @@ cc_test(
 )
 
 
+cc_test(
+    name = "sequential_vertex_coloring_test",
+    srcs = [ "sequential_vertex_coloring_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "strong_components_test",
+    srcs = [ "strong_components_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "successive_shortest_path_nonnegative_weights_test",
+    srcs = [ "successive_shortest_path_nonnegative_weights_test.cc", ],
+    deps = [
+        ":min_cost_max_flow_utils",
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "tiernan_all_cycles_test",
+    srcs = [ "tiernan_all_cycles_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
 
 cc_test(
     name = "undirected_dfs_test",

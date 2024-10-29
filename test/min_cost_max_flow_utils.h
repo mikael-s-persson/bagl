@@ -14,7 +14,7 @@
 
 namespace bagl {
 
-struct SampleGraph {
+struct sample_graph {
   using Graph =
       adjacency_list<vec_s, vec_s, directed_s, no_property,
                      property<edge_capacity_t, int,
@@ -46,7 +46,7 @@ struct SampleGraph {
     Reversed& m_rev;
   };
 
-  static void getSampleGraph(Graph& g, Vertex& s, Vertex& t, Reversed rev) {
+  static void get_sample_graph(Graph& g, Vertex& s, Vertex& t, Reversed rev) {
     std::size_t N(6);
 
     for (std::size_t i = 0; i < N; ++i) {
@@ -70,7 +70,7 @@ struct SampleGraph {
     ea.addEdge(4, 5, 2, 20);
   }
 
-  static void getSampleGraph2(Graph& g, Vertex& s, Vertex& t, Reversed rev) {
+  static void get_sample_graph_2(Graph& g, Vertex& s, Vertex& t, Reversed rev) {
     const std::size_t N(5);
 
     for (std::size_t i = 0; i < N; ++i) {
