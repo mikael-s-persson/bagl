@@ -420,7 +420,8 @@ bool isomorphism(
     return true;
   }
 
-  isomorphism_detail::isomorphism_algo algo(g1, g2, f, std::move(invariant1), std::move(invariant2), 0, index_map1, index_map2);
+  isomorphism_detail::isomorphism_algo algo(g1, g2, f, std::move(invariant1), std::move(invariant2), 0, index_map1,
+                                            index_map2);
   return algo.test_isomorphism();
 }
 

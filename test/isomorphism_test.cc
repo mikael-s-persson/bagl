@@ -10,10 +10,10 @@
 
 #include <algorithm>
 #include <cstdlib>
-#include <unordered_set>
 #include <iostream>
 #include <map>
 #include <random>
+#include <unordered_set>
 
 #include "bagl/adjacency_list.h"
 #include "bagl/graph_traits.h"
@@ -160,7 +160,7 @@ TEST(IsomorphismTest, Colored) {
   using Graph1 = adjacency_list<vec_s, vec_s, bidirectional_s, property<vertex_color_t, int> >;
   using Graph2 =
       adjacency_list<list_s, list_s, bidirectional_s, property<vertex_index_t, int, property<vertex_color_t, int> > >;
- 
+
   int n = 30;
   double edge_probability = 0.45;
 
@@ -215,7 +215,8 @@ TEST(IsomorphismTest, Colored) {
   // Map is bijective if each vertex of the second graph occurs only once
   std::unordered_set<std::size_t> v2_set;
   for (auto v : vertices(g1)) {
-    EXPECT_TRUE(v2_set.insert(vindex2[mapping[v]]).second) << "At " << vindex1[v] << " mapping to " << vindex2[mapping[v]];
+    EXPECT_TRUE(v2_set.insert(vindex2[mapping[v]]).second)
+        << "At " << vindex1[v] << " mapping to " << vindex2[mapping[v]];
   }
 }
 
