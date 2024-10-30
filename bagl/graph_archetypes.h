@@ -79,7 +79,7 @@ struct adjacency_graph_archetype : public Base {
   using degree_size_type = std::size_t;
   using vertices_size_type = std::size_t;
   using edges_size_type = std::size_t;
-  using edge_descriptor = void;
+  using edge_descriptor = semiregular_archetype<3424234>;
 
   using directed_category = Directed;
   using edge_parallel_category = ParallelCategory;

@@ -38,3 +38,19 @@ build --cxxopt='-Wmismatched-return-types'
 build --cxxopt='-fno-trigraphs'
 build --cxxopt='-fno-digraphs'
 build --cxxopt='-ffp-model=strict'
+
+build:asan --strip=never
+build:asan --copt -fsanitize=address
+build:asan --copt -DADDRESS_SANITIZER
+build:asan --copt -O1
+build:asan --copt -g
+build:asan --copt -fno-omit-frame-pointer
+build:asan --linkopt -fsanitize=address
+
+build:msan --strip=never
+build:msan --copt -fsanitize=memory
+build:msan --copt -DMEMORY_SANITIZER
+build:msan --copt -O1
+build:msan --copt -g
+build:msan --copt -fno-omit-frame-pointer
+build:msan --linkopt -fsanitize=memory

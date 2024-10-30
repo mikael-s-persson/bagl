@@ -67,8 +67,8 @@ class isomorphism_algo {
       : g1_(g1),
         g2_(g2),
         f_(f),
-        invariant1_(invariant1),
-        invariant2_(invariant2),
+        invariant1_(std::move(invariant1)),
+        invariant2_(std::move(invariant2)),
         index_map1_(index_map1),
         index_map2_(index_map2),
         in_s_(vector_property_map(num_vertices(g1_), index_map2_, false)) {}
@@ -118,7 +118,7 @@ class isomorphism_algo {
       invar2_array.push_back(invariant2_(v));
     }
     std::ranges::sort(invar2_array);
-    if (!equal(invar1_array, invar2_array)) {
+    if (invar1_array != invar2_array) {
       return false;
     }
 
@@ -141,7 +141,7 @@ class isomorphism_algo {
     for (auto u : v_mult) {
       if (color_map[u] == Color::white()) {
         dfs_visitor.start_vertex(u, g1_);
-        depth_first_visit(g1_, u, dfs_visitor, color_map);
+        depth_first_visit(g1_, u, dfs_visitor, color_map.ref());
       }
     }
     // Create the dfs_num array and dfs_num_map
@@ -169,8 +169,8 @@ class isomorphism_algo {
  private:
   struct match_continuation {
     enum { pos_g2_vertex_loop, pos_fi_adj_loop, pos_dfs_num } position;
-    decltype(partial_view(vertices(std::declval<Graph2>()))) g2_verts;
-    decltype(partial_view(adjacent_vertices(std::declval<Vertex2>(), std::declval<Graph2>()))) fi_adj;
+    std::optional<decltype(partial_view(vertices(std::declval<Graph2>())))> g2_verts;
+    std::optional<decltype(partial_view(adjacent_vertices(std::declval<Vertex2>(), std::declval<Graph2>())))> fi_adj;
     typename std::vector<Edge1>::iterator iter;
     int dfs_num_k;
   };
@@ -189,9 +189,9 @@ class isomorphism_algo {
       j = target(*iter, g1_);
       if (dfs_num_[i] > dfs_num_k) {
         g2_verts = partial_view(vertices(g2_));
-        while (!g2_verts.empty()) {
+        while (!g2_verts->empty()) {
           {
-            Vertex2 u = *g2_verts.begin();
+            Vertex2 u = *g2_verts->begin();
             Vertex1 kp1 = dfs_vertices_[dfs_num_k + 1];
             if (invariant1_(kp1) == invariant2_(u) && !in_s_[u]) {
               f_[kp1] = u;
@@ -200,7 +200,7 @@ class isomorphism_algo {
 
               match_continuation new_k;
               new_k.position = match_continuation::pos_g2_vertex_loop;
-              new_k.g2_verts = g2_verts;
+              new_k.g2_verts = *g2_verts;
               new_k.iter = iter;
               new_k.dfs_num_k = dfs_num_k;
               k.push_back(new_k);
@@ -209,7 +209,7 @@ class isomorphism_algo {
             }
           }
         g2_loop_k:
-          g2_verts.move_to_next();
+          g2_verts->move_to_next();
         }
       } else if (dfs_num_[j] > dfs_num_k) {
         {
@@ -225,9 +225,9 @@ class isomorphism_algo {
           goto return_point_false;
         }
         fi_adj = partial_view(adjacent_vertices(f_[i], g2_));
-        while (!fi_adj.empty()) {
+        while (!fi_adj->empty()) {
           {
-            Vertex2 v = *fi_adj.begin();
+            Vertex2 v = *fi_adj->begin();
             if (invariant2_(v) == invariant1_(j) && !in_s_[v]) {
               f_[j] = v;
               in_s_[v] = true;
@@ -235,7 +235,7 @@ class isomorphism_algo {
               int next_k = std::max(dfs_num_k, std::max(dfs_num_[i], dfs_num_[j]));
               match_continuation new_k;
               new_k.position = match_continuation::pos_fi_adj_loop;
-              new_k.fi_adj = fi_adj;
+              new_k.fi_adj = *fi_adj;
               new_k.iter = iter;
               new_k.dfs_num_k = dfs_num_k;
               ++iter;
@@ -245,10 +245,10 @@ class isomorphism_algo {
             }
           }
         fi_adj_loop_k:
-          fi_adj.move_to_next();
+          fi_adj->move_to_next();
         }
       } else {
-        if (container_contains(adjacent_vertices(f_[i], g2_), f_[j])) {
+        if (std::ranges::count(adjacent_vertices(f_[i], g2_), f_[j]) != 0) {
           ++num_edges_on_k_;
           match_continuation new_k;
           new_k.position = match_continuation::pos_dfs_num;
@@ -272,21 +272,21 @@ class isomorphism_algo {
       const match_continuation& this_k = k.back();
       switch (this_k.position) {
         case match_continuation::pos_g2_vertex_loop: {
-          g2_verts = this_k.g2_verts;
+          g2_verts = *this_k.g2_verts;
           iter = this_k.iter;
           dfs_num_k = this_k.dfs_num_k;
           k.pop_back();
-          in_s_[*g2_verts.begin()] = false;
+          in_s_[*g2_verts->begin()] = false;
           i = source(*iter, g1_);
           j = target(*iter, g1_);
           goto g2_loop_k;
         }
         case match_continuation::pos_fi_adj_loop: {
-          fi_adj = this_k.fi_adj;
+          fi_adj = *this_k.fi_adj;
           iter = this_k.iter;
           dfs_num_k = this_k.dfs_num_k;
           k.pop_back();
-          in_s_[*fi_adj.begin()] = false;
+          in_s_[*fi_adj->begin()] = false;
           i = source(*iter, g1_);
           j = target(*iter, g1_);
           goto fi_adj_loop_k;
@@ -348,14 +348,14 @@ void compute_in_degree(const G& g, InDegreeMap in_degree_map) {
 template <concepts::VertexListGraph G, concepts::ReadableVertexPropertyMap<G> InDegreeMap>
 class degree_vertex_invariant {
  public:
-  degree_vertex_invariant(const G& g, const InDegreeMap& in_degree_map) : g_(&g), in_degree_map_(in_degree_map) {
+  degree_vertex_invariant(const G& g, InDegreeMap&& in_degree_map) : g_(&g), in_degree_map_(std::move(in_degree_map)) {
     for (auto v : vertices(*g_)) {
       max_vertex_in_degree_ = std::max(max_vertex_in_degree_, get(in_degree_map_, v));
       max_vertex_out_degree_ = std::max(max_vertex_out_degree_, out_degree(v, *g_));
     }
   }
 
-  std::size_t operator()(graph_vertex_descriptor_t<G> v) const {
+  std::size_t operator()(graph_vertex_descriptor_t<G> v) {
     return (max_vertex_in_degree_ + 1) * out_degree(v, *g_) + get(in_degree_map_, v);
   }
   // The largest possible vertex invariant number
@@ -378,7 +378,7 @@ template <concepts::VertexListGraph G, concepts::ReadableVertexIndexMap<G> Index
 auto make_degree_invariant(const G& g, const Index& index) {
   auto pm = vector_property_map(num_vertices(g), index, std::size_t{0});
   isomorphism_detail::compute_in_degree(g, pm.ref());
-  return degree_vertex_invariant(g, pm.ref());
+  return degree_vertex_invariant(g, std::move(pm));
 }
 
 template <concepts::VertexAndEdgeListGraph Graph1, concepts::VertexListGraph Graph2,
@@ -420,7 +420,7 @@ bool isomorphism(
     return true;
   }
 
-  isomorphism_detail::isomorphism_algo algo(g1, g2, f, invariant1, invariant2, 0, index_map1, index_map2);
+  isomorphism_detail::isomorphism_algo algo(g1, g2, f, std::move(invariant1), std::move(invariant2), 0, index_map1, index_map2);
   return algo.test_isomorphism();
 }
 

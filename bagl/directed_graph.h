@@ -76,6 +76,8 @@ class directed_graph {
   using edge_index_type = std::size_t;
 
   explicit directed_graph(GraphProp const& p = GraphProp()) : graph_(0, p) {}
+  explicit directed_graph(std::size_t num_vertices, GraphProp const& p = GraphProp())
+      : directed_graph(non_empty_graph_ctor_t{}, num_vertices, p) {}
   ~directed_graph() = default;
 
   directed_graph(const directed_graph& x) = default;

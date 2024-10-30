@@ -468,6 +468,34 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "graph_concepts_test",
+    srcs = [ "graph_concepts_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "index_graph_test",
+    srcs = [ "index_graph_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "isomorphism_test",
+    srcs = [ "isomorphism_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+
 
 cc_test(
     name = "sequential_vertex_coloring_test",

@@ -78,6 +78,8 @@ class undirected_graph {
 
   undirected_graph() = default;
   explicit undirected_graph(const GraphProp& p) : graph_(0, p) {}
+  explicit undirected_graph(std::size_t n, const GraphProp& p = {})
+      : undirected_graph(non_empty_graph_ctor_t{}, n, p) {}
   ~undirected_graph() = default;
 
   undirected_graph(const undirected_graph& x) = default;
