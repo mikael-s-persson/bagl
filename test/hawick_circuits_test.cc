@@ -43,14 +43,13 @@ struct cycle_validator {
 
 template <typename Graph, typename Algorithm>
 void test_one(Algorithm algorithm, std::size_t num_cycles_expected) {
-  typedef erdos_renyi_iterator<std::mt19937, Graph> er;
-
   // Generate random graph with N vertices and probability P
   // of edge connection.
   static std::size_t const N = 20;
   static double const P = 0.1;
 
-  Graph g(N, std::ranges::subrange(er(std::mt19937{42}, N, P), er()));
+  std::mt19937 rng{42};
+  Graph g(N, erdos_renyi_range<is_undirected_graph_v<Graph>>(rng, N, P));
   renumber_indices(g);
 
   std::size_t cycles = 0;

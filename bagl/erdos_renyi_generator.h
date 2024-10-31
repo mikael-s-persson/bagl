@@ -21,12 +21,9 @@
 
 namespace bagl {
 
-template <typename RandomGenerator, typename Graph>
+template <std::uniform_random_bit_generator RandomGenerator, bool IsUndirected = false>
 class erdos_renyi_iterator {
-  using directed_category = graph_directed_category_t<Graph>;
-  using self = erdos_renyi_iterator<RandomGenerator, Graph>;
-
-  static constexpr bool is_undirected = is_undirected_graph_v<Graph>;
+  using self = erdos_renyi_iterator<RandomGenerator, IsUndirected>;
 
  public:
   using value_type = std::pair<std::size_t, std::size_t>;
@@ -36,19 +33,16 @@ class erdos_renyi_iterator {
   using iterator_category = std::input_iterator_tag;
 
   erdos_renyi_iterator() = default;
-  erdos_renyi_iterator(RandomGenerator gen, std::size_t n, double fraction = 0.0, bool allow_self_loops = false)
-      : gen_(std::move(gen)),
-        n_(n),
-        edges_(static_cast<std::size_t>(fraction * n * n)),
-        allow_self_loops_(allow_self_loops) {
-    if constexpr (is_undirected) {
+  erdos_renyi_iterator(RandomGenerator& gen, std::size_t n, double fraction = 0.0, bool allow_self_loops = false)
+      : gen_(&gen), n_(n), edges_(static_cast<std::size_t>(fraction * n * n)), allow_self_loops_(allow_self_loops) {
+    if constexpr (IsUndirected) {
       edges_ = edges_ / 2;
     }
     next();
   }
 
-  erdos_renyi_iterator(RandomGenerator gen, std::size_t n, std::size_t m, bool allow_self_loops = false)
-      : gen_(std::move(gen)), n_(n), edges_(m), allow_self_loops_(allow_self_loops) {
+  erdos_renyi_iterator(RandomGenerator& gen, std::size_t n, std::size_t m, bool allow_self_loops = false)
+      : gen_(&gen), n_(n), edges_(m), allow_self_loops_(allow_self_loops) {
     next();
   }
 
@@ -71,25 +65,34 @@ class erdos_renyi_iterator {
  private:
   void next() {
     std::uniform_int_distribution<std::size_t> rand_vertex(0, n_ - 1);
-    current_.first = rand_vertex(gen_);
+    current_.first = rand_vertex(*gen_);
     do {
-      current_.second = rand_vertex(gen_);
+      current_.second = rand_vertex(*gen_);
     } while (current_.first == current_.second && !allow_self_loops_);
   }
 
-  RandomGenerator gen_;
+  RandomGenerator* gen_;
   std::size_t n_ = 0;
   std::size_t edges_ = 0;
   bool allow_self_loops_ = false;
   std::pair<std::size_t, std::size_t> current_ = {0, 0};
 };
 
-template <typename RandomGenerator, typename Graph>
-class sorted_erdos_renyi_iterator {
-  using directed_category = graph_directed_category_t<Graph>;
-  using self = sorted_erdos_renyi_iterator<RandomGenerator, Graph>;
+template <bool IsUndirected, std::uniform_random_bit_generator RandomGenerator>
+auto erdos_renyi_range(RandomGenerator& gen, std::size_t n, double fraction = 0.0, bool allow_self_loops = false) {
+  return std::ranges::subrange(erdos_renyi_iterator<RandomGenerator, IsUndirected>(gen, n, fraction, allow_self_loops),
+                               erdos_renyi_iterator<RandomGenerator, IsUndirected>());
+}
 
-  static constexpr bool is_undirected = std::is_base_of_v<undirected_tag, directed_category>;
+template <bool IsUndirected, std::uniform_random_bit_generator RandomGenerator>
+auto erdos_renyi_range(RandomGenerator& gen, std::size_t n, std::size_t m, bool allow_self_loops = false) {
+  return std::ranges::subrange(erdos_renyi_iterator<RandomGenerator, IsUndirected>(gen, n, m, allow_self_loops),
+                               erdos_renyi_iterator<RandomGenerator, IsUndirected>());
+}
+
+template <std::uniform_random_bit_generator RandomGenerator, bool IsUndirected = false>
+class sorted_erdos_renyi_iterator {
+  using self = sorted_erdos_renyi_iterator<RandomGenerator, IsUndirected>;
 
  public:
   using value_type = std::pair<std::size_t, std::size_t>;
@@ -103,8 +106,8 @@ class sorted_erdos_renyi_iterator {
   // NOTE: The default probability has been changed to be the same as that
   // used by the geometic distribution. It was previously 0.0, which would
   // cause an assertion.
-  sorted_erdos_renyi_iterator(RandomGenerator gen, std::size_t n, double prob = 0.5, bool loops = false)
-      : gen_(std::move(gen)), rand_vertex_(1. - prob), n_(n), allow_self_loops_(loops), prob_(prob) {
+  sorted_erdos_renyi_iterator(RandomGenerator& gen, std::size_t n, double prob = 0.5, bool allow_self_loops = false)
+      : gen_(&gen), rand_vertex_(1. - prob), n_(n), allow_self_loops_(allow_self_loops), prob_(prob) {
     if (prob != 0.0) {
       src_ = 0;
       return;
@@ -141,8 +144,8 @@ class sorted_erdos_renyi_iterator {
     assert(src_ != std::numeric_limits<std::size_t>::max());
     assert(src_ != n_);
     while (src_ != n_) {
-      std::size_t increment = rand_vertex_(gen_);
-      size_t tgt_index_limit = (is_undirected ? src_ + 1 : n_) + (allow_self_loops_ ? 0 : -1);
+      std::size_t increment = rand_vertex_(*gen_);
+      size_t tgt_index_limit = (IsUndirected ? src_ + 1 : n_) + (allow_self_loops_ ? 0 : -1);
       if (tgt_index_ + increment >= tgt_index_limit) {
         // Overflowed this source; go to the next one and try again.
         ++src_;
@@ -154,7 +157,7 @@ class sorted_erdos_renyi_iterator {
 
       tgt_index_ += increment;
       current_.first = src_;
-      current_.second = tgt_index_ + (!allow_self_loops_ && !is_undirected && tgt_index_ >= src_ ? 1 : 0);
+      current_.second = tgt_index_ + (!allow_self_loops_ && !IsUndirected && tgt_index_ >= src_ ? 1 : 0);
       break;
     }
     if (src_ == n_) {
@@ -162,7 +165,7 @@ class sorted_erdos_renyi_iterator {
     }
   }
 
-  RandomGenerator gen_;
+  RandomGenerator* gen_;
   std::geometric_distribution<std::size_t> rand_vertex_{0.5};
   std::size_t n_ = 0;
   bool allow_self_loops_ = false;
@@ -171,6 +174,13 @@ class sorted_erdos_renyi_iterator {
   std::pair<std::size_t, std::size_t> current_ = {0, 0};
   double prob_ = 0.5;
 };
+
+template <bool IsUndirected, std::uniform_random_bit_generator RandomGenerator>
+auto sorted_erdos_renyi_range(RandomGenerator& gen, std::size_t n, double prob = 0.5, bool allow_self_loops = false) {
+  return std::ranges::subrange(
+      sorted_erdos_renyi_iterator<RandomGenerator, IsUndirected>(gen, n, prob, allow_self_loops),
+      sorted_erdos_renyi_iterator<RandomGenerator, IsUndirected>());
+}
 
 }  // namespace bagl
 

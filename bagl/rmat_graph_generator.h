@@ -125,7 +125,7 @@ struct keep_local_edges {
   To get a true scale free distribution {a, b, c, d : a > b, a > c, a > d}
 */
 
-template <typename RandomGenerator>
+template <std::uniform_random_bit_generator RandomGenerator>
 class rmat_iterator {
  public:
   using iterator_category = std::input_iterator_tag;
@@ -215,14 +215,14 @@ class rmat_iterator {
   value_type current_{};
 };
 
-template <typename RandomGenerator>
+template <std::uniform_random_bit_generator RandomGenerator>
 auto rmat_range(RandomGenerator& gen, std::size_t n, std::size_t m, double a, double b, double c, double d,
                 bool permute_vertices = true) {
   return std::ranges::subrange(rmat_iterator<RandomGenerator>(gen, n, m, a, b, c, d, permute_vertices),
                                rmat_iterator<RandomGenerator>());
 }
 
-template <typename RandomGenerator, typename EdgePredicate = keep_all_edges>
+template <std::uniform_random_bit_generator RandomGenerator, typename EdgePredicate = keep_all_edges>
 class sorted_rmat_iterator {
  public:
   using iterator_category = std::input_iterator_tag;
@@ -305,14 +305,14 @@ class sorted_rmat_iterator {
   bool done_ = false;
 };
 
-template <typename RandomGenerator>
+template <std::uniform_random_bit_generator RandomGenerator>
 auto sorted_rmat_range(RandomGenerator& gen, std::size_t n, std::size_t m, double a, double b, double c, double d,
                        bool permute_vertices = true) {
   return std::ranges::subrange(sorted_rmat_iterator<RandomGenerator>(gen, n, m, a, b, c, d, permute_vertices),
                                sorted_rmat_iterator<RandomGenerator>());
 }
 
-template <typename RandomGenerator, typename EdgePredicate>
+template <std::uniform_random_bit_generator RandomGenerator, typename EdgePredicate>
 auto sorted_rmat_range(RandomGenerator& gen, std::size_t n, std::size_t m, double a, double b, double c, double d,
                        bool permute_vertices, EdgePredicate ep) {
   return std::ranges::subrange(
@@ -321,7 +321,8 @@ auto sorted_rmat_range(RandomGenerator& gen, std::size_t n, std::size_t m, doubl
 }
 
 // This version is slow but guarantees unique edges
-template <typename RandomGenerator, bool IsUndirected = false, typename EdgePredicate = keep_all_edges>
+template <std::uniform_random_bit_generator RandomGenerator, bool IsUndirected = false,
+          typename EdgePredicate = keep_all_edges>
 class unique_rmat_iterator {
  public:
   using iterator_category = std::input_iterator_tag;
@@ -335,7 +336,7 @@ class unique_rmat_iterator {
 
   // Initialize for edge generation
   unique_rmat_iterator(RandomGenerator& gen, std::size_t n, std::size_t m, double a, double b, double c, double d,
-                       bool permute_vertices = true, EdgePredicate ep = keep_all_edges())
+                       bool permute_vertices = true, EdgePredicate ep = {})
       : gen_(&gen)
 
   {
@@ -420,14 +421,14 @@ class unique_rmat_iterator {
   bool done_ = false;
 };
 
-template <typename RandomGenerator>
+template <std::uniform_random_bit_generator RandomGenerator>
 auto unique_undirected_rmat_range(RandomGenerator& gen, std::size_t n, std::size_t m, double a, double b, double c,
                                   double d, bool permute_vertices = true) {
   return std::ranges::subrange(unique_rmat_iterator<RandomGenerator, true>(gen, n, m, a, b, c, d, permute_vertices),
                                unique_rmat_iterator<RandomGenerator, true>());
 }
 
-template <typename RandomGenerator, typename EdgePredicate>
+template <std::uniform_random_bit_generator RandomGenerator, typename EdgePredicate>
 auto unique_undirected_rmat_range(RandomGenerator& gen, std::size_t n, std::size_t m, double a, double b, double c,
                                   double d, bool permute_vertices, EdgePredicate ep) {
   return std::ranges::subrange(
@@ -435,14 +436,14 @@ auto unique_undirected_rmat_range(RandomGenerator& gen, std::size_t n, std::size
       unique_rmat_iterator<RandomGenerator, true, EdgePredicate>());
 }
 
-template <typename RandomGenerator>
+template <std::uniform_random_bit_generator RandomGenerator>
 auto unique_directed_rmat_range(RandomGenerator& gen, std::size_t n, std::size_t m, double a, double b, double c,
                                 double d, bool permute_vertices = true) {
   return std::ranges::subrange(unique_rmat_iterator<RandomGenerator, false>(gen, n, m, a, b, c, d, permute_vertices),
                                unique_rmat_iterator<RandomGenerator, false>());
 }
 
-template <typename RandomGenerator, typename EdgePredicate>
+template <std::uniform_random_bit_generator RandomGenerator, typename EdgePredicate>
 auto unique_directed_rmat_range(RandomGenerator& gen, std::size_t n, std::size_t m, double a, double b, double c,
                                 double d, bool permute_vertices, EdgePredicate ep) {
   return std::ranges::subrange(
@@ -450,8 +451,18 @@ auto unique_directed_rmat_range(RandomGenerator& gen, std::size_t n, std::size_t
       unique_rmat_iterator<RandomGenerator, false, EdgePredicate>());
 }
 
+template <bool IsUndirected, typename... Args>
+auto unique_rmat_range(Args&&... args) {
+  if constexpr (IsUndirected) {
+    return unique_undirected_rmat_range(std::forward<Args>(args)...);
+  } else {
+    return unique_directed_rmat_range(std::forward<Args>(args)...);
+  }
+}
+
 // This version is slow but guarantees unique edges
-template <typename RandomGenerator, bool IsUndirected = false, typename EdgePredicate = keep_all_edges>
+template <std::uniform_random_bit_generator RandomGenerator, bool IsUndirected = false,
+          typename EdgePredicate = keep_all_edges>
 class sorted_unique_rmat_iterator {
  public:
   using iterator_category = std::input_iterator_tag;
@@ -465,8 +476,7 @@ class sorted_unique_rmat_iterator {
 
   // Initialize for edge generation
   sorted_unique_rmat_iterator(RandomGenerator& gen, std::size_t n, std::size_t m, double a, double b, double c,
-                              double d, bool bidirectional = false, bool permute_vertices = true,
-                              EdgePredicate ep = keep_all_edges())
+                              double d, bool bidirectional = false, bool permute_vertices = true, EdgePredicate ep = {})
       : gen_(&gen),
         bidirectional_(bidirectional)
 
@@ -573,7 +583,7 @@ class sorted_unique_rmat_iterator {
   bool done_ = false;
 };
 
-template <typename RandomGenerator>
+template <std::uniform_random_bit_generator RandomGenerator>
 auto sorted_unique_undirected_rmat_range(RandomGenerator& gen, std::size_t n, std::size_t m, double a, double b,
                                          double c, double d, bool bidirectional = false, bool permute_vertices = true) {
   return std::ranges::subrange(
@@ -581,7 +591,7 @@ auto sorted_unique_undirected_rmat_range(RandomGenerator& gen, std::size_t n, st
       sorted_unique_rmat_iterator<RandomGenerator, true>());
 }
 
-template <typename RandomGenerator, typename EdgePredicate>
+template <std::uniform_random_bit_generator RandomGenerator, typename EdgePredicate>
 auto sorted_unique_undirected_rmat_range(RandomGenerator& gen, std::size_t n, std::size_t m, double a, double b,
                                          double c, double d, bool bidirectional, bool permute_vertices,
                                          EdgePredicate ep) {
@@ -590,7 +600,7 @@ auto sorted_unique_undirected_rmat_range(RandomGenerator& gen, std::size_t n, st
                                sorted_unique_rmat_iterator<RandomGenerator, true, EdgePredicate>());
 }
 
-template <typename RandomGenerator>
+template <std::uniform_random_bit_generator RandomGenerator>
 auto sorted_unique_directed_rmat_range(RandomGenerator& gen, std::size_t n, std::size_t m, double a, double b, double c,
                                        double d, bool bidirectional = false, bool permute_vertices = true) {
   return std::ranges::subrange(
@@ -598,12 +608,21 @@ auto sorted_unique_directed_rmat_range(RandomGenerator& gen, std::size_t n, std:
       sorted_unique_rmat_iterator<RandomGenerator, false>());
 }
 
-template <typename RandomGenerator, typename EdgePredicate>
+template <std::uniform_random_bit_generator RandomGenerator, typename EdgePredicate>
 auto sorted_unique_directed_rmat_range(RandomGenerator& gen, std::size_t n, std::size_t m, double a, double b, double c,
                                        double d, bool bidirectional, bool permute_vertices, EdgePredicate ep) {
   return std::ranges::subrange(sorted_unique_rmat_iterator<RandomGenerator, false, EdgePredicate>(
                                    gen, n, m, a, b, c, d, bidirectional, permute_vertices, ep),
                                sorted_unique_rmat_iterator<RandomGenerator, false, EdgePredicate>());
+}
+
+template <bool IsUndirected, typename... Args>
+auto sorted_unique_rmat_range(Args&&... args) {
+  if constexpr (IsUndirected) {
+    return sorted_unique_undirected_rmat_range(std::forward<Args>(args)...);
+  } else {
+    return sorted_unique_directed_rmat_range(std::forward<Args>(args)...);
+  }
 }
 
 }  // namespace bagl

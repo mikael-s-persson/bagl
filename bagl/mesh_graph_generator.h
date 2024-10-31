@@ -16,18 +16,14 @@
 
 namespace bagl {
 
-template <typename Graph>
+template <bool IsUndirected = false>
 class mesh_iterator {
-  using directed_category = graph_directed_category_t<Graph>;
-
-  static constexpr bool is_undirected_v = is_undirected_graph_v<Graph>;
-
  public:
   using iterator_category = std::input_iterator_tag;
   using value_type = std::pair<std::size_t, std::size_t>;
   using reference = const value_type&;
   using pointer = const value_type*;
-  using difference_type = void;
+  using difference_type = int;
 
   mesh_iterator() : done_(true) {}
 
@@ -42,7 +38,7 @@ class mesh_iterator {
   [[nodiscard]] pointer operator->() const { return &current_; }
 
   mesh_iterator& operator++() {
-    if constexpr (is_undirected_v) {
+    if constexpr (IsUndirected) {
       if (!toroidal_) {
         if (target_ == source_ + 1) {
           if (source_ < x_ * (y_ - 1)) {
@@ -135,9 +131,9 @@ class mesh_iterator {
   bool done_ = false;
 };
 
-template <typename Graph>
+template <bool IsUndirected>
 auto mesh_range(std::size_t x, std::size_t y, bool toroidal = true) {
-  return std::ranges::subrange(mesh_iterator<Graph>(x, y, toroidal), mesh_iterator<Graph>());
+  return std::ranges::subrange(mesh_iterator<IsUndirected>(x, y, toroidal), mesh_iterator<IsUndirected>());
 }
 
 }  // namespace bagl

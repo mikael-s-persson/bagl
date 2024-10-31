@@ -28,7 +28,7 @@ class ssca_iterator {
   using value_type = std::pair<std::size_t, std::size_t>;
   using reference = const value_type&;
   using pointer = const value_type*;
-  using difference_type = void;
+  using difference_type = int;
 
   // No argument constructor, set to terminating condition
   ssca_iterator() = default;
@@ -153,8 +153,8 @@ class ssca_iterator {
 };
 
 template <std::uniform_random_bit_generator RandomGenerator>
-auto small_world_range(RandomGenerator& gen, std::size_t tot_vertices, std::size_t max_clique_size,
-                       double prob_unidirectional, int max_parallel_edges, double prob_interclique_edges) {
+auto ssca_range(RandomGenerator& gen, std::size_t tot_vertices, std::size_t max_clique_size, double prob_unidirectional,
+                int max_parallel_edges, double prob_interclique_edges) {
   return std::ranges::subrange(ssca_iterator<RandomGenerator>(gen, tot_vertices, max_clique_size, prob_unidirectional,
                                                               max_parallel_edges, prob_interclique_edges),
                                ssca_iterator<RandomGenerator>());

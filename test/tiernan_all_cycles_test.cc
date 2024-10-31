@@ -53,15 +53,13 @@ struct cycle_printer {
 
 template <typename Graph>
 void test() {
-  using ERIter = erdos_renyi_iterator<std::mt19937, Graph>;
-
   // Generate random graph with N vertices and probability P
   // of edge connection.
   constexpr std::size_t n = 20;
   constexpr double p = 0.1;
   std::mt19937 rng(42);
 
-  Graph g(n, std::ranges::subrange<ERIter, ERIter>(ERIter(rng, n, p), ERIter()));
+  Graph g(n, erdos_renyi_range<is_undirected_graph_v<Graph>>(rng, n, p));
   renumber_indices(g);
 
   std::size_t cycles = 0;

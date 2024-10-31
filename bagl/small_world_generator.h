@@ -21,7 +21,7 @@ class small_world_iterator {
   using value_type = std::pair<std::size_t, std::size_t>;
   using reference = const value_type&;
   using pointer = const value_type*;
-  using difference_type = void;
+  using difference_type = int;
 
   small_world_iterator() = default;
   small_world_iterator(RandomGenerator& gen, std::size_t n, std::size_t k, double prob = 0.0,
