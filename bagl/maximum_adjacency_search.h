@@ -43,7 +43,7 @@ namespace bagl {
 namespace concepts {
 template <typename V, typename G>
 concept MASVisitor = std::copy_constructible<V> &&
-    requires(const V& vis, const G& g, graph_vertex_descriptor_t<G> u, graph_edge_descriptor_t<G> e) {
+    requires(V& vis, const G& g, graph_vertex_descriptor_t<G> u, graph_edge_descriptor_t<G> e) {
   vis.initialize_vertex(u, g);
   vis.start_vertex(u, g);
   vis.examine_edge(e, g);
@@ -81,9 +81,13 @@ class mas_visitor {
  protected:
   Visitors vis_;
 };
-template <typename Visitors>
-auto make_mas_visitor(Visitors vis) {
-  return mas_visitor<Visitors>(vis);
+template <typename... Visitors>
+auto make_mas_visitor(Visitors&&... vis) {
+  if constexpr (sizeof...(Visitors) == 0) {
+    return mas_visitor<>();
+  } else {
+    return mas_visitor(std::tuple<std::decay_t<Visitors>...>(std::forward<Visitors>(vis)...));
+  }
 }
 using default_mas_visitor = mas_visitor<>;
 
@@ -93,7 +97,7 @@ template <concepts::VertexListGraph G, concepts::ReadableEdgePropertyMap<G> Weig
           concepts::KeyedUpdatableQueue PriorityQueue>
 requires concepts::IncidenceGraph<G>
 void maximum_adjacency_search(const G& g, WeightMap weights, V vis, graph_vertex_descriptor_t<G> start,
-                              VertexAssignmentMap assignments, PriorityQueue pq) {
+                              VertexAssignmentMap assignments, PriorityQueue& pq) {
   using Vertex = graph_vertex_descriptor_t<G>;
   using Weight = property_traits_value_t<WeightMap>;
 
@@ -176,7 +180,7 @@ template <concepts::VertexListGraph G, concepts::ReadableEdgePropertyMap<G> Weig
           concepts::KeyedUpdatableQueue PriorityQueue>
 requires concepts::IncidenceGraph<G>
 void maximum_adjacency_search(const G& g, WeightMap weights, V vis, graph_vertex_descriptor_t<G> start,
-                              VertexAssignmentMap assignments, PriorityQueue pq) {
+                              VertexAssignmentMap assignments, PriorityQueue& pq) {
   static_assert(is_undirected_graph_v<G>);
   static_assert(std::is_convertible_v<graph_vertex_descriptor_t<G>, property_traits_value_t<VertexAssignmentMap>>);
 

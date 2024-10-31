@@ -37,7 +37,7 @@ template <typename Q>
 concept UpdatableQueue = Buffer<Q> && requires(Q& q, const buffer_concepts_detail::get_value_type_or_not<Q>& value) {
   q.update(value);
 } && requires(const Q& q, const buffer_concepts_detail::get_value_type_or_not<Q>& value) {
-  { q.contains() } -> std::convertible_to<bool>;
+  { q.contains(value) } -> std::convertible_to<bool>;
 };
 
 template <typename Q>

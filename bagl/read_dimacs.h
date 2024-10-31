@@ -82,11 +82,14 @@ bool read_dimacs_max_flow_internal(Graph& g, CapacityMap capacity, ReverseEdgeMa
     ++no_lines;
 
     fields.clear();
-    std::string::size_type sp_last_pos = 0;
-    auto sp_pos = in_line.find_first_of(' ');
+    std::string::size_type sp_last_pos = in_line.find_first_not_of(' ');
+    if (sp_last_pos == std::string::npos) {
+      continue;
+    }
+    auto sp_pos = in_line.find_first_of(' ', sp_last_pos);
     while (sp_pos != std::string::npos) {
       fields.emplace_back(&in_line[sp_last_pos], sp_pos - sp_last_pos);
-      sp_last_pos = sp_pos + 1;
+      sp_last_pos = in_line.find_first_not_of(' ', sp_pos);
       sp_pos = in_line.find_first_of(' ', sp_last_pos);
     }
     fields.emplace_back(&in_line[sp_last_pos], in_line.size() - sp_last_pos);
@@ -212,8 +215,8 @@ bool read_dimacs_max_flow_internal(Graph& g, CapacityMap capacity, ReverseEdgeMa
         }
 
         if (std::from_chars(fields[1].data(), fields[1].data() + fields[1].size(), tail).ec != std::errc{} ||
-            std::from_chars(fields[1].data(), fields[1].data() + fields[1].size(), head).ec != std::errc{} ||
-            std::from_chars(fields[1].data(), fields[1].data() + fields[1].size(), cap).ec != std::errc{} ||
+            std::from_chars(fields[2].data(), fields[2].data() + fields[2].size(), head).ec != std::errc{} ||
+            std::from_chars(fields[3].data(), fields[3].data() + fields[3].size(), cap).ec != std::errc{} ||
             --tail < 0 || tail > n || --head < 0 || head > n) {
           // wrong value of nodes
           std::cerr << "line " << no_lines << " of input - " << err_message[14] << std::endl;

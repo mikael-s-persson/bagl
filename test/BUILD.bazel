@@ -495,7 +495,31 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "maximum_adjacency_search_test",
+    srcs = [ "maximum_adjacency_search_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
 
+
+
+
+cc_test(
+    name = "stoer_wagner_test",
+    srcs = [ "stoer_wagner_test.cc", ],
+    data = [
+        "testdata/prgen_20_70_2.net",
+        "testdata/prgen_50_40_2.net",
+        "testdata/prgen_50_70_2.net",
+    ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
 
 cc_test(
     name = "sequential_vertex_coloring_test",

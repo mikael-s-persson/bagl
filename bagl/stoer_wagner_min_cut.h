@@ -71,7 +71,6 @@ requires concepts::IncidenceGraph<G> &&
   for (auto v : vertices(g)) {
     if (v == get(assignments, v)) {  // foreach u \in V do
       put(keys, v, weight_type{});
-
       pq.push(v);
     }
   }
