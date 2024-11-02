@@ -25,6 +25,163 @@
 namespace bagl {
 namespace {
 
+struct get_hit_and_stop {
+  explicit get_hit_and_stop(bool& got_hit, bool stop = true) : got_hit_(&got_hit), stop_(stop) {}
+
+  template <typename Map1To2, typename Map2To1>
+  bool operator()(Map1To2 /*unused*/, Map2To1 /*unused*/) {
+    *got_hit_ = true;
+    return stop_;
+  }
+
+  bool* got_hit_;
+  bool stop_;
+};
+
+struct false_predicate {
+  template <typename VertexOrEdge1, typename VertexOrEdge2>
+  bool operator()(VertexOrEdge1 /*unused*/, VertexOrEdge2 /*unused*/) const {
+    return false;
+  }
+};
+
+using TestGraph = adjacency_list<vec_s, vec_s, bidirectional_s>;
+
+TEST(GraphIsomorphismTest, Empty) {
+  TestGraph g_empty;
+  bool got_hit = false;
+  EXPECT_TRUE(vf2_graph_iso(g_empty, g_empty, get_hit_and_stop{got_hit}));
+  // even empty matches are reported
+  EXPECT_TRUE(got_hit);
+}
+
+TEST(SubGraphIsomorphismTest, EmptyVsEmpty) {
+  TestGraph g_empty;
+  bool got_hit = false;
+  EXPECT_TRUE(vf2_subgraph_iso(g_empty, g_empty, get_hit_and_stop{got_hit}));
+  // even empty matches are reported
+  EXPECT_TRUE(got_hit);
+}
+
+TEST(SubGraphIsomorphismTest, EmptyVsNonEmpty) {
+  TestGraph g_empty;
+  TestGraph g_large{1};
+  bool got_hit = false;
+  EXPECT_TRUE(vf2_subgraph_iso(g_empty, g_large, get_hit_and_stop{got_hit}));
+  // even empty matches are reported
+  EXPECT_TRUE(got_hit);
+}
+
+TEST(SubGraphMonomorphismTest, EmptyVsEmpty) {
+  TestGraph g_empty;
+  bool got_hit = false;
+  EXPECT_TRUE(vf2_subgraph_mono(g_empty, g_empty, get_hit_and_stop{got_hit}));
+  // even empty matches are reported
+  EXPECT_TRUE(got_hit);
+}
+
+TEST(SubGraphMonomorphismTest, EmptyVsNonEmpty) {
+  TestGraph g_empty;
+  TestGraph g_large{1};
+  bool got_hit = false;
+  EXPECT_TRUE(vf2_subgraph_mono(g_empty, g_large, get_hit_and_stop{got_hit}));
+  // even empty matches are reported
+  EXPECT_TRUE(got_hit);
+}
+
+TEST(GraphIsomorphismTest, SizeMismatch) {
+  TestGraph g_small{1};
+  TestGraph g_large{2, std::ranges::single_view{std::pair{0, 1}}};
+  bool got_hit = false;
+  EXPECT_FALSE(vf2_graph_iso(g_small, g_large, get_hit_and_stop{got_hit}));
+  EXPECT_FALSE(got_hit);
+}
+
+TEST(GraphIsomorphismTest, VertexMismatch) {
+  TestGraph g_large{2, std::ranges::single_view{std::pair{0, 1}}};
+  bool got_hit = false;
+  EXPECT_FALSE(vf2_graph_iso(g_large, g_large, get_hit_and_stop{got_hit}, get(vertex_index, g_large),
+                             get(vertex_index, g_large), vertex_order_by_mult(g_large), false_predicate{},
+                             false_predicate{}));
+  EXPECT_FALSE(got_hit);
+}
+
+TEST(GraphIsomorphismTest, FindAll) {
+  TestGraph g_large{2, std::ranges::single_view{std::pair{0, 1}}};
+  bool got_hit = false;
+  EXPECT_TRUE(vf2_graph_iso(g_large, g_large, get_hit_and_stop{got_hit, false}));
+  EXPECT_TRUE(got_hit);
+}
+
+TEST(GraphIsomorphismTest, FindFirst) {
+  TestGraph g_large{2, std::ranges::single_view{std::pair{0, 1}}};
+  bool got_hit = false;
+  EXPECT_TRUE(vf2_graph_iso(g_large, g_large, get_hit_and_stop{got_hit}));
+  EXPECT_TRUE(got_hit);
+}
+
+TEST(SubGraphIsomorphismTest, SizeMismatch) {
+  TestGraph g_small{1};
+  TestGraph g_large{2, std::ranges::single_view{std::pair{0, 1}}};
+  bool got_hit = false;
+  EXPECT_FALSE(vf2_subgraph_iso(g_large, g_small, get_hit_and_stop{got_hit}));
+  EXPECT_FALSE(got_hit);
+}
+
+TEST(SubGraphIsomorphismTest, VertexMismatch) {
+  TestGraph g_large{2, std::ranges::single_view{std::pair{0, 1}}};
+  bool got_hit = false;
+  EXPECT_FALSE(vf2_subgraph_iso(g_large, g_large, get_hit_and_stop{got_hit}, get(vertex_index, g_large),
+                                get(vertex_index, g_large), vertex_order_by_mult(g_large), false_predicate{},
+                                false_predicate{}));
+  EXPECT_FALSE(got_hit);
+}
+
+TEST(SubGraphIsomorphismTest, FindAll) {
+  TestGraph g_large{2, std::ranges::single_view{std::pair{0, 1}}};
+  bool got_hit = false;
+  EXPECT_TRUE(vf2_subgraph_iso(g_large, g_large, get_hit_and_stop{got_hit, false}));
+  EXPECT_TRUE(got_hit);
+}
+
+TEST(SubGraphIsomorphismTest, FindFirst) {
+  TestGraph g_large{2, std::ranges::single_view{std::pair{0, 1}}};
+  bool got_hit = false;
+  EXPECT_TRUE(vf2_subgraph_iso(g_large, g_large, get_hit_and_stop{got_hit}));
+  EXPECT_TRUE(got_hit);
+}
+
+TEST(SubGraphMonomorphismTest, SizeMismatch) {
+  TestGraph g_small{1};
+  TestGraph g_large{2, std::ranges::single_view{std::pair{0, 1}}};
+  bool got_hit = false;
+  EXPECT_FALSE(vf2_subgraph_mono(g_large, g_small, get_hit_and_stop{got_hit}));
+  EXPECT_FALSE(got_hit);
+}
+
+TEST(SubGraphMonomorphismTest, VertexMismatch) {
+  TestGraph g_large{2, std::ranges::single_view{std::pair{0, 1}}};
+  bool got_hit = false;
+  EXPECT_FALSE(vf2_subgraph_mono(g_large, g_large, get_hit_and_stop{got_hit}, get(vertex_index, g_large),
+                                 get(vertex_index, g_large), vertex_order_by_mult(g_large), false_predicate{},
+                                 false_predicate{}));
+  EXPECT_FALSE(got_hit);
+}
+
+TEST(SubGraphMonomorphismTest, FindAll) {
+  TestGraph g_large{2, std::ranges::single_view{std::pair{0, 1}}};
+  bool got_hit = false;
+  EXPECT_TRUE(vf2_subgraph_mono(g_large, g_large, get_hit_and_stop{got_hit, false}));
+  EXPECT_TRUE(got_hit);
+}
+
+TEST(SubGraphMonomorphismTest, FindFirst) {
+  TestGraph g_large{2, std::ranges::single_view{std::pair{0, 1}}};
+  bool got_hit = false;
+  EXPECT_TRUE(vf2_subgraph_mono(g_large, g_large, get_hit_and_stop{got_hit}));
+  EXPECT_TRUE(got_hit);
+}
+
 template <typename Graph1, typename Graph2>
 void randomly_permute_graph(Graph1& g1, const Graph2& g2) {
   EXPECT_LE(num_vertices(g1), num_vertices(g2));
@@ -115,7 +272,7 @@ struct test_callback {
   VertexEqPredicate vertex_comp_;
 };
 
-TEST(Vf2SubGraphIsoTest, RandomGraph) {
+TEST(SubGraphIsomorphismTest, RandomGraph) {
   int n1 = 10;
   int n2 = 20;
   double edge_probability = 0.4;

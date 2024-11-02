@@ -367,13 +367,13 @@ struct unique_subgraph_interceptor {
             concepts::ReadableVertexPropertyMap<GraphSecond> CorrespondenceMapSecondToFirst>
   bool operator()(CorrespondenceMapFirstToSecond correspondence_map_1_to_2,
                   CorrespondenceMapSecondToFirst correspondence_map_2_to_1, std::size_t subgraph_size) {
-    for (auto [cached_size, cached_1_to_2, cached_2_to_1] : *subgraphs_) {
+    for (auto& [cached_size, cached_1_to_2, cached_2_to_1] : *subgraphs_) {
       // Compare subgraph sizes
       if (subgraph_size != cached_size) {
         continue;
       }
 
-      if (!are_property_maps_different(correspondence_map_1_to_2, cached_1_to_2, graph1_)) {
+      if (!are_property_maps_different(correspondence_map_1_to_2, cached_1_to_2.ref(), graph1_)) {
         // New subgraph is a duplicate
         return true;
       }
@@ -459,8 +459,8 @@ struct maximum_subgraph_interceptor : unique_subgraph_interceptor<GraphFirst, Gr
     if (subgraph_size == largest_size_so_far_) {
       if constexpr (CheckUniqueness::value) {
         // Check if subgraph is unique
-        for (auto [cached_size, cached_1_to_2, cached_2_to_1] : *this->subgraphs_) {
-          if (!are_property_maps_different(correspondence_map_1_to_2, cached_1_to_2, this->graph1_)) {
+        for (auto& [cached_size, cached_1_to_2, cached_2_to_1] : *this->subgraphs_) {
+          if (!are_property_maps_different(correspondence_map_1_to_2, cached_1_to_2.ref(), this->graph1_)) {
             // New subgraph is a duplicate
             return true;
           }
@@ -478,7 +478,7 @@ struct maximum_subgraph_interceptor : unique_subgraph_interceptor<GraphFirst, Gr
 
   void output_subgraphs() {
     for (auto& [cached_size, cached_1_to_2, cached_2_to_1] : *this->subgraphs_) {
-      user_callback_(cached_1_to_2.ref(), cached_2_to_1.ref(), cached_size);
+      this->user_callback_(cached_1_to_2.ref(), cached_2_to_1.ref(), cached_size);
     }
   }
 
@@ -576,7 +576,7 @@ void fill_membership_map(const GraphFirst& graph1, const CorrespondenceMapFirstT
 // Returns a filtered sub-graph of graph whose edge and vertex
 // inclusion is dictated by membership_map.
 template <concepts::Graph Graph, concepts::ReadableVertexPropertyMap<Graph> MembershipMap>
-auto make_membership_filtered_graph(const Graph& graph, MembershipMap& membership_map) {
+auto make_membership_filtered_graph(const Graph& graph, MembershipMap membership_map) {
   return filtered_graph{graph, keep_all(), property_map_filter{membership_map}};
 }
 
