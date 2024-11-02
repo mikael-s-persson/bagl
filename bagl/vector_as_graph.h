@@ -53,6 +53,12 @@ struct vector_as_graph {
   using traversal_category = vector_as_graph_traversal_tag;
 
   static std::size_t null_vertex() { return std::numeric_limits<std::size_t>::max(); }
+
+  // Indexing operator. Returns a const-reference to the vertex-bundle associated to the given vertex descriptor.
+  const auto& operator[](std::size_t v) const { return data[v]; }
+
+  // Indexing operator. Returns a const-reference to the edge-bundle associated to the given edge descriptor.
+  const auto& operator[](const edge_descriptor& e) const { return data[e.u][e.v]; }
 };
 
 template <typename Vector>
@@ -174,9 +180,10 @@ identity_property_map get(vertex_index_t /*unused*/, const vector_as_graph<Vecto
 }
 
 template <typename Vector>
-identity_property_map get(vertex_index_t /*unused*/, vector_as_graph<Vector>& /*unused*/) {
-  return {};
+std::size_t get(vertex_index_t /*unused*/, const vector_as_graph<Vector>& /*unused*/, std::size_t v) {
+  return v;
 }
+
 }  // namespace bagl
 
 #endif  // BAGL_BAGL_VECTOR_AS_GRAPH_H_

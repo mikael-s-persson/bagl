@@ -182,7 +182,7 @@ void randomize_property(G& g, RandomGenerator& rg, Property /*unused*/, edge_pro
 }  // namespace random_detail
 
 template <typename Property, typename G, std::invocable<> RandomGenerator>
-void randomize_property(G& g, RandomGenerator& rg) {
+void randomize_property(G& g, RandomGenerator rg) {
   random_detail::randomize_property(g, rg, Property(), property_kind_t<Property>());
 }
 

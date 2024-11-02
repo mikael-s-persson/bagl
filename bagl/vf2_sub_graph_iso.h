@@ -807,7 +807,7 @@ bool verify_vf2_subgraph_iso(const Graph1& graph1, const Graph2& graph2, const C
     }
 
     if (!edge2_exists(
-            s2, t2, [&edge_comp, e1](auto e2) { return edge_comp_(e1, e2); }, graph2)) {
+            s2, t2, [&edge_comp, e1](auto e2) { return edge_comp(e1, e2); }, graph2)) {
       return false;
     }
   }

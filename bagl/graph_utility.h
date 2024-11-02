@@ -162,6 +162,13 @@ void print_graph(const G& g, std::ostream& os = std::cout) {
               printable_descriptor_property_map<G, graph_edge_descriptor_t<G>>(g), os);
 }
 
+template <concepts::IncidenceGraph G, typename... Args>
+std::string print_graph_to_string(const G& g, Args&&... args) {
+  std::stringstream ss;
+  print_graph(g, std::forward<Args>(args)..., ss);
+  return ss.str();
+}
+
 template <concepts::Graph G, typename Vertex>
 bool is_adjacent(G& g, Vertex a, Vertex b) {
   if constexpr (concepts::AdjacencyGraph<G>) {

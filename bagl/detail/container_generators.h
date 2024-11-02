@@ -3,6 +3,7 @@
 #ifndef BAGL_BAGL_DETAIL_CONTAINER_GENERATORS_H_
 #define BAGL_BAGL_DETAIL_CONTAINER_GENERATORS_H_
 
+#include <cstdint>
 #include <limits>
 #include <list>
 #include <map>
@@ -151,38 +152,6 @@ template <typename Key, typename Value>
 bool desc_less_than(std::pair<Key, Value*> lhs, std::pair<Key, Value*> rhs) {
   return (desc_less_than(lhs.first, rhs.first) || ((lhs.first == rhs.first) && (lhs.second < rhs.second)));
 }
-
-inline std::size_t desc_get_hash(std::size_t d) {
-  std::hash<std::size_t> hasher;
-  return hasher(d);
-}
-
-template <typename Iter>
-std::size_t desc_get_hash(Iter it) {
-  using ValueType = typename Iter::value_type;
-  std::hash<ValueType*> hasher;
-  return hasher(&(*it));
-}
-
-// Not really needed.
-template <typename Key, typename Value>
-std::size_t desc_get_hash(std::pair<Key, Value*> p) {
-  std::hash<Key> hasher;
-  return hasher(p.first);
-}
-
-struct desc_hasher {
-  std::size_t operator()(std::size_t d) const {
-    std::hash<std::size_t> hasher;
-    return hasher(d);
-  }
-  template <typename Iter>
-  std::size_t operator()(Iter it) const {
-    using ValueType = typename Iter::value_type;
-    std::hash<ValueType*> hasher;
-    return hasher(&(*it));
-  }
-};
 
 /*************************************************************************
  *                      indexable descriptor
@@ -481,9 +450,70 @@ struct ignore_output_iter {
   value_type operator*() const { return {}; }
 };
 
+// We use Jon Maiga's implementation from
+// http://jonkagstrom.com/mx3/mx3_rev2.html
+inline std::uint64_t desc_get_hash(std::uint64_t x) {
+  const std::uint64_t m = 0xe9846af9b1a615d;
+  x ^= x >> 32;
+  x *= m;
+  x ^= x >> 32;
+  x *= m;
+  x ^= x >> 28;
+  return x;
+}
+
+template <std::indirectly_readable Iter>
+std::uint64_t desc_get_hash(Iter it) {
+  return desc_get_hash(reinterpret_cast<std::uint64_t>(&(*it)));
+}
+
+// Not really needed.
+template <typename Key, typename Value>
+std::uint64_t desc_get_hash(const std::pair<Key, Value*>& p) {
+  return desc_get_hash(p.first);
+}
+
+struct desc_hasher {
+  template <typename T>
+  std::uint64_t operator()(const T& v) const {
+    return desc_get_hash(v);
+  }
+};
+
+template <typename... Args>
+std::uint64_t desc_combined_hash(const Args&... args) {
+  std::uint64_t seed = 0;
+  ((seed = desc_get_hash(seed + 0x9e3779b9 + desc_get_hash(args))), ...);
+  return seed;
+}
+
+template <typename Vertex, typename EdgeRawDesc>
+std::uint64_t desc_get_hash(const bagl::container_detail::edge_desc<Vertex, EdgeRawDesc>& x) {
+  return bagl::container_detail::desc_combined_hash(x.source, x.edge_id);
+}
+
+template <typename EdgeRawDesc>
+std::uint64_t desc_get_hash(const bagl::container_detail::undir_edge_desc<EdgeRawDesc>& x) {
+  return bagl::container_detail::desc_combined_hash(x.is_reversed ? 1 : 0, static_cast<const EdgeRawDesc&>(x));
+}
+
 }  // namespace container_detail
 
 }  // namespace bagl
+
+template <typename Vertex, typename EdgeRawDesc>
+struct std::hash<bagl::container_detail::edge_desc<Vertex, EdgeRawDesc>> {
+  std::size_t operator()(const bagl::container_detail::edge_desc<Vertex, EdgeRawDesc>& x) const {
+    return bagl::container_detail::desc_get_hash(x);
+  }
+};
+
+template <typename EdgeRawDesc>
+struct std::hash<bagl::container_detail::undir_edge_desc<EdgeRawDesc>> {
+  std::size_t operator()(const bagl::container_detail::undir_edge_desc<EdgeRawDesc>& x) const {
+    return bagl::container_detail::desc_get_hash(x);
+  }
+};
 
 template <typename RawDesc>
 struct std::hash<bagl::container_detail::indexable_desc<RawDesc>> {

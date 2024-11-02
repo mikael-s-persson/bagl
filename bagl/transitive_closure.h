@@ -28,7 +28,10 @@ void transitive_closure(const Graph& g, GraphTC& tc, G_to_TC_VertexMap g_to_tc_m
   using vertex = graph_vertex_descriptor_t<Graph>;
   auto component_number = vector_property_map(num_vertices(g), index_map, std::size_t{0});
 
-  const std::size_t num_scc = strong_components(g, component_number.ref(), index_map);
+  const std::size_t num_scc = strong_components(
+      g, component_number.ref(),
+      vector_property_map(num_vertices(g), get(vertex_index, g), graph_traits<Graph>::null_vertex()).ref(),
+      vector_property_map(num_vertices(g), get(vertex_index, g), std::size_t{0}).ref(), index_map);
 
   std::vector<std::vector<vertex> > components;
   build_component_lists(g, num_scc, component_number.ref(), components);

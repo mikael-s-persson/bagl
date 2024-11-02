@@ -105,13 +105,12 @@ struct in_l_edge_status {
   InLMap map_;
 };
 
-template <typename Graph, typename VertexIndex, typename EdgeCont, typename EdgeIndex, typename Func, typename Seq,
-          typename Map>
+template <typename Graph, typename VertexIndex, typename EdgeCont, typename EdgeIndex, typename Func, typename Map>
 void rec_two_graphs_common_spanning_trees(const Graph& i_g, const VertexIndex& i_g_vindex,
                                           const EdgeCont& i_g_id_to_edge, const EdgeIndex& i_g_eindex, Map ai_g_in_l,
                                           Map di_g, const Graph& v_g, const VertexIndex& v_g_vindex,
                                           const EdgeCont& v_g_id_to_edge, const EdgeIndex& v_g_eindex, Map av_g_in_l,
-                                          Map dv_g, Func func, Seq in_l) {
+                                          Map dv_g, Func func, std::vector<bool> in_l) {
   using edge_descriptor = graph_edge_descriptor_t<Graph>;
 
   //
@@ -208,8 +207,8 @@ void rec_two_graphs_common_spanning_trees(const Graph& i_g, const VertexIndex& i
   }
 
   // REC
-  rec_two_graphs_common_spanning_trees(i_g, i_g_vindex, i_g_id_to_edge, i_g_eindex, ai_g_in_l.ref(), di_g, v_g,
-                                       v_g_vindex, v_g_id_to_edge, v_g_eindex, ai_g_in_l.ref(), dv_g, func, in_l);
+  rec_two_graphs_common_spanning_trees(i_g, i_g_vindex, i_g_id_to_edge, i_g_eindex, ai_g_in_l, di_g, v_g, v_g_vindex,
+                                       v_g_id_to_edge, v_g_eindex, ai_g_in_l, dv_g, func, in_l);
 
   while (!i_g_buf_copy.empty()) {
     put(di_g, i_g_buf_copy.back(), false);
@@ -256,9 +255,9 @@ void rec_two_graphs_common_spanning_trees(const Graph& i_g, const VertexIndex& i
     put(ai_g_in_l, i_g_buf.back(), true);
     put(av_g_in_l, v_g_id_to_edge[get(i_g_eindex, i_g_buf.back())], true);
 
-    undirected_dfs(filtered_graph(i_g, in_l_edge_status(ai_g_in_l.ref())), make_dfs_visitor(cycle_finder(&i_g_buf_tmp)),
+    undirected_dfs(filtered_graph(i_g, in_l_edge_status(ai_g_in_l)), make_dfs_visitor(cycle_finder(&i_g_buf_tmp)),
                    i_g_vertex_color.ref(), i_g_edge_color.ref());
-    undirected_dfs(filtered_graph(v_g, in_l_edge_status(av_g_in_l.ref())), make_dfs_visitor(cycle_finder(&v_g_buf_tmp)),
+    undirected_dfs(filtered_graph(v_g, in_l_edge_status(av_g_in_l)), make_dfs_visitor(cycle_finder(&v_g_buf_tmp)),
                    v_g_vertex_color.ref(), v_g_edge_color.ref());
 
     if (!i_g_buf_tmp.empty() || !v_g_buf_tmp.empty()) {
@@ -282,9 +281,9 @@ void rec_two_graphs_common_spanning_trees(const Graph& i_g, const VertexIndex& i
     put(av_g_in_l, v_g_buf.back(), true);
     put(ai_g_in_l, i_g_id_to_edge[get(i_g_eindex, v_g_buf.back())], true);
 
-    undirected_dfs(filtered_graph(i_g, in_l_edge_status(ai_g_in_l.ref())), make_dfs_visitor(cycle_finder(&i_g_buf_tmp)),
+    undirected_dfs(filtered_graph(i_g, in_l_edge_status(ai_g_in_l)), make_dfs_visitor(cycle_finder(&i_g_buf_tmp)),
                    i_g_vertex_color.ref(), i_g_edge_color.ref());
-    undirected_dfs(filtered_graph(v_g, in_l_edge_status(av_g_in_l.ref())), make_dfs_visitor(cycle_finder(&v_g_buf_tmp)),
+    undirected_dfs(filtered_graph(v_g, in_l_edge_status(av_g_in_l)), make_dfs_visitor(cycle_finder(&v_g_buf_tmp)),
                    v_g_vertex_color.ref(), v_g_edge_color.ref());
 
     if (!i_g_buf_tmp.empty() || !v_g_buf_tmp.empty()) {
@@ -318,8 +317,8 @@ void rec_two_graphs_common_spanning_trees(const Graph& i_g, const VertexIndex& i
     }
 
     // REC
-    rec_two_graphs_common_spanning_trees(i_g, i_g_vindex, i_g_id_to_edge, i_g_eindex, ai_g_in_l.ref(), di_g, v_g,
-                                         v_g_vindex, v_g_id_to_edge, v_g_eindex, ai_g_in_l.ref(), dv_g, func, in_l);
+    rec_two_graphs_common_spanning_trees(i_g, i_g_vindex, i_g_id_to_edge, i_g_eindex, ai_g_in_l, di_g, v_g, v_g_vindex,
+                                         v_g_id_to_edge, v_g_eindex, ai_g_in_l, dv_g, func, in_l);
 
     while (!i_g_buf.empty()) {
       in_l[get(i_g_eindex, i_g_buf.back())] = false;
@@ -356,12 +355,12 @@ struct tree_collector {
 
 template <concepts::VertexAndEdgeListGraph Graph, concepts::ReadableVertexIndexMap<Graph> VertexIndex,
           concepts::ReadablePropertyMap<std::size_t> EdgeOrder, concepts::ReadableEdgeIndexMap<Graph> EdgeIndex,
-          std::ranges::random_access_range Seq, std::invocable<Seq&> Func>
-requires concepts::IncidenceGraph<Graph> && std::ranges::output_range<Seq, bool> &&
+          std::invocable<std::vector<bool>> Func>
+requires concepts::IncidenceGraph<Graph> &&
     std::convertible_to<property_traits_value_t<EdgeOrder>, graph_edge_descriptor_t<Graph>>
 void two_graphs_common_spanning_trees(const Graph& i_g, VertexIndex i_g_vindex, EdgeOrder i_g_id_to_edge,
                                       EdgeIndex i_g_eindex, const Graph& v_g, VertexIndex v_g_vindex,
-                                      EdgeOrder v_g_id_to_edge, EdgeIndex v_g_eindex, Func func, Seq in_l) {
+                                      EdgeOrder v_g_id_to_edge, EdgeIndex v_g_eindex, Func func) {
   using edge_descriptor = graph_edge_descriptor_t<Graph>;
 
   static_assert(is_undirected_graph_v<Graph>);
@@ -370,9 +369,10 @@ void two_graphs_common_spanning_trees(const Graph& i_g, VertexIndex i_g_vindex, 
     return;
   }
 
-  if (in_l.size() != num_edges(i_g) || in_l.size() != num_edges(v_g)) {
+  if (num_edges(v_g) != num_edges(i_g)) {
     return;
   }
+  std::vector<bool> in_l(num_edges(i_g), false);
 
   std::vector<edge_descriptor> i_g_buf;
   std::vector<edge_descriptor> v_g_buf;
@@ -476,49 +476,13 @@ void two_graphs_common_spanning_trees(const Graph& i_g, VertexIndex i_g_vindex, 
   // REC
   common_trees_detail::rec_two_graphs_common_spanning_trees(
       i_g, i_g_vindex, i_g_id_to_edge, i_g_eindex, ai_g_in_l.ref(), di_g.ref(), v_g, v_g_vindex, v_g_id_to_edge,
-      v_g_eindex, ai_g_in_l.ref(), dv_g.ref(), func, in_l);
+      v_g_eindex, av_g_in_l.ref(), dv_g.ref(), func, in_l);
 }
 
 template <concepts::EdgeListGraph Graph, concepts::ReadableVertexIndexMap<Graph> VertexIndex,
-          concepts::ReadablePropertyMap<std::size_t> EdgeOrder, typename Func, typename Seq>
-requires std::convertible_to<property_traits_value_t<EdgeOrder>, graph_edge_descriptor_t<Graph>>
-void two_graphs_common_spanning_trees(const Graph& i_g, VertexIndex i_g_vindex, EdgeOrder i_g_id_to_edge,
-                                      const Graph& v_g, VertexIndex v_g_vindex, EdgeOrder v_g_id_to_edge, Func func,
-                                      Seq in_l) {
-  using edge_descriptor = graph_edge_descriptor_t<Graph>;
-
-  std::unordered_map<edge_descriptor, std::size_t> i_g_eindex_store;
-  i_g_eindex_store.reserve(num_edges(i_g));
-  for (std::size_t i = 0; i < num_edges(i_g); ++i) {
-    i_g_eindex_store[get(i_g_id_to_edge, i)] = i;
-  }
-  std::unordered_map<edge_descriptor, std::size_t> v_g_eindex_store;
-  v_g_eindex_store.reserve(num_edges(v_g));
-  for (std::size_t i = 0; i < num_edges(v_g); ++i) {
-    v_g_eindex_store[get(v_g_id_to_edge, i)] = i;
-  }
-
-  for (auto e : edges(i_g)) {
-    if (i_g_eindex_store.find(e) == i_g_eindex_store.end()) {
-      return;
-    }
-  }
-  for (auto e : edges(v_g)) {
-    if (v_g_eindex_store.find(e) == v_g_eindex_store.end()) {
-      return;
-    }
-  }
-  auto i_g_eindex = associative_property_map(i_g_eindex_store);
-  auto v_g_eindex = associative_property_map(v_g_eindex_store);
-
-  two_graphs_common_spanning_trees(i_g, i_g_vindex, i_g_id_to_edge, i_g_eindex, v_g, v_g_vindex, v_g_id_to_edge,
-                                   v_g_eindex, func, in_l);
-}
-
-template <concepts::EdgeListGraph Graph, concepts::ReadableVertexIndexMap<Graph> VertexIndex,
-          concepts::ReadableEdgeIndexMap<Graph> EdgeIndex, typename Func, typename Seq>
+          concepts::ReadableEdgeIndexMap<Graph> EdgeIndex, typename Func>
 void two_graphs_common_spanning_trees(const Graph& i_g, VertexIndex i_g_vindex, EdgeIndex i_g_eindex, const Graph& v_g,
-                                      VertexIndex v_g_vindex, EdgeIndex v_g_eindex, Func func, Seq in_l) {
+                                      VertexIndex v_g_vindex, EdgeIndex v_g_eindex, Func func) {
   using edge_descriptor = graph_edge_descriptor_t<Graph>;
 
   auto i_g_o = vector_property_map<edge_descriptor>(num_edges(i_g));
@@ -532,13 +496,12 @@ void two_graphs_common_spanning_trees(const Graph& i_g, VertexIndex i_g_vindex, 
   }
 
   two_graphs_common_spanning_trees(i_g, i_g_vindex, i_g_o.ref(), i_g_eindex, v_g, v_g_vindex, v_g_o.ref(), v_g_eindex,
-                                   func, in_l);
+                                   func);
 }
 
-template <concepts::EdgeListGraph Graph, concepts::ReadableVertexIndexMap<Graph> VertexIndex, typename Func,
-          typename Seq>
+template <concepts::EdgeListGraph Graph, concepts::ReadableVertexIndexMap<Graph> VertexIndex, typename Func>
 void two_graphs_common_spanning_trees(const Graph& i_g, VertexIndex i_g_vindex, const Graph& v_g,
-                                      VertexIndex v_g_vindex, Func func, Seq in_l) {
+                                      VertexIndex v_g_vindex, Func func) {
   using edge_descriptor = graph_edge_descriptor_t<Graph>;
 
   std::unordered_map<edge_descriptor, std::size_t> i_g_eindex_store;
@@ -556,12 +519,12 @@ void two_graphs_common_spanning_trees(const Graph& i_g, VertexIndex i_g_vindex, 
   auto i_g_eindex = associative_property_map(i_g_eindex_store);
   auto v_g_eindex = associative_property_map(v_g_eindex_store);
 
-  two_graphs_common_spanning_trees(i_g, i_g_vindex, i_g_eindex, v_g, v_g_vindex, v_g_eindex, func, in_l);
+  two_graphs_common_spanning_trees(i_g, i_g_vindex, i_g_eindex, v_g, v_g_vindex, v_g_eindex, func);
 }
 
-template <concepts::EdgeListGraph Graph, typename Func, typename Seq>
-void two_graphs_common_spanning_trees(const Graph& i_g, const Graph& v_g, Func func, Seq in_l) {
-  two_graphs_common_spanning_trees(i_g, get(vertex_index, i_g), v_g, get(vertex_index, v_g), func, in_l);
+template <concepts::EdgeListGraph Graph, typename Func>
+void two_graphs_common_spanning_trees(const Graph& i_g, const Graph& v_g, Func func) {
+  two_graphs_common_spanning_trees(i_g, get(vertex_index, i_g), v_g, get(vertex_index, v_g), func);
 }
 
 }  // namespace bagl

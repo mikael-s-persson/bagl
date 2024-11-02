@@ -76,6 +76,47 @@ auto variadic_min(T0&& val1, T1&& val2, Ts&&... vs) {
   return variadic_min((val1 < val2) ? val1 : val2, std::forward<Ts>(vs)...);
 }
 
+template <typename... Sents>
+class zip_sentinel {
+ public:
+  using difference_type = int;
+
+  using self = zip_sentinel<Sents...>;
+
+  // Universal constructor:
+  template <typename... OtherSents>
+  explicit zip_sentinel(OtherSents... st) : st_tuple_(std::move(st)...) {}
+
+  // Default constructor:
+  zip_sentinel() = default;
+
+  template <typename ZIter, size_t... Ids>
+  bool is_equal(const ZIter& lhs, std::index_sequence<Ids...> /*ids*/) const {
+    // Only require one pair of iterators to match such that iterations are
+    // stopped by the shortest range if all ranges don't match.
+    return ((std::get<Ids>(lhs.it_tuple_) == std::get<Ids>(st_tuple_)) || ...);
+  }
+  template <typename ZIter, size_t... Ids>
+  int distance_from(const ZIter& lhs, std::index_sequence<Ids...> /*ids*/) const {
+    // Return the smallest distance between iterators because that is where
+    // iterations will stop.
+    return zip_range_detail::variadic_min((std::get<Ids>(st_tuple_) - std::get<Ids>(lhs.it_tuple_))...);
+  }
+
+  using SentIndexSeq = std::make_index_sequence<sizeof...(Sents)>;
+
+  template <typename ZIter>
+  bool is_equal(const ZIter& lhs) const {
+    return is_equal(lhs, SentIndexSeq());
+  }
+  template <typename ZIter>
+  int distance_from(const ZIter& lhs) const {
+    return distance_from(lhs, SentIndexSeq());
+  }
+
+  std::tuple<Sents...> st_tuple_;
+};
+
 }  // namespace zip_range_detail
 
 // A zip_iterator is an iterator that combines multiple underlying iterators
@@ -156,6 +197,8 @@ class zip_iterator {
     return result;  // NRVO
   }
 
+  int operator-(const self& rhs) const { return -distance_to(rhs); }
+
   self operator+(int i) {
     self result = *this;
     result += i;
@@ -192,6 +235,71 @@ class zip_iterator {
     return !(rhs > *this);
   }
 
+  template <typename... Sents>
+  friend class zip_range_detail::zip_sentinel;
+
+  template <typename... Sents>
+  friend bool operator==(const self& lhs, const zip_range_detail::zip_sentinel<Sents...>& rhs) {
+    static_assert(sizeof...(Iters) == sizeof...(Sents));
+    return rhs.is_equal(lhs);
+  }
+  template <typename... Sents>
+  friend bool operator==(const zip_range_detail::zip_sentinel<Sents...>& lhs, const self& rhs) {
+    static_assert(sizeof...(Iters) == sizeof...(Sents));
+    return lhs.is_equal(rhs);
+  }
+  template <typename... Sents>
+  friend bool operator!=(const self& lhs, const zip_range_detail::zip_sentinel<Sents...>& rhs) {
+    static_assert(sizeof...(Iters) == sizeof...(Sents));
+    return !rhs.is_equal(lhs);
+  }
+  template <typename... Sents>
+  friend bool operator!=(const zip_range_detail::zip_sentinel<Sents...>& lhs, const self& rhs) {
+    static_assert(sizeof...(Iters) == sizeof...(Sents));
+    return !lhs.is_equal(rhs);
+  }
+
+  template <typename... Sents>
+  friend bool operator<(const self& lhs, const zip_range_detail::zip_sentinel<Sents...>& rhs) {
+    static_assert(sizeof...(Iters) == sizeof...(Sents));
+    return rhs.distance_from(lhs) > 0;
+  }
+  template <typename... Sents>
+  friend bool operator<(const zip_range_detail::zip_sentinel<Sents...>& lhs, const self& rhs) {
+    static_assert(sizeof...(Iters) == sizeof...(Sents));
+    return lhs.distance_from(rhs) < 0;
+  }
+  template <typename... Sents>
+  friend bool operator>(const self& lhs, const zip_range_detail::zip_sentinel<Sents...>& rhs) {
+    static_assert(sizeof...(Iters) == sizeof...(Sents));
+    return rhs.distance_from(lhs) < 0;
+  }
+  template <typename... Sents>
+  friend bool operator>(const zip_range_detail::zip_sentinel<Sents...>& lhs, const self& rhs) {
+    static_assert(sizeof...(Iters) == sizeof...(Sents));
+    return lhs.distance_from(rhs) > 0;
+  }
+  template <typename... Sents>
+  friend bool operator<=(const self& lhs, const zip_range_detail::zip_sentinel<Sents...>& rhs) {
+    static_assert(sizeof...(Iters) == sizeof...(Sents));
+    return rhs.distance_from(lhs) >= 0;
+  }
+  template <typename... Sents>
+  friend bool operator<=(const zip_range_detail::zip_sentinel<Sents...>& lhs, const self& rhs) {
+    static_assert(sizeof...(Iters) == sizeof...(Sents));
+    return lhs.distance_from(rhs) <= 0;
+  }
+  template <typename... Sents>
+  friend bool operator>=(const self& lhs, const zip_range_detail::zip_sentinel<Sents...>& rhs) {
+    static_assert(sizeof...(Iters) == sizeof...(Sents));
+    return rhs.distance_from(lhs) <= 0;
+  }
+  template <typename... Sents>
+  friend bool operator>=(const zip_range_detail::zip_sentinel<Sents...>& lhs, const self& rhs) {
+    static_assert(sizeof...(Iters) == sizeof...(Sents));
+    return lhs.distance_from(rhs) >= 0;
+  }
+
  private:
 
   // Implementation of the IteratorFacade requirements:
@@ -207,15 +315,14 @@ class zip_iterator {
   void decrement(std::index_sequence<Ids...>  /*ids*/) {
     ((void)--std::get<Ids>(it_tuple_), ...);
   }
-  template <size_t... Ids>
-  bool is_equal(const self& rhs, std::index_sequence<Ids...>  /*ids*/) const {
+  template <typename... Oters, size_t... Ids>
+  bool is_equal(const zip_iterator<Oters...>& rhs, std::index_sequence<Ids...> /*ids*/) const {
     // Only require one pair of iterators to match such that iterations are
     // stopped by the shortest range if all ranges don't match.
     return ((std::get<Ids>(it_tuple_) == std::get<Ids>(rhs.it_tuple_)) || ...);
   }
-  template <size_t... Ids>
-  int distance_to(const self& rhs,
-                 std::index_sequence<Ids...>  /*ids*/) const {
+  template <typename... Oters, size_t... Ids>
+  int distance_to(const zip_iterator<Oters...>& rhs, std::index_sequence<Ids...> /*ids*/) const {
     // Return the smallest distance between iterators because that is where
     // iterations will stop.
     return zip_range_detail::variadic_min(
@@ -231,10 +338,12 @@ class zip_iterator {
   value_type dereference() const { return dereference(IterIndexSeq()); }
   void increment() { increment(IterIndexSeq()); }
   void decrement() { decrement(IterIndexSeq()); }
-  bool is_equal(const zip_iterator& rhs) const {
+  template <typename... Oters>
+  bool is_equal(const zip_iterator<Oters...>& rhs) const {
     return is_equal(rhs, IterIndexSeq());
   }
-  int distance_to(const zip_iterator& rhs) const {
+  template <typename... Oters>
+  int distance_to(const zip_iterator<Oters...>& rhs) const {
     return distance_to(rhs, IterIndexSeq());
   }
   void advance(int n) { advance(n, IterIndexSeq()); }
@@ -267,6 +376,7 @@ class zipped_range
  public:
   using RangeTuple = std::tuple<Ranges...>;
   using ZipIter = zip_iterator<std::ranges::iterator_t<Ranges>...>;
+  using ZipSent = zip_range_detail::zip_sentinel<std::ranges::sentinel_t<Ranges>...>;
 
   template <typename... OtherRanges>
   explicit zipped_range(OtherRanges&&... ranges)
@@ -292,7 +402,7 @@ class zipped_range
     return std::apply(
         [](const Ranges&... base_ranges) {
           using std::end;
-          return ZipIter(end(base_ranges)...);
+          return ZipSent(end(base_ranges)...);
         },
         range_tuple);
   }
@@ -300,7 +410,7 @@ class zipped_range
     return std::apply(
         [](Ranges&... base_ranges) {
           using std::end;
-          return ZipIter(end(base_ranges)...);
+          return ZipSent(end(base_ranges)...);
         },
         range_tuple);
   }

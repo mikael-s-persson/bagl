@@ -581,8 +581,35 @@ cc_test(
 )
 
 cc_test(
+    name = "transitive_closure_test",
+    srcs = [ "transitive_closure_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "two_graphs_common_spanning_trees_test",
+    srcs = [ "two_graphs_common_spanning_trees_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "undirected_dfs_test",
     srcs = [ "undirected_dfs_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "vf2_sub_graph_iso_test",
+    srcs = [ "vf2_sub_graph_iso_test.cc", ],
     deps = [
         "//bagl",
         "@com_google_googletest//:gtest_main",
