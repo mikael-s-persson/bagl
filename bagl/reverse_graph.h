@@ -21,14 +21,20 @@ namespace reverse_graph_detail {
 template <typename EdgeDesc>
 class reverse_graph_edge_descriptor {
  public:
-  EdgeDesc underlying_descx_;  // Odd name is because this needs to be public but
-                               // shouldn't be exposed to users anymore
+  EdgeDesc underlying_desc_;  // Odd name is because this needs to be public but
+                              // shouldn't be exposed to users anymore
 
   explicit reverse_graph_edge_descriptor(const EdgeDesc& underlying_descx = EdgeDesc())
-      : underlying_descx_(underlying_descx) {}
+      : underlying_desc_(underlying_descx) {}
 
+  friend bool operator==(const reverse_graph_edge_descriptor& a, const reverse_graph_edge_descriptor& b) {
+    return a.underlying_desc_ == b.underlying_desc_;
+  }
+  friend bool operator!=(const reverse_graph_edge_descriptor& a, const reverse_graph_edge_descriptor& b) {
+    return a.underlying_desc_ != b.underlying_desc_;
+  }
   friend auto operator<=>(const reverse_graph_edge_descriptor& a, const reverse_graph_edge_descriptor& b) {
-    return a.underlying_descx_ <=> b.underlying_descx_;
+    return a.underlying_desc_ <=> b.underlying_desc_;
   }
 };
 
@@ -44,7 +50,7 @@ Desc convert_to_underlying_descriptor(Desc d) {
 }
 template <typename Desc>
 Desc convert_to_underlying_descriptor(reverse_graph_edge_descriptor<Desc> d) {
-  return d.underlying_descx_;
+  return d.underlying_desc_;
 }
 
 }  // namespace reverse_graph_detail
@@ -176,13 +182,13 @@ auto in_degree(graph_vertex_descriptor_t<BidirectionalGraph> u, const reverse_gr
 template <typename Edge, typename BidirectionalGraph, typename GRef>
 auto source(const reverse_graph_detail::reverse_graph_edge_descriptor<Edge>& e,
             const reverse_graph<BidirectionalGraph, GRef>& g) {
-  return target(e.underlying_descx_, g.m_g);
+  return target(e.underlying_desc_, g.m_g);
 }
 
 template <typename Edge, typename BidirectionalGraph, typename GRef>
 auto target(const reverse_graph_detail::reverse_graph_edge_descriptor<Edge>& e,
             const reverse_graph<BidirectionalGraph, GRef>& g) {
-  return source(e.underlying_descx_, g.m_g);
+  return source(e.underlying_desc_, g.m_g);
 }
 
 template <typename BidirectionalGraph, typename GRef>
@@ -204,18 +210,18 @@ struct reverse_graph_edge_property_map {
 
   template <typename Key>
   friend decltype(auto) get(const reverse_graph_edge_property_map& m, const reverse_graph_edge_descriptor<Key>& e) {
-    return get(m.underlying_pm_, e.underlying_descx_);
+    return get(m.underlying_pm_, e.underlying_desc_);
   }
 
   template <typename Key>
   friend void put(const reverse_graph_edge_property_map& m, const reverse_graph_edge_descriptor<Key>& e,
                   const value_type& v) {
-    put(m.underlying_pm_, e.underlying_descx_, v);
+    put(m.underlying_pm_, e.underlying_desc_, v);
   }
 
   template <typename Key>
   decltype(auto) operator[](const reverse_graph_edge_descriptor<Key>& k) const {
-    return (this->underlying_pm_)[k.underlying_descx_];
+    return (this->underlying_pm_)[k.underlying_desc_];
   }
 };
 
@@ -251,12 +257,13 @@ struct property_map<const reverse_graph<BidirGraph, GRef>, Property> {
 
 template <typename BidirGraph, typename GRef, typename Property>
 auto get(Property p, reverse_graph<BidirGraph, GRef>& g) {
-  return get(p, g.m_g);
+  return property_map_t<reverse_graph<BidirGraph, GRef>, Property>(get(p, g.m_g));
 }
 
 template <typename BidirGraph, typename GRef, typename Property>
 auto get(Property p, const reverse_graph<BidirGraph, GRef>& g) {
-  return get(p, std::as_const(g.m_g));  // in case GRef is non-const
+  return property_map_const_t<reverse_graph<BidirGraph, GRef>, Property>(
+      get(p, std::as_const(g.m_g)));  // in case GRef is non-const
 }
 
 template <typename BidirectionalGraph, typename GRef, typename Property, typename Key>
@@ -274,7 +281,7 @@ void put(Property p, reverse_graph<BidirGraph, GRef>& g, const Key& k, const Val
 namespace reverse_graph_detail {
 template <typename E>
 struct underlying_edge_desc_map_type {
-  E operator[](const reverse_graph_edge_descriptor<E>& k) const { return k.underlying_descx_; }
+  E operator[](const reverse_graph_edge_descriptor<E>& k) const { return k.underlying_desc_; }
 };
 
 template <typename E>
@@ -307,7 +314,7 @@ auto get(edge_underlying_t /*unused*/, reverse_graph<BidirGraph, GRef>& /*g*/) {
 template <typename BidirGraph, typename GRef>
 auto get(edge_underlying_t /*unused*/, reverse_graph<BidirGraph, GRef>& /*g*/,
          const graph_edge_descriptor_t<reverse_graph<BidirGraph, GRef>>& k) {
-  return k.underlying_descx_;
+  return k.underlying_desc_;
 }
 
 template <typename BidirGraph, typename GRef>
@@ -318,18 +325,23 @@ auto get(edge_underlying_t /*unused*/, const reverse_graph<BidirGraph, GRef>& /*
 template <typename BidirGraph, typename GRef>
 auto get(edge_underlying_t /*unused*/, const reverse_graph<BidirGraph, GRef>& /*g*/,
          const graph_edge_descriptor_t<reverse_graph<BidirGraph, GRef>>& k) {
-  return k.underlying_descx_;
+  return k.underlying_desc_;
 }
 
 // Access to wrapped graph's graph properties
 
 template <typename BidirectionalGraph, typename GRef, typename Tag, typename Value>
-void set_property(const reverse_graph<BidirectionalGraph, GRef>& g, Tag tag, const Value& value) {
+void set_property(reverse_graph<BidirectionalGraph, GRef>& g, Tag tag, const Value& value) {
   set_property(g.m_g, tag, value);
 }
 
 template <typename BidirectionalGraph, typename GRef, typename Tag>
-auto get_property(const reverse_graph<BidirectionalGraph, GRef>& g, Tag tag) {
+decltype(auto) get_property(reverse_graph<BidirectionalGraph, GRef>& g, Tag tag) {
+  return get_property(g.m_g, tag);
+}
+
+template <typename BidirectionalGraph, typename GRef, typename Tag>
+decltype(auto) get_property(const reverse_graph<BidirectionalGraph, GRef>& g, Tag tag) {
   return get_property(g.m_g, tag);
 }
 

@@ -284,5 +284,18 @@ TEST(AdjacencyList, ConceptChecks) {
   }
 }
 
+struct TestEdgeProp {
+  double weight;
+};
+
+TEST(AdjacencyList, BundledProperties) {
+  using Graph = adjacency_list<vec_s, vec_s, directed_s, no_property, TestEdgeProp>;
+  using WeightMap = property_map_t<Graph, double TestEdgeProp::*>;
+  using cWeightMap = property_map_const_t<Graph, double TestEdgeProp::*>;
+  using Edge = graph_edge_descriptor_t<Graph>;
+  static_assert(concepts::ReadablePropertyMap<WeightMap, Edge>);
+  static_assert(concepts::ReadablePropertyMap<cWeightMap, Edge>);
+}
+
 }  // namespace
 }  // namespace bagl

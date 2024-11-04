@@ -355,10 +355,10 @@ auto make_container_vertex_map(RAContainer& c) {
 // be overloaded by graph implementations. However, we need them to be
 // declared for the functions below.
 template <typename Graph, typename Tag>
-graph_property<Graph, graph_bundle_t>& get_property(Graph& g, Tag);
+graph_property<Graph, graph_bundle_t>& get_property(Graph& g, Tag) = delete;
 
 template <typename Graph, typename Tag>
-const graph_property<Graph, graph_bundle_t>& get_property(Graph const& g, Tag);
+const graph_property<Graph, graph_bundle_t>& get_property(Graph const& g, Tag) = delete;
 
 // NOTE: This operation is a simple adaptor over the overloaded get_property
 // operations.

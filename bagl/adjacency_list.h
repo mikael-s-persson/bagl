@@ -646,6 +646,12 @@ get_property(const BAGL_ADJACENCY_LIST& g, Tag /*unused*/) {
   return get_property_value(g.get_property(graph_all), Tag{});
 }
 
+template <BAGL_ADJACENCY_LIST_ARGS, typename Tag, typename T>
+std::enable_if_t<std::is_same_v<property_kind_t<Tag>, graph_property_tag>> set_property(BAGL_ADJACENCY_LIST& g,
+                                                                                        Tag /*unused*/, T&& value) {
+  get_property_value(g.get_property(graph_all), Tag{}) = std::forward<T>(value);
+}
+
 template <BAGL_ADJACENCY_LIST_ARGS, typename T, typename Bundle>
 struct property_map<BAGL_ADJACENCY_LIST, T Bundle::*> {
   using non_const_Bundle = std::remove_cv_t<Bundle>;

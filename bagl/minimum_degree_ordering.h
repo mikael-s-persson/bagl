@@ -191,7 +191,7 @@ class predicate_remove_edge {
   predicate_remove_edge(Graph& g, MarkerP& marker, NumberD numbering, Stack& n_e, VertexIndexMap id)
       : g_(&g), marker_(&marker), numbering_(numbering), neighbor_elements_(&n_e), id_(id) {}
 
-  bool operator()(edge_t e) {
+  bool operator()(edge_t e) const {
     vertex_t dist = target(e, *g_);
     if (marker_->is_tagged(dist)) {
       return true;
@@ -221,7 +221,7 @@ class predicate_remove_tagged_edges {
  public:
   predicate_remove_tagged_edges(Graph& g, MarkerP& marker) : g_(&g), marker_(&marker) {}
 
-  bool operator()(edge_t e) {
+  bool operator()(edge_t e) const {
     vertex_t dist = target(e, *g_);
     return marker_->is_tagged(dist);
   }

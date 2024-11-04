@@ -11,15 +11,14 @@
 namespace bagl {
 
 template <concepts::VertexListGraph G, concepts::NumericValue DistanceType, concepts::NumericValue ResultType,
-          typename Divides = std::divides<ResultType> >
+          typename Divides = std::divides<ResultType>>
 struct mean_geodesic_measure : public geodesic_measure<DistanceType, ResultType> {
   using base_type = geodesic_measure<DistanceType, ResultType>;
-  using distance_type = typename base_type::distance_type;
-  using result_type = typename base_type::result_type;
 
-  result_type operator()(distance_type d, const G& g) {
-    return (d == base_type::infinite_distance()) ? base_type::infinite_result()
-                                                 : div(result_type(d), result_type(num_vertices(g) - 1));
+  auto operator()(DistanceType d, const G& g) const {
+    return (d == base_type::infinite_distance())
+               ? base_type::infinite_result()
+               : div(static_cast<ResultType>(d), static_cast<ResultType>(num_vertices(g) - 1));
   }
   Divides div;
 };
@@ -45,21 +44,19 @@ auto measure_mean_geodesic(const Graph&, DistanceMap) {
 template <concepts::VertexListGraph G, concepts::NumericValue DistanceType>
 struct mean_graph_distance_measure : public geodesic_measure<DistanceType, DistanceType> {
   using base_type = geodesic_measure<DistanceType, DistanceType>;
-  using distance_type = typename base_type::distance_type;
-  using result_type = typename base_type::result_type;
 
-  result_type operator()(distance_type d, const G& g) {
+  DistanceType operator()(DistanceType d, const G& g) const {
     if (d == base_type::infinite_distance()) {
       return base_type::infinite_result();
     }
 
-    return d / result_type(num_vertices(g));
+    return d / static_cast<DistanceType>(num_vertices(g));
   }
 };
 
 template <typename Graph, typename DistanceMap>
 auto measure_graph_mean_geodesic(const Graph&, DistanceMap) {
-  return mean_graph_distance_measure<Graph, property_traits_value_t<DistanceMap> >();
+  return mean_graph_distance_measure<Graph, property_traits_value_t<DistanceMap>>();
 }
 
 template <concepts::VertexListGraph G, concepts::ReadableVertexPropertyMap<G> DistanceMap,
@@ -74,8 +71,7 @@ auto mean_geodesic(const G& g, DistanceMap dist, Measure measure, Combine combin
 template <concepts::VertexListGraph G, concepts::ReadableVertexPropertyMap<G> DistanceMap,
           concepts::DistanceMeasure<G, property_traits_value_t<DistanceMap>> Measure>
 auto mean_geodesic(const G& g, DistanceMap dist, Measure measure) {
-  using Distance = typename Measure::distance_type;
-  return mean_geodesic(g, dist, measure, std::plus<Distance>());
+  return mean_geodesic(g, dist, measure, std::plus<>());
 }
 
 template <concepts::VertexListGraph G, concepts::ReadableVertexPropertyMap<G> DistanceMap>
@@ -93,16 +89,16 @@ template <concepts::VertexListGraph G, concepts::ReadableVertexPropertyMap<G> Di
           concepts::DistanceMeasure<G, property_traits_value_t<property_traits_value_t<DistanceMatrixMap>>> Measure>
 property_traits_value_t<GeodesicMap> all_mean_geodesics(const G& g, DistanceMatrixMap dist, GeodesicMap geo,
                                                         Measure measure) {
-  using Result = typename Measure::result_type;
+  using Result = property_traits_value_t<GeodesicMap>;
   // NOTE: We could compute the mean geodesic here by performing additional
   // computations (i.e., adding and dividing). However, I don't really feel
   // like fully genericizing the entire operation yet so I'm not going to.
 
-  Result inf = numeric_values<Result>::infinity();
-  Result sum = numeric_values<Result>::zero();
+  constexpr auto inf = numeric_values<Result>::infinity();
+  auto sum = numeric_values<Result>::zero();
   for (auto v : vertices(g)) {
     auto dm = get(dist, v);
-    Result r = mean_geodesic(g, dm, measure);
+    auto r = mean_geodesic(g, dm, measure);
     put(geo, v, r);
 
     // compute the sum along with geodesics
@@ -114,7 +110,7 @@ property_traits_value_t<GeodesicMap> all_mean_geodesics(const G& g, DistanceMatr
   }
 
   // return the average of averages.
-  return sum / Result(num_vertices(g));
+  return sum / static_cast<Result>(num_vertices(g));
 }
 
 template <concepts::Graph G, concepts::ReadableVertexPropertyMap<G> DistanceMatrixMap,
