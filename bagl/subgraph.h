@@ -87,9 +87,9 @@ class subgraph {
   using vertex_property_type = vertex_property_type<Graph>;
   using graph_property_type = graph_property_type<Graph>;
 
-  using vertex_bundle_type = vertex_bundle_type<Graph>;
-  using edge_bundle_type = edge_bundle_type<Graph>;
-  using graph_bundle_type = graph_bundle_type<Graph>;
+  using vertex_bundled = vertex_bundle_type<Graph>;
+  using edge_bundled = edge_bundle_type<Graph>;
+  using graph_bundled = graph_bundle_type<Graph>;
 
   // Create the main graph, the root of the subgraph tree
   subgraph() : m_parent(0), m_edge_counter(0) {}
@@ -419,11 +419,11 @@ auto edge(graph_vertex_descriptor_t<G> u, graph_vertex_descriptor_t<G> v, const 
 namespace detail {
 
 template <typename Vertex, typename Edge, typename Graph>
-void add_edge_recur_down(Vertex u_global, Vertex v_global, Edge e_global, subgraph<Graph>& g);
+void add_edge_recur_down(Vertex u_global, Vertex v_global, Edge e_global, subgraph<Graph>& g, subgraph<Graph>* orig);
 
 template <typename Vertex, typename Edge, typename Children, typename G>
 void children_add_edge(Vertex u_global, Vertex v_global, Edge e_global, Children& c, subgraph<G>* orig) {
-  for (auto i : c) {
+  for (auto& i : c) {
     if (i->find_vertex(u_global).second && i->find_vertex(v_global).second) {
       add_edge_recur_down(u_global, v_global, e_global, *i, orig);
     }
@@ -443,18 +443,17 @@ void add_edge_recur_down(Vertex u_global, Vertex v_global, Edge e_global, subgra
   children_add_edge(u_global, v_global, e_global, g.m_children, orig);
 }
 
-template <typename Vertex, typename Graph>
-std::pair<graph_edge_descriptor_t<Graph>, bool> add_edge_recur_up(Vertex u_global, Vertex v_global,
-                                                                  const edge_property_type<Graph>& ep,
-                                                                  subgraph<Graph>& g, subgraph<Graph>* orig) {
+template <typename Vertex, typename Graph, typename... EPArgs>
+std::pair<graph_edge_descriptor_t<Graph>, bool> add_edge_recur_up(Vertex u_global, Vertex v_global, subgraph<Graph>& g,
+                                                                  subgraph<Graph>* orig, EPArgs&&... ep_args) {
   if (g.is_root()) {
-    auto [e_global, inserted] = add_edge(u_global, v_global, ep, g.m_graph);
+    auto [e_global, inserted] = add_edge(u_global, v_global, g.m_graph, std::forward<EPArgs>(ep_args)...);
     put(edge_index, g.m_graph, e_global, g.m_edge_counter++);
     g.m_global_edge.push_back(e_global);
     children_add_edge(u_global, v_global, e_global, g.m_children, orig);
     return {e_global, inserted};
   }
-  return add_edge_recur_up(u_global, v_global, ep, *g.m_parent, orig);
+  return add_edge_recur_up(u_global, v_global, *g.m_parent, orig, std::forward<EPArgs>(ep_args)...);
 }
 
 }  // namespace detail
@@ -463,23 +462,18 @@ std::pair<graph_edge_descriptor_t<Graph>, bool> add_edge_recur_up(Vertex u_globa
 // and v. In addition, the edge will be added to any (all) other subgraphs that
 // contain vertex descriptors u and v.
 
-template <typename G>
+template <typename G, typename... EPArgs>
 std::pair<graph_edge_descriptor_t<G>, bool> add_edge(graph_vertex_descriptor_t<G> u, graph_vertex_descriptor_t<G> v,
-                                                     const edge_property_type<G>& ep, subgraph<G>& g) {
+                                                     subgraph<G>& g, EPArgs&&... ep_args) {
   if (g.is_root()) {
     // u and v are really global
-    return detail::add_edge_recur_up(u, v, ep, g, &g);
+    return detail::add_edge_recur_up(u, v, g, &g, std::forward<EPArgs>(ep_args)...);
   }
 
-  auto [e_global, inserted] = detail::add_edge_recur_up(g.local_to_global(u), g.local_to_global(v), ep, g, &g);
+  auto [e_global, inserted] =
+      detail::add_edge_recur_up(g.local_to_global(u), g.local_to_global(v), g, &g, std::forward<EPArgs>(ep_args)...);
   auto e_local = g.local_add_edge(u, v, e_global);
   return {e_local, inserted};
-}
-
-template <typename G>
-std::pair<graph_edge_descriptor_t<G>, bool> add_edge(graph_vertex_descriptor_t<G> u, graph_vertex_descriptor_t<G> v,
-                                                     subgraph<G>& g) {
-  return add_edge(u, v, edge_property_type<G>{}, g);
 }
 
 namespace subgraph_detail {
@@ -490,7 +484,7 @@ void remove_edge_recur_down(Vertex u_global, Vertex v_global, subgraph<Graph>& g
 
 template <typename Vertex, typename Children>
 void children_remove_edge(Vertex u_global, Vertex v_global, Children& c) {
-  for (auto i : c) {
+  for (auto& i : c) {
     if (i->find_vertex(u_global).second && i->find_vertex(v_global).second) {
       remove_edge_recur_down(u_global, v_global, *i);
     }
@@ -505,22 +499,12 @@ void remove_edge_recur_down(Vertex u_global, Vertex v_global, subgraph<Graph>& g
   children_remove_edge(u_global, v_global, g.m_children);
 }
 
-template <typename Vertex, typename Graph>
-void remove_edge_recur_up(Vertex u_global, Vertex v_global, subgraph<Graph>& g) {
-  if (g.is_root()) {
-    remove_edge(u_global, v_global, g.m_graph);
-    children_remove_edge(u_global, v_global, g.m_children);
-  } else {
-    remove_edge_recur_up(u_global, v_global, *g.m_parent);
-  }
-}
-
 //-------------------------------------------------------------------------
 // implementation of remove_edge(e,g)
 
 template <typename G, typename Edge, typename Children>
 void children_remove_edge(Edge e_global, Children& c) {
-  for (auto i : c) {
+  for (auto& i : c) {
     auto [e_local, found] = i->find_edge(e_global);
     if (!found) {
       continue;
@@ -534,11 +518,11 @@ void children_remove_edge(Edge e_global, Children& c) {
 
 template <typename G>
 void remove_edge(graph_vertex_descriptor_t<G> u, graph_vertex_descriptor_t<G> v, subgraph<G>& g) {
-  if (g.is_root()) {
-    subgraph_detail::remove_edge_recur_up(u, v, g);
-  } else {
-    subgraph_detail::remove_edge_recur_up(g.local_to_global(u), g.local_to_global(v), g);
-  }
+  auto u_global = g.local_to_global(u);
+  auto v_global = g.local_to_global(v);
+  subgraph<G>& root = g.root();  // chase to root
+  remove_edge(u_global, v_global, g.m_graph);
+  subgraph_detail::children_remove_edge(u_global, v_global, root.m_children);
 }
 
 template <typename G>
@@ -590,7 +574,7 @@ auto add_vertex_recur_up(subgraph<G>& g, VPArgs&&... vp_args) {
     g.m_global_vertex.push_back(u_global);
     return u_global;
   }
-  auto u_global = add_vertex_recur_up(*g.m_parent);
+  auto u_global = add_vertex_recur_up(*g.m_parent, std::forward<VPArgs>(vp_args)...);
   auto u_local = add_vertex(g.m_graph);
   g.m_global_vertex.push_back(u_global);
   g.m_local_vertex[u_global] = u_local;
@@ -612,9 +596,40 @@ auto add_vertex(subgraph<G>& g, VPArgs&&... vp_args) {
   return u_local;
 }
 
-// TODO: Under Construction (delete for overload resolution)
+namespace subgraph_detail {
+//-------------------------------------------------------------------------
+// implementation of remove_vertex(u,g)
+template <typename Vertex, typename Graph>
+void remove_vertex_recur_down(Vertex u_global, subgraph<Graph>& g);
+
+template <typename Vertex, typename Children>
+void children_remove_vertex(Vertex u_global, Children& c) {
+  for (auto i : c) {
+    if (i->find_vertex(u_global).second) {
+      remove_vertex_recur_down(u_global, *i);
+    }
+  }
+}
+
+template <typename Vertex, typename Graph>
+void remove_vertex_recur_down(Vertex u_global, subgraph<Graph>& g) {
+  Vertex u_local = g.m_local_vertex[u_global];
+  children_remove_vertex(u_global, g.m_children);
+  remove_vertex(u_local, g.m_graph);
+}
+}  // namespace subgraph_detail
+
 template <typename G>
-void remove_vertex(graph_vertex_descriptor_t<G> u, subgraph<G>& g) = delete;
+void remove_vertex(graph_vertex_descriptor_t<G> u, subgraph<G>& g) {
+  auto u_global = g.local_to_global(u);
+#ifndef NDEBUG
+  auto [fu_u, fu_found] = g.find_vertex(u_global);
+  assert(fu_found && fu_u == u);
+#endif                           // NDEBUG
+  subgraph<G>& root = g.root();  // chase to root
+  subgraph_detail::children_remove_vertex(u_global, root.m_children);
+  remove_edge(u_global, root.m_graph);  // remove vertex from root
+}
 
 //===========================================================================
 // Functions required by the PropertyGraph concept

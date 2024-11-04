@@ -96,7 +96,7 @@ struct dummy_property_copier {
 
 template <concepts::MutableGraph G, std::uniform_random_bit_generator RandNumGen>
 void generate_random_graph(G& g, std::size_t v_count, std::size_t e_count, RandNumGen& gen, bool allow_parallel = true,
-                            bool self_edges = false) {
+                           bool self_edges = false) {
   // When parallel edges are not allowed, we create a new graph which
   // does not allow parallel edges, construct it and copy back.
   // This is not efficient if 'g' already disallow parallel edges,
@@ -151,7 +151,7 @@ void generate_random_graph(G& g, std::size_t v_count, std::size_t e_count, RandN
     } while (!self_edges && a == b);
     auto [e, inserted] = add_edge(a, b, g);
     if (inserted) {
-      *edge_out++ = std::make_pair(source(e, g), target(e, g));
+      *edge_out++ = e;
       ++j;
     } else {
       ++not_inserted_counter;

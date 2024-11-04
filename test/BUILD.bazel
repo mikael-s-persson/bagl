@@ -539,6 +539,15 @@ cc_test(
 
 
 cc_test(
+    name = "subgraph_test",
+    srcs = [ "subgraph_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "stoer_wagner_test",
     srcs = [ "stoer_wagner_test.cc", ],
     data = [
