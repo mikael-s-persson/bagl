@@ -423,7 +423,7 @@ void extra_greedy_matching(const Graph& g, MateMap mate) {
                    [&g](const auto& x, const auto& y) { return out_degree(x.first, g) < out_degree(y.first, g); });
 
   // construct the extra greedy matching
-  for (auto [u, v] : edge_list.begin()) {
+  for (auto [u, v] : edge_list) {
     if (get(mate, u) == get(mate, v)) {
       // only way equality can hold is if mate[itr->first] ==
       // mate[itr->second] == null_vertex
@@ -523,17 +523,17 @@ bool maximum_cardinality_matching_verify(const Graph& g, MateMap mate, VertexInd
   auto non_odd_vertex = [&vertex_state](const auto& v) {
     return get(vertex_state, v) != max_cardinality_detail::vertex_state::odd;
   };
-  filtered_graph<Graph, keep_all, decltype(non_odd_vertex)> fg(g, keep_all(), non_odd_vertex);
+  filtered_graph fg(g, keep_all(), non_odd_vertex);
 
   std::size_t num_odd_components = 0;
   max_cardinality_detail::odd_components_counter occ(num_odd_components);
-  depth_first_search(fg, occ, vm);
+  depth_first_search(fg, occ, two_bit_color_map(num_vertices(g), vm).ref());
 
   return (2 * matching_size(g, mate, vm) == num_vertices(g) + num_odd_vertices - num_odd_components);
 }
 
 template <typename MateMap, typename AugmentingPathFinder>
-bool matching_loop(MateMap mate, AugmentingPathFinder augmentor) {
+void matching_loop(MateMap mate, AugmentingPathFinder augmentor) {
   bool not_maximum_yet = true;
   while (not_maximum_yet) {
     not_maximum_yet = augmentor.augment_matching();

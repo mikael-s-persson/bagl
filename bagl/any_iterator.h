@@ -217,11 +217,11 @@ class any_range : public std::ranges::view_interface<any_range<Reference>> {
 // Check.
 static_assert(std::ranges::input_range<any_range<std::any>>);
 
-template <std::ranges::common_range BaseRange, typename Reference = std::ranges::range_reference_t<BaseRange>>
+template <std::ranges::common_range BaseRange, typename Reference = std::ranges::range_reference_t<const BaseRange>>
 class any_range_wrapper : public any_range_interface<Reference> {
  public:
   using Self = any_range_wrapper<BaseRange, Reference>;
-  using Iter = std::ranges::iterator_t<BaseRange>;
+  using Iter = std::ranges::iterator_t<const BaseRange>;
   any_range_wrapper() = default;
   explicit any_range_wrapper(BaseRange rg) : range_(std::move(rg)) {}
 

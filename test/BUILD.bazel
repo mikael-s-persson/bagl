@@ -518,6 +518,15 @@ cc_test(
 )
 
 cc_test(
+    name = "matching_test",
+    srcs = [ "matching_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "max_flow_test",
     srcs = [ "max_flow_test.cc", ],
     deps = [
@@ -565,6 +574,15 @@ cc_test(
 
 
 
+
+cc_test(
+    name = "random_matching_test",
+    srcs = [ "random_matching_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
 
 cc_test(
     name = "random_spanning_tree_test",

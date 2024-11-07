@@ -13,6 +13,7 @@
 
 #include "bagl/dynamic_property_map.h"
 #include "bagl/graph_traits.h"
+#include "bagl/graph_utility.h"
 #include "bagl/graphviz.h"
 #include "bagl/grid_graph.h"
 #include "bagl/properties.h"
@@ -63,18 +64,65 @@ TEST(RandomSpanningTreeTest, Basic) {
   }
 
   std::mt19937 gen{42};
+
   random_spanning_tree(g, gen, random_vertex(g, gen), pred.ref());
   if (print_out_test_graphs) {
-    // write_spanning_tree(g, pred.ref(), single_property_map(1.), "unweight_random_st.dot");
+    write_spanning_tree(g, pred.ref(), single_property_map(1.), "/tmp/unweight_random_st.dot");
   }
-  random_spanning_tree(g, gen, random_vertex(g, gen), pred.ref());
-  if (print_out_test_graphs) {
-    // write_spanning_tree(g, pred.ref(), single_property_map(1.), "unweight_random_st2.dot");
+  int root_count = 0;
+  for (auto u : vertices(g)) {
+    if (pred[u] != graph_traits<Graph>::null_vertex()) {
+      continue;
+    }
+    EXPECT_EQ(root_count, 0) << "Duplicated root at: " << get(vertex_index, g, u);
+    ++root_count;
+    pred[u] = u;
+  }
+  for (auto u : vertices(g)) {
+    // Expect pred for form a tree, for undirected graph, that means no cycles.
+    EXPECT_FALSE(is_descendant(u, u, pred.ref()));
   }
 
+  for (auto u : vertices(g)) {
+    pred[u] = graph_traits<Graph>::null_vertex();
+  }
+  random_spanning_tree(g, gen, random_vertex(g, gen), pred.ref());
+  if (print_out_test_graphs) {
+    write_spanning_tree(g, pred.ref(), single_property_map(1.), "/tmp/unweight_random_st2.dot");
+  }
+  root_count = 0;
+  for (auto u : vertices(g)) {
+    if (pred[u] != graph_traits<Graph>::null_vertex()) {
+      continue;
+    }
+    EXPECT_EQ(root_count, 0) << "Duplicated root at: " << get(vertex_index, g, u);
+    ++root_count;
+    pred[u] = u;
+  }
+  for (auto u : vertices(g)) {
+    // Expect pred for form a tree, for undirected graph, that means no cycles.
+    EXPECT_FALSE(is_descendant(u, u, pred.ref()));
+  }
+
+  for (auto u : vertices(g)) {
+    pred[u] = graph_traits<Graph>::null_vertex();
+  }
   random_spanning_tree(g, gen, random_vertex(g, gen), pred.ref(), weight.ref());
   if (print_out_test_graphs) {
-    // write_spanning_tree(g, pred.ref(), weight.ref(), "weight_random_st.dot");
+    write_spanning_tree(g, pred.ref(), weight.ref(), "/tmp/weight_random_st.dot");
+  }
+  root_count = 0;
+  for (auto u : vertices(g)) {
+    if (pred[u] != graph_traits<Graph>::null_vertex()) {
+      continue;
+    }
+    EXPECT_EQ(root_count, 0) << "Duplicated root at: " << get(vertex_index, g, u);
+    ++root_count;
+    pred[u] = u;
+  }
+  for (auto u : vertices(g)) {
+    // Expect pred for form a tree, for undirected graph, that means no cycles.
+    EXPECT_FALSE(is_descendant(u, u, pred.ref()));
   }
 }
 

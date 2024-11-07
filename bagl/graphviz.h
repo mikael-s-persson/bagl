@@ -51,18 +51,16 @@ void write_graphviz(std::ostream& out, const dynamic_graph_observer& g, graphviz
                     graphviz_attr_writer epw, graphviz_attr_writer gpw, const std::string& node_id_pmap);
 
 template <concepts::VertexListGraph Graph, concepts::ReadableVertexPropertyMap<Graph> NodeIDMap>
-void write_graphviz(std::ostream& out, const Graph& g, const dynamic_properties& dp,
-                    graphviz_attr_writer vpw,
-                    graphviz_attr_writer epw,
-                    graphviz_attr_writer gpw, const std::string& node_id_pmap_name,
+void write_graphviz(std::ostream& out, const Graph& g, dynamic_properties& dp, graphviz_attr_writer vpw,
+                    graphviz_attr_writer epw, graphviz_attr_writer gpw, const std::string& node_id_pmap_name,
                     NodeIDMap id) {
   dynamic_graph_observer_wrapper<Graph> mg(g, dp.property<graph_vertex_descriptor_t<Graph>>(node_id_pmap_name, id));
   write_graphviz(out, mg, vpw, epw, gpw, node_id_pmap_name);
 }
 
 template <concepts::VertexListGraph Graph, concepts::ReadableVertexPropertyMap<Graph> NodeIDMap>
-void write_graphviz(std::ostream& out, const Graph& g, const dynamic_properties& dp,
-                    const std::string& node_id_pmap_name, NodeIDMap id) {
+void write_graphviz(std::ostream& out, const Graph& g, dynamic_properties& dp, const std::string& node_id_pmap_name,
+                    NodeIDMap id) {
   dynamic_graph_observer_wrapper<Graph> mg(g, dp.property<graph_vertex_descriptor_t<Graph>>(node_id_pmap_name, id));
   write_graphviz(out, mg,
                  /*vertex_writer=*/dynamic_properties_graphviz_writer(dp),
@@ -71,7 +69,7 @@ void write_graphviz(std::ostream& out, const Graph& g, const dynamic_properties&
 }
 
 template <concepts::VertexListGraph Graph>
-void write_graphviz(std::ostream& out, const Graph& g, const dynamic_properties& dp,
+void write_graphviz(std::ostream& out, const Graph& g, dynamic_properties& dp,
                     const std::string& node_id_prefix = "node_") {
   auto node_id_pmap = transform_property_map{
       [node_id_prefix](std::size_t i) { return node_id_prefix + std::to_string(i); }, get(vertex_index, g)};
@@ -83,8 +81,8 @@ void write_graphviz(std::ostream& out, const Graph& g, graphviz_attr_writer vpw,
                     graphviz_attr_writer epw,
                     graphviz_attr_writer gpw, const std::string& node_id_pmap_name,
                     NodeIDMap id) {
-  dynamic_graph_observer_wrapper<Graph> mg(
-      g, dynamic_properties{}.property<graph_vertex_descriptor_t<Graph>>(node_id_pmap_name, id));
+  dynamic_properties dp;
+  dynamic_graph_observer_wrapper<Graph> mg(g, dp.property<graph_vertex_descriptor_t<Graph>>(node_id_pmap_name, id));
   write_graphviz(out, mg, vpw, epw, gpw);
 }
 
