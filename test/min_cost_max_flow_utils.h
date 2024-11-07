@@ -9,6 +9,7 @@
 #include <iostream>
 
 #include "bagl/adjacency_list.h"
+#include "bagl/graph_traits.h"
 #include "bagl/vector_property_map.h"
 #include "gtest/gtest.h"
 
@@ -20,81 +21,85 @@ struct sample_graph {
                      property<edge_capacity_t, int,
                               property<edge_residual_capacity_t, int,
                                        property<edge_weight_t, int, property<edge_index_t, std::size_t> > > > >;
-  using EdgeIndex = property_map_t<Graph, edge_index_t>;
-  using Edge = graph_edge_descriptor_t<Graph>;
-  using Reversed = property_map_ref<vector_property_map<Edge, EdgeIndex> >;
-  using Vertex = graph_vertex_descriptor_t<Graph>;
 
-  class EdgeAdder {
+  template <typename OGraph, typename OReversed>
+  class edge_adder {
    public:
-    EdgeAdder(Graph& g, Reversed& rev) : m_g(g), m_rev(rev) {}
-    void addEdge(Vertex v, Vertex w, int weight, int capacity) {
-      auto e = add(v, w, weight, capacity);
-      auto f = add(w, v, -weight, 0);
-      m_rev[e] = f;
-      m_rev[f] = e;
+    using OVertex = graph_vertex_descriptor_t<OGraph>;
+    edge_adder(OGraph& g, OReversed& rev) : g_(g), rev_(rev) {}
+    void add(OVertex v, OVertex w, int weight, int capacity) {
+      auto e = add_raw(v, w, weight, capacity);
+      auto f = add_raw(w, v, -weight, 0);
+      rev_[e] = f;
+      rev_[f] = e;
     }
 
    private:
-    Edge add(Vertex v, Vertex w, int weight, int capacity) {
-      auto [e, b] = add_edge(*std::next(vertices(m_g).begin(), v), *std::next(vertices(m_g).begin(), w), m_g, capacity,
-                             0, weight, num_edges(m_g));
+    auto add_raw(OVertex v, OVertex w, int weight, int capacity) {
+      auto [e, b] = add_edge(*std::next(vertices(g_).begin(), v), *std::next(vertices(g_).begin(), w), g_, capacity, 0,
+                             weight, num_edges(g_));
       EXPECT_TRUE(b);
       return e;
     }
-    Graph& m_g;
-    Reversed& m_rev;
+    OGraph& g_;
+    OReversed& rev_;
   };
 
-  static void get_sample_graph(Graph& g, Vertex& s, Vertex& t, Reversed rev) {
-    std::size_t N(6);
+  template <typename OGraph, typename OReversed>
+  static auto get_sample_graph(OGraph& g, OReversed rev) {
+    const std::size_t N(6);
 
     for (std::size_t i = 0; i < N; ++i) {
       add_vertex(g);
     }
 
-    s = 0;
-    t = 5;
+    auto s = *vertices(g).begin();
+    auto t = *std::next(vertices(g).begin(), 5);
 
-    EdgeAdder ea(g, rev);
+    edge_adder ea(g, rev);
 
-    ea.addEdge(0, 1, 4, 2);
-    ea.addEdge(0, 2, 2, 2);
+    ea.add(0, 1, 4, 2);
+    ea.add(0, 2, 2, 2);
 
-    ea.addEdge(1, 3, 2, 2);
-    ea.addEdge(1, 4, 1, 1);
-    ea.addEdge(2, 3, 1, 1);
-    ea.addEdge(2, 4, 1, 1);
+    ea.add(1, 3, 2, 2);
+    ea.add(1, 4, 1, 1);
+    ea.add(2, 3, 1, 1);
+    ea.add(2, 4, 1, 1);
 
-    ea.addEdge(3, 5, 4, 20);
-    ea.addEdge(4, 5, 2, 20);
+    ea.add(3, 5, 4, 20);
+    ea.add(4, 5, 2, 20);
+
+    return std::pair{s, t};
   }
 
-  static void get_sample_graph_2(Graph& g, Vertex& s, Vertex& t, Reversed rev) {
+  template <typename OGraph, typename OReversed>
+  static auto get_sample_graph_2(OGraph& g, OReversed rev) {
     const std::size_t N(5);
 
     for (std::size_t i = 0; i < N; ++i) {
       add_vertex(g);
     }
 
-    s = 0;
-    t = 4;
+    auto s = *vertices(g).begin();
+    auto t = *std::next(vertices(g).begin(), 4);
 
-    EdgeAdder ea(g, rev);
+    edge_adder ea(g, rev);
 
-    ea.addEdge(0, 1, 4, 2);
-    ea.addEdge(0, 2, 2, 2);
-    ea.addEdge(1, 2, 2, 2);
-    ea.addEdge(2, 3, 1, 1);
-    ea.addEdge(2, 4, 1, 1);
-    ea.addEdge(3, 4, 1, 1);
+    ea.add(0, 1, 4, 2);
+    ea.add(0, 2, 2, 2);
+    ea.add(1, 2, 2, 2);
+    ea.add(2, 3, 1, 1);
+    ea.add(2, 4, 1, 1);
+    ea.add(3, 4, 1, 1);
 
-    ea.addEdge(1, 0, 2, 2);
-    ea.addEdge(2, 0, 1, 1);
-    ea.addEdge(2, 1, 5, 2);
-    ea.addEdge(3, 2, 1, 1);
-    ea.addEdge(4, 2, 2, 2);
-    ea.addEdge(4, 3, 1, 3);
+    ea.add(1, 0, 2, 2);
+    ea.add(2, 0, 1, 1);
+    ea.add(2, 1, 5, 2);
+    ea.add(3, 2, 1, 1);
+    ea.add(4, 2, 2, 2);
+    ea.add(4, 3, 1, 3);
+
+    return std::pair{s, t};
   }
 };
 }  // namespace bagl

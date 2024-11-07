@@ -134,20 +134,33 @@ struct mutable_lvalue_property_map_archetype : readable_property_map_archetype<K
 template <typename LvaluePropertyMap>
 struct put_get_helper {};
 
+namespace put_get_helper_detail {
+template <typename PMap, typename Key>
+concept IndexableBy = requires(PMap p, Key k) {
+  p[k];
+};
+}  // namespace put_get_helper_detail
+
 template <typename PropertyMap, typename K>
+requires put_get_helper_detail::IndexableBy<const PropertyMap&, K&&>
 decltype(auto) get(const put_get_helper<PropertyMap>& pa, K&& k) {
   return static_cast<const PropertyMap&>(pa)[std::forward<K>(k)];
 }
 template <typename PropertyMap, typename K>
+requires put_get_helper_detail::IndexableBy<PropertyMap&, K&&>
 decltype(auto) get(put_get_helper<PropertyMap>& pa, K&& k) {
   return static_cast<PropertyMap&>(pa)[std::forward<K>(k)];
 }
 template <typename PropertyMap, typename K, typename U>
-void put(const put_get_helper<PropertyMap>& pa, K&& k, U&& u) {
+requires put_get_helper_detail::IndexableBy<const PropertyMap&, K&&>
+void put(const put_get_helper<PropertyMap>& pa, K&& k,
+         U&& u) requires(std::is_assignable_v<decltype(std::declval<const PropertyMap&>()[std::declval<K&&>()]), U&&>) {
   static_cast<const PropertyMap&>(pa)[std::forward<K>(k)] = std::forward<U>(u);
 }
 template <typename PropertyMap, typename K, typename U>
-void put(put_get_helper<PropertyMap>& pa, K&& k, U&& u) {
+requires put_get_helper_detail::IndexableBy<PropertyMap&, K&&>
+void put(put_get_helper<PropertyMap>& pa, K&& k,
+         U&& u) requires(std::is_assignable_v<decltype(std::declval<PropertyMap&>()[std::declval<K&&>()]), U&&>) {
   static_cast<PropertyMap&>(pa)[std::forward<K>(k)] = std::forward<U>(u);
 }
 
@@ -163,6 +176,7 @@ class iterator_property_map : public put_get_helper<iterator_property_map<RAIter
       : iter_(std::move(iter)), index_(std::move(index)) {}
 
   template <typename Key>
+  requires concepts::ReadablePropertyMap<IndexMap, Key&&>
   decltype(auto) operator[](Key&& k) const {
     return *(iter_ + get(index_, std::forward<Key>(k)));
   }
@@ -181,6 +195,7 @@ class safe_iterator_property_map : public put_get_helper<safe_iterator_property_
       : iter_(std::move(first)), n_(n), index_(std::move(index)) {}
 
   template <typename Key>
+  requires concepts::ReadablePropertyMap<IndexMap, Key&&>
   decltype(auto) operator[](Key&& k) const {
     assert(get(index_, k) < n_);
     return *(iter_ + get(index_, std::forward<Key>(k)));
@@ -255,9 +270,8 @@ class data_member_property_map : public put_get_helper<data_member_property_map<
   explicit data_member_property_map(member_ptr_type aMemPtr) : mem_ptr_(aMemPtr) {}
   data_member_property_map() = default;
   template <typename OtherProp>
-  decltype(auto) operator[](OtherProp& p) const {
-    return p.*mem_ptr_;
-  }
+  requires std::convertible_to < std::remove_cv_t<OtherProp>
+  &, std::remove_cv_t<PropertyType>& > decltype(auto) operator[](OtherProp& p) const { return p.*mem_ptr_; }
 };
 
 //======== Composite property-map ==========
@@ -278,6 +292,7 @@ class composite_property_map : public put_get_helper<composite_property_map<Outp
   composite_property_map() = default;
 
   template <typename Key>
+  requires concepts::ReadablePropertyMap<InputMap, Key&&>
   decltype(auto) operator[](Key&& k) const {
     return prop_out_[prop_in_[std::forward<Key>(k)]];
   }
@@ -294,6 +309,7 @@ class function_property_map : public put_get_helper<function_property_map<Func, 
   explicit function_property_map(Func f = Func()) : f_(std::move(f)) {}
 
   template <typename T>
+  requires std::invocable<const Func&, T&&>
   decltype(auto) operator[](T&& k) const {
     return f_(std::forward<T>(k));
   }
@@ -321,6 +337,7 @@ class transform_property_map : public put_get_helper<transform_property_map<Func
   transform_property_map(Func f, PM pm) : f_(std::move(f)), pm_(std::move(pm)) {}
 
   template <typename Key>
+  requires concepts::ReadablePropertyMap<PM, Key&&>
   decltype(auto) operator[](Key&& k) const {
     return f_(get(pm_, std::forward<Key>(k)));
   }
@@ -347,6 +364,7 @@ class property_map_ref : public put_get_helper<property_map_ref<UnderlyingMap>> 
   property_map_ref() = default;
 
   template <typename Key>
+  requires concepts::ReadablePropertyMap<UnderlyingMap, Key&&>
   decltype(auto) operator[](Key&& k) const {
     return (*prop_)[std::forward<Key>(k)];
   }
@@ -417,6 +435,7 @@ class property_map_function {
  public:
   explicit property_map_function(const PropMap& pm) : pm_(pm) {}
   template <typename T>
+  requires concepts::ReadablePropertyMap<PropMap, T&&>
   decltype(auto) operator()(T&& k) const {
     return get(pm_, std::forward<T>(k));
   }

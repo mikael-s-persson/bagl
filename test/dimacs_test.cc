@@ -34,19 +34,19 @@ TEST(ReadDimacsTest, MinCutProblem) {
 
 // Min-cut problem
 TEST(ReadWriteDimacsTest, MaxFlowProblem) {
-  sample_graph::Vertex s;
-  sample_graph::Vertex t;
-  sample_graph::Graph g;
-  auto rev = vector_property_map(0, get(edge_index, g), sample_graph::Edge{});
-  sample_graph::get_sample_graph_2(g, s, t, rev.ref());
+  using Graph = sample_graph::Graph;
+  using Edge = graph_edge_descriptor_t<Graph>;
+  Graph g;
+  auto rev = vector_property_map(0, get(edge_index, g), Edge{});
+  auto [s, t] = sample_graph::get_sample_graph_2(g, rev.ref());
 
   std::stringstream dimacs_stream;
   write_dimacs_max_flow(g, get(edge_capacity, g), get(vertex_index, g), s, t, dimacs_stream);
 
-  sample_graph::Vertex s2;
-  sample_graph::Vertex t2;
-  sample_graph::Graph g2;
-  auto rev2 = vector_property_map(0, get(edge_index, g2), sample_graph::Edge{});
+  auto s2 = graph_traits<Graph>::null_vertex();
+  auto t2 = graph_traits<Graph>::null_vertex();
+  Graph g2;
+  auto rev2 = vector_property_map(0, get(edge_index, g2), Edge{});
   EXPECT_TRUE(read_dimacs_max_flow(g2, get(edge_capacity, g2), rev2.ref(), s2, t2, dimacs_stream));
 
   EXPECT_EQ(num_vertices(g), num_vertices(g2));

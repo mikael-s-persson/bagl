@@ -5,6 +5,7 @@
 #include "bagl/cycle_canceling.h"
 
 #include "bagl/edmonds_karp_max_flow.h"
+#include "bagl/graph_traits.h"
 #include "bagl/graph_utility.h"
 #include "bagl/properties.h"
 #include "gmock/gmock.h"
@@ -15,15 +16,15 @@ namespace bagl {
 namespace {
 
 TEST(PathAugmentation, Test) {
-  sample_graph::Vertex s;
-  sample_graph::Vertex t;
-  sample_graph::Graph g;
-  auto rev = vector_property_map(0, get(edge_index, g), sample_graph::Edge{});
-  sample_graph::get_sample_graph_2(g, s, t, rev.ref());
+  using Graph = sample_graph::Graph;
+  using Edge = graph_edge_descriptor_t<Graph>;
+  Graph g;
+  auto rev = vector_property_map(0, get(edge_index, g), Edge{});
+  auto [s, t] = sample_graph::get_sample_graph_2(g, rev.ref());
 
   int N = num_vertices(g);
   auto idx = get(vertex_index, g);
-  auto edge_pred = vector_property_map(N, idx, sample_graph::Edge{});
+  auto edge_pred = vector_property_map(N, idx, Edge{});
 
   edmonds_karp_max_flow(g, s, t, get(edge_capacity, g), get(edge_residual_capacity, g), rev.ref(),
                         two_bit_color_map(N, idx).ref(), edge_pred.ref());
@@ -34,15 +35,15 @@ TEST(PathAugmentation, Test) {
 }
 
 TEST(CycleCanceling, Test) {
-  sample_graph::Vertex s;
-  sample_graph::Vertex t;
-  sample_graph::Graph g;
-  auto rev = vector_property_map(0, get(edge_index, g), sample_graph::Edge{});
-  sample_graph::get_sample_graph(g, s, t, rev.ref());
+  using Graph = sample_graph::Graph;
+  using Edge = graph_edge_descriptor_t<Graph>;
+  Graph g;
+  auto rev = vector_property_map(0, get(edge_index, g), Edge{});
+  auto [s, t] = sample_graph::get_sample_graph(g, rev.ref());
 
   int N = num_vertices(g);
   auto idx = get(vertex_index, g);
-  auto edge_pred = vector_property_map(N, idx, sample_graph::Edge{});
+  auto edge_pred = vector_property_map(N, idx, Edge{});
 
   edmonds_karp_max_flow(g, s, t, get(edge_capacity, g), get(edge_residual_capacity, g), rev.ref(),
                         two_bit_color_map(N, idx).ref(), edge_pred.ref());

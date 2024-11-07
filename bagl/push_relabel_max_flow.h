@@ -53,7 +53,8 @@ class push_relabel {
   using FlowValue = property_traits_value_t<EdgeCapacityMap>;
   using Vertex = graph_vertex_descriptor_t<Graph>;
   using Edge = graph_edge_descriptor_t<Graph>;
-  using PartialOutEdges = partial_view<decltype(out_edges(std::declval<Vertex>(), std::declval<Graph>()))>;
+  using PartialOutEdges =
+      std::optional<partial_view<decltype(out_edges(std::declval<Vertex>(), std::declval<Graph>()))>>;
 
   using Layer = preflow_layer<Vertex>;
   using ListIterator = typename std::list<Vertex>::iterator;
@@ -196,10 +197,10 @@ class push_relabel {
     max_distance = max_active = 0;
     min_active = n;
 
-    Q.push(sink);
-    while (!Q.empty()) {
-      Vertex u = Q.top();
-      Q.pop();
+    q.push(sink);
+    while (!q.empty()) {
+      Vertex u = q.top();
+      q.pop();
       std::size_t d_v = get(distance, u) + 1;
 
       for (auto a : out_edges(u, g)) {
@@ -219,7 +220,7 @@ class push_relabel {
           add_to_inactive_list(v, layers[d_v]);
         }
 
-        Q.push(v);
+        q.push(v);
       }
     }
   }  // global_distance_update()
@@ -230,7 +231,7 @@ class push_relabel {
   void discharge(Vertex u) {
     assert(get(excess_flow, u) > 0);
     while (true) {
-      auto& current_u = current[u];
+      auto& current_u = *current[u];
       auto ai = current_u.begin();
       for (; ai != current_u.end(); ++ai) {
         Edge a = *ai;
@@ -306,7 +307,7 @@ class push_relabel {
 
     // Examine the residual out-edges of vertex i, choosing the
     // edge whose target vertex has the minimal distance.
-    auto& current_u = current[u];
+    auto& current_u = *current[u];
     auto min_edge_iter = current_u.begin();
     for (auto ai = current_u.base_begin(); ai != current_u.end(); ++ai) {
       ++work_since_last_update;
@@ -415,8 +416,8 @@ class push_relabel {
       auto r = u;
       put(color, r, ColorTraits::gray());
       while (true) {
-        for (; !current[u].empty(); current[u].move_to_next()) {
-          Edge a = *current[u].begin();
+        for (; !current[u]->empty(); current[u]->move_to_next()) {
+          Edge a = *current[u]->begin();
           if (get(capacity, a) != 0 || !is_residual_edge(a)) {
             continue;
           }
@@ -435,7 +436,7 @@ class push_relabel {
           // find minimum flow on the cycle
           FlowValue delta = get(residual_capacity, a);
           while (true) {
-            Edge b = *current[v].begin();
+            Edge b = *current[v]->begin();
             delta = std::min(delta, get(residual_capacity, b));
             if (v == u) {
               break;
@@ -445,7 +446,7 @@ class push_relabel {
           // remove delta flow units
           v = u;
           while (true) {
-            a = *current[v].begin();
+            a = *current[v]->begin();
             put(residual_capacity, a, get(residual_capacity, a) - delta);
             Edge rev = get(reverse_edge, a);
             put(residual_capacity, rev, get(residual_capacity, rev) + delta);
@@ -458,8 +459,8 @@ class push_relabel {
           // back-out of DFS to the first saturated
           // edge
           auto restart = u;
-          for (v = target(*current[u].begin(), g); v != u; v = target(a, g)) {
-            a = *current[v].begin();
+          for (v = target(*current[u]->begin(), g); v != u; v = target(a, g)) {
+            a = *current[v]->begin();
             if (get(color, v) != ColorTraits::white() && !is_saturated(a)) {
               continue;
             }
@@ -470,12 +471,12 @@ class push_relabel {
           }
           if (restart != u) {
             u = restart;
-            current[u].move_to_nex();
+            current[u]->move_to_next();
             break;
           }
         }
 
-        if (!current[u].empty()) {
+        if (!current[u]->empty()) {
           continue;
         }
         // scan of i is complete
@@ -492,7 +493,7 @@ class push_relabel {
         }
         if (u != r) {
           u = parent[get(index, u)];
-          current[u].move_to_nex();
+          current[u]->move_to_next();
         } else {
           break;
         }
@@ -611,7 +612,7 @@ class push_relabel {
   std::size_t max_distance;  // maximal distance
   std::size_t max_active;    // maximal distance with active node
   std::size_t min_active;    // minimal distance with active node
-  std::queue<Vertex> Q;
+  buffer_queue<Vertex> q;
 
   // Statistics counters
   std::size_t push_count = 0;

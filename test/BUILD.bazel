@@ -518,6 +518,16 @@ cc_test(
 )
 
 cc_test(
+    name = "max_flow_test",
+    srcs = [ "max_flow_test.cc", ],
+    deps = [
+        ":min_cost_max_flow_utils",
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "maximum_adjacency_search_test",
     srcs = [ "maximum_adjacency_search_test.cc", ],
     deps = [
@@ -554,6 +564,17 @@ cc_test(
 )
 
 
+
+
+cc_test(
+    name = "random_spanning_tree_test",
+    srcs = [ "random_spanning_tree_test.cc", ],
+    deps = [
+        "//bagl:graphviz",
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
 
 cc_test(
     name = "reverse_graph_concepts_test",

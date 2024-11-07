@@ -11,15 +11,15 @@ namespace bagl {
 namespace {
 
 TEST(SuccShortestPathAugmentation, Test) {
-  sample_graph::Vertex s;
-  sample_graph::Vertex t;
-  sample_graph::Graph g;
-  auto rev = vector_property_map(0, get(edge_index, g), sample_graph::Edge{});
-  sample_graph::get_sample_graph(g, s, t, rev.ref());
+  using Graph = sample_graph::Graph;
+  using Edge = graph_edge_descriptor_t<Graph>;
+  Graph g;
+  auto rev = vector_property_map(0, get(edge_index, g), Edge{});
+  auto [s, t] = sample_graph::get_sample_graph(g, rev.ref());
 
   int N = num_vertices(g);
   auto idx = get(vertex_index, g);
-  auto edge_pred = vector_property_map(N, idx, sample_graph::Edge{});
+  auto edge_pred = vector_property_map(N, idx, Edge{});
 
   successive_shortest_path_nonnegative_weights(g, s, t, get(edge_capacity, g), get(edge_residual_capacity, g),
                                                get(edge_weight, g), rev.ref(), idx, edge_pred.ref());
@@ -29,15 +29,15 @@ TEST(SuccShortestPathAugmentation, Test) {
 }
 
 TEST(SuccShortestPathAugmentation, Test2) {
-  sample_graph::Vertex s;
-  sample_graph::Vertex t;
-  sample_graph::Graph g;
-  auto rev = vector_property_map(0, get(edge_index, g), sample_graph::Edge{});
-  sample_graph::get_sample_graph_2(g, s, t, rev.ref());
+  using Graph = sample_graph::Graph;
+  using Edge = graph_edge_descriptor_t<Graph>;
+  Graph g;
+  auto rev = vector_property_map(0, get(edge_index, g), Edge{});
+  auto [s, t] = sample_graph::get_sample_graph_2(g, rev.ref());
 
   int N = num_vertices(g);
   auto idx = get(vertex_index, g);
-  auto edge_pred = vector_property_map(N, idx, sample_graph::Edge{});
+  auto edge_pred = vector_property_map(N, idx, Edge{});
 
   successive_shortest_path_nonnegative_weights(g, s, t, get(edge_capacity, g), get(edge_residual_capacity, g),
                                                get(edge_weight, g), rev.ref(), idx, edge_pred.ref());

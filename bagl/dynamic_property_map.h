@@ -249,9 +249,9 @@ struct dynamic_properties {
   explicit dynamic_properties(generate_fn_type g) : generate_fn_(std::move(g)) {}
 
   template <typename Key, typename PropertyMap>
-  dynamic_properties& property(std::string name, PropertyMap property_map_) {
+  dynamic_properties& property(std::string_view name, PropertyMap property_map_) {
     property_maps_.emplace(
-        std::move(name),
+        std::string{name},
         std::make_shared<dynamic_pmap_detail::dynamic_property_map_adaptor<Key, PropertyMap>>(property_map_));
 
     return *this;
@@ -260,9 +260,7 @@ struct dynamic_properties {
   // Add property maps from tags:
   // property(name, vertex_index, g) == property<vertex_descriptor>(name, get(vertex_index, g))
   template <typename PropertyTag, typename Graph>
-  std::enable_if_t<!std::is_same_v<PropertyTag, std::string>, dynamic_properties&> property(std::string name,
-                                                                                            PropertyTag property_tag,
-                                                                                            Graph&& g) {
+  dynamic_properties& property(std::string_view name, PropertyTag property_tag, Graph&& g) {
     if constexpr (is_vertex_property_kind_v<PropertyTag>) {
       return property<graph_vertex_descriptor_t<Graph>>(std::move(name), get(property_tag, std::forward<Graph>(g)));
     } else if constexpr (is_edge_property_kind_v<PropertyTag>) {
@@ -274,24 +272,22 @@ struct dynamic_properties {
   // Add property maps from tags:
   // property(vertex_index, g) == property<vertex_descriptor>("vertex_index", get(vertex_index, g))
   template <typename PropertyTag, typename Graph>
-  std::enable_if_t<!std::is_same_v<PropertyTag, std::string>, dynamic_properties&> property(PropertyTag property_tag,
-                                                                                            Graph&& g) {
+  std::enable_if_t<!std::is_convertible_v<PropertyTag, std::string_view>, dynamic_properties&> property(
+      PropertyTag property_tag, Graph&& g) {
     return property(std::string{PropertyTag::name}, property_tag, std::forward<Graph>(g));
   }
 
   template <typename Key, typename PropertyMap>
-  [[nodiscard]] dynamic_properties property(const std::string& name, PropertyMap property_map_) const {
+  [[nodiscard]] dynamic_properties property(std::string_view name, PropertyMap property_map_) const {
     dynamic_properties result = *this;
-    result.property<Key>(name, property_map_);
+    result.property<Key>(std::string{name}, property_map_);
     return result;
   }
 
   // Add property maps from tags:
   // property(name, vertex_index, g) == property<vertex_descriptor>(name, get(vertex_index, g))
   template <typename PropertyTag, typename Graph>
-  std::enable_if_t<!std::is_same_v<PropertyTag, std::string>, dynamic_properties> property(std::string name,
-                                                                                           PropertyTag property_tag,
-                                                                                           Graph&& g) const {
+  dynamic_properties property(std::string_view name, PropertyTag property_tag, Graph&& g) const {
     dynamic_properties result = *this;
     result.property(property_tag, std::forward<Graph>(g));
     return result;
@@ -299,8 +295,8 @@ struct dynamic_properties {
   // Add property maps from tags:
   // property(vertex_index, g) == property<vertex_descriptor>("vertex_index", get(vertex_index, g))
   template <typename PropertyTag, typename Graph>
-  std::enable_if_t<!std::is_same_v<PropertyTag, std::string>, dynamic_properties> property(PropertyTag property_tag,
-                                                                                           Graph&& g) const {
+  std::enable_if_t<!std::is_convertible_v<PropertyTag, std::string_view>, dynamic_properties> property(
+      PropertyTag property_tag, Graph&& g) const {
     dynamic_properties result = *this;
     result.property(std::string{PropertyTag::name}, property_tag, std::forward<Graph>(g));
     return result;

@@ -31,6 +31,7 @@ class vector_property_map : public property_store_helper<vector_property_map<T, 
   const IndexMap& get_index_map() const { return index_; }
 
   template <typename Key>
+  requires concepts::ReadablePropertyMap<IndexMap, Key&&>
   decltype(auto) operator[](Key&& k) {
     auto i = static_cast<std::size_t>(get(index_, std::forward<Key>(k)));
     if (i >= store_.size()) [[unlikely]] {

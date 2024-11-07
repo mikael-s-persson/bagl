@@ -15,6 +15,7 @@
 #include "bagl/properties.h"
 #include "bagl/property_map.h"
 #include "bagl/random.h"
+#include "bagl/two_bit_color_map.h"
 #include "bagl/vector_property_map.h"
 
 namespace bagl {
@@ -73,21 +74,6 @@ void random_spanning_tree_internal(const Graph& g, graph_vertex_descriptor_t<Gra
 //    address = {New York, NY, USA},
 //  }
 //
-template <concepts::VertexListGraph Graph, std::uniform_random_bit_generator Gen,
-          concepts::WritableVertexPropertyMap<Graph> PredMap, concepts::ReadWriteVertexPropertyMap<Graph> ColorMap>
-void random_spanning_tree(const Graph& g, Gen& gen, graph_vertex_descriptor_t<Graph> root, PredMap pred,
-                          ColorMap color) {
-  unweighted_random_out_edge_gen<Graph, Gen> random_oe(gen);
-  random_detail::random_spanning_tree_internal(g, root, pred, color, random_oe);
-}
-
-template <concepts::VertexListGraph Graph, std::uniform_random_bit_generator Gen,
-          concepts::WritableVertexPropertyMap<Graph> PredMap>
-void random_spanning_tree(const Graph& g, Gen& gen, graph_vertex_descriptor_t<Graph> root, PredMap pred) {
-  random_spanning_tree(
-      g, gen, root, pred,
-      vector_property_map(num_vertices(g), get(vertex_index, g), default_color_type::white_color).ref());
-}
 
 // Compute a weight-distributed spanning tree on a graph.
 template <concepts::VertexListGraph Graph, std::uniform_random_bit_generator Gen,
@@ -98,13 +84,26 @@ void random_spanning_tree(const Graph& g, Gen& gen, graph_vertex_descriptor_t<Gr
   weighted_random_out_edge_gen<Graph, WeightMap, Gen> random_oe(weight, gen);
   random_detail::random_spanning_tree_internal(g, root, pred, color, random_oe);
 }
+
 template <concepts::VertexListGraph Graph, std::uniform_random_bit_generator Gen,
-          concepts::WritableVertexPropertyMap<Graph> PredMap, concepts::ReadableEdgePropertyMap<Graph> WeightMap>
+          concepts::WritableVertexPropertyMap<Graph> PredMap, typename ColorOrWeightMap>
 void random_spanning_tree(const Graph& g, Gen& gen, graph_vertex_descriptor_t<Graph> root, PredMap pred,
-                          WeightMap weight) {
-  random_spanning_tree(
-      g, gen, root, pred, weight,
-      vector_property_map(num_vertices(g), get(vertex_index, g), default_color_type::white_color).ref());
+                          ColorOrWeightMap color_or_weight) {
+  if constexpr (concepts::ReadWriteVertexPropertyMap<ColorOrWeightMap, Graph>) {
+    unweighted_random_out_edge_gen<Graph, Gen> random_oe(gen);
+    random_detail::random_spanning_tree_internal(g, root, pred, color_or_weight, random_oe);
+  } else if constexpr (concepts::ReadableEdgePropertyMap<ColorOrWeightMap, Graph>) {
+    random_spanning_tree(g, gen, root, pred, color_or_weight,
+                         two_bit_color_map(num_vertices(g), get(vertex_index, g)).ref());
+  } else {
+    static_assert(false);
+  }
+}
+
+template <concepts::VertexListGraph Graph, std::uniform_random_bit_generator Gen,
+          concepts::WritableVertexPropertyMap<Graph> PredMap>
+void random_spanning_tree(const Graph& g, Gen& gen, graph_vertex_descriptor_t<Graph> root, PredMap pred) {
+  random_spanning_tree(g, gen, root, pred, two_bit_color_map(num_vertices(g), get(vertex_index, g)).ref());
 }
 
 }  // namespace bagl

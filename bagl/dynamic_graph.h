@@ -118,6 +118,7 @@ class dynamic_graph_mutator_wrapper : public dynamic_graph_mutator {
 // than a statically-known graph type.
 class dynamic_graph_observer {
  public:
+  dynamic_graph_observer() = default;
   dynamic_graph_observer(const dynamic_graph_observer&) = delete;
   dynamic_graph_observer(dynamic_graph_observer&&) = delete;
   dynamic_graph_observer& operator=(const dynamic_graph_observer&) = delete;
@@ -299,7 +300,7 @@ class dynamic_graph_observer_wrapper : public dynamic_graph_observer {
   [[nodiscard]] std::size_t get_index_of(const std::any& u_or_e) const override {
     if (u_or_e.type() == typeid(vertex_descriptor)) {
       if constexpr (has_property_map_v<Graph, vertex_index_t>) {
-        return get(vertex_index, std::any_cast<vertex_descriptor>(u_or_e), g_);
+        return get(vertex_index, g_, std::any_cast<vertex_descriptor>(u_or_e));
       } else {
         auto it = vindex_.find(std::any_cast<vertex_descriptor>(u_or_e));
         return it != vindex_.end() ? it->second : 0;
@@ -307,7 +308,7 @@ class dynamic_graph_observer_wrapper : public dynamic_graph_observer {
     }
     if (u_or_e.type() == typeid(edge_descriptor)) {
       if constexpr (has_property_map_v<Graph, edge_index_t>) {
-        return get(edge_index, std::any_cast<edge_descriptor>(u_or_e), g_);
+        return get(edge_index, g_, std::any_cast<edge_descriptor>(u_or_e));
       } else {
         auto it = eindex_.find(std::any_cast<edge_descriptor>(u_or_e));
         return it != eindex_.end() ? it->second : 0;
@@ -320,8 +321,8 @@ class dynamic_graph_observer_wrapper : public dynamic_graph_observer {
  protected:
   const Graph& g_;
   const dynamic_properties& dp_;
-  std::unordered_map<vertex_descriptor, std::size_t> vindex_;
-  std::unordered_map<edge_descriptor, std::size_t> eindex_;
+  std::map<vertex_descriptor, std::size_t> vindex_;
+  std::map<edge_descriptor, std::size_t> eindex_;
 };
 
 template <concepts::Graph Graph>
