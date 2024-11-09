@@ -419,6 +419,15 @@ cc_test(
 )
 
 cc_test(
+    name = "filtered_graph_test",
+    srcs = [ "filtered_graph_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "floyd_warshall_test",
     srcs = [ "floyd_warshall_test.cc", ],
     deps = [
@@ -511,6 +520,15 @@ cc_test(
 cc_test(
     name = "isomorphism_test",
     srcs = [ "isomorphism_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "make_connected_test",
+    srcs = [ "make_connected_test.cc", ],
     deps = [
         "//bagl",
         "@com_google_googletest//:gtest_main",

@@ -112,7 +112,7 @@ struct filtered_graph_tag {};
 // This base class is a stupid hack to change overload resolution
 // rules for the source and target functions so that they are a
 // worse match than the source and target functions defined for
-// pairs in graph_traits.hpp. I feel dirty. -JGS
+// pairs in graph_traits.h. I feel dirty. -JGS
 template <class G>
 struct filtered_graph_base {
   using vertex_descriptor = graph_vertex_descriptor_t<G>;
@@ -239,22 +239,22 @@ auto edges(const filtered_graph<G, EP, VP>& g) {
 
 template <typename G, typename EP, typename VP>
 auto num_vertices(const filtered_graph<G, EP, VP>& g) {
-  return num_vertices(g.g_);
+  return num_vertices(std::as_const(g.g_));
 }
 
 template <typename G, typename EP, typename VP>
 auto num_edges(const filtered_graph<G, EP, VP>& g) {
-  return num_edges(g.g_);
+  return num_edges(std::as_const(g.g_));
 }
 
 template <typename G>
 auto source(graph_edge_descriptor_t<G> e, const filtered_graph_base<G>& g) {
-  return source(e, g.g_);
+  return source(e, std::as_const(g.g_));
 }
 
 template <typename G>
 auto target(graph_edge_descriptor_t<G> e, const filtered_graph_base<G>& g) {
-  return target(e, g.g_);
+  return target(e, std::as_const(g.g_));
 }
 
 template <typename G, typename EP, typename VP>
@@ -310,12 +310,12 @@ auto get(Property p, filtered_graph<G, EP, VP>& g) {
 
 template <typename G, typename EP, typename VP, typename Property>
 auto get(Property p, const filtered_graph<G, EP, VP>& g) {
-  return get(p, g.g_);
+  return get(p, std::as_const(g.g_));
 }
 
 template <typename G, typename EP, typename VP, typename Property, typename Key>
 auto get(Property p, const filtered_graph<G, EP, VP>& g, const Key& k) {
-  return get(p, g.g_, k);
+  return get(p, std::as_const(g.g_), k);
 }
 
 template <typename G, typename EP, typename VP, typename Property, typename Key, typename Value>

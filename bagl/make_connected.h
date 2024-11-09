@@ -20,7 +20,7 @@ template <concepts::VertexListGraph G, concepts::ReadableVertexIndexMap<G> Verte
 void make_connected(G& g, VertexIndexMap vm, AddEdgeVisitor& vis) {
   using vertex_t = graph_vertex_descriptor_t<G>;
 
-  auto component = vector_property_map(num_vertices(g), vm, std::vector<std::size_t>{});
+  auto component = vector_property_map(num_vertices(g), vm, std::size_t{});
   std::vector<vertex_t> vertices_by_component(num_vertices(g));
 
   std::size_t num_components = connected_components(g, component.ref());
