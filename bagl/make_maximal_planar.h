@@ -124,7 +124,8 @@ template <concepts::VertexAndEdgeListGraph G, concepts::LvalueVertexPropertyMap<
           concepts::ReadableVertexIndexMap<G> VertexIndexMap, concepts::ReadableEdgeIndexMap<G> EdgeIndexMap,
           typename AddEdgeVisitor>
 void make_maximal_planar(G& g, PlanarEmbedding embedding, VertexIndexMap vm, EdgeIndexMap em, AddEdgeVisitor& vis) {
-  planar_face_traversal(g, embedding, triangulation_visitor(g, vm, vis), em);
+  triangulation_visitor tvis(g, vm, vis);
+  planar_face_traversal(g, embedding, tvis, em);
 }
 
 template <concepts::VertexAndEdgeListGraph G, concepts::LvalueVertexPropertyMap<G> PlanarEmbedding,

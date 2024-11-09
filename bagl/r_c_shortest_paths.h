@@ -42,19 +42,19 @@ auto operator<=>(const r_c_shortest_paths_label<Graph, ResourceContainer>& l1,
 
 namespace concepts {
 template <typename F, typename G, typename RC>
-concept ResourceExtensionFunction = std::invocable<F, const G&, const RC&, const RC&, graph_edge_descriptor_t<G>>;
+concept ResourceExtensionFunction = std::invocable<F, const G&, RC&, const RC&, graph_edge_descriptor_t<G>>;
 
 template <typename F, typename RC>
 concept DominanceFunction = std::invocable<F, const RC&, const RC&>;
 }
 
-namespace detail {
+namespace r_c_shortest_paths_detail {
 
 // r_c_shortest_paths_dispatch function (body/implementation)
 template <concepts::VertexListGraph G, concepts::ReadableVertexIndexMap<G> VertexIndexMap,
           concepts::ReadableEdgeIndexMap<G> EdgeIndexMap, class ResourceContainer,
           concepts::ResourceExtensionFunction<G, ResourceContainer> RFunc,
-          concepts::DominanceFunction<ResourceContainer> DFunc, class LabelAllocator, class Visitor>
+          concepts::DominanceFunction<ResourceContainer> DFunc, class Visitor>
 void r_c_shortest_paths_dispatch(const G& g, const VertexIndexMap& vertex_index_map,
                                  const EdgeIndexMap& /*edge_index_map*/, graph_vertex_descriptor_t<G> s,
                                  graph_vertex_descriptor_t<G> t,
@@ -64,24 +64,20 @@ void r_c_shortest_paths_dispatch(const G& g, const VertexIndexMap& vertex_index_
                                  bool b_all_pareto_optimal_solutions,
                                  // to initialize the first label/resource container
                                  // and to carry the type information
-                                 const ResourceContainer& rc, RFunc& ref,
-                                 DFunc& dominance,
+                                 const ResourceContainer& rc, RFunc& ref, DFunc& dominance,
                                  // to specify the memory management strategy for the labels
-                                 LabelAllocator /*la*/, Visitor vis) {
+                                 Visitor vis) {
   pareto_optimal_resource_containers.clear();
   pareto_optimal_solutions.clear();
 
-  size_t i_label_num = 0;
+  std::size_t i_label_num = 0;
   using LabelType = r_c_shortest_paths_label<G, ResourceContainer>;
-  using LAlloc = typename std::allocator_traits<LabelAllocator>::template rebind_alloc<LabelType>;
-  LAlloc l_alloc;
   using Splabel = std::shared_ptr<LabelType>;
   std::priority_queue<Splabel, std::vector<Splabel>, std::greater<>> unprocessed_labels;
 
   bool b_feasible = true;
-  Splabel splabel_first_label = std::allocate_shared<LabelType>(
-      l_alloc, i_label_num++, rc, std::shared_ptr<LabelType>(),
-      graph_edge_descriptor_t<G>(), s);
+  Splabel splabel_first_label =
+      std::make_shared<LabelType>(i_label_num++, rc, std::shared_ptr<LabelType>(), graph_edge_descriptor_t<G>(), s);
 
   unprocessed_labels.push(splabel_first_label);
   auto vec_vertex_labels = vector_property_map(num_vertices(g), vertex_index_map, std::list<Splabel>{});
@@ -198,8 +194,8 @@ void r_c_shortest_paths_dispatch(const G& g, const VertexIndexMap& vertex_index_
       auto cur_vertex = cur_label->resident_vertex;
       for (auto e : out_edges(cur_vertex, g)) {
         b_feasible = true;
-        Splabel new_label = std::allocate_shared<LabelType>(
-            l_alloc, i_label_num++, cur_label->cumulated_resource_consumption, cur_label, e, target(e, g));
+        Splabel new_label = std::make_shared<LabelType>(i_label_num++, cur_label->cumulated_resource_consumption,
+                                                        cur_label, e, target(e, g));
         b_feasible = ref(g, new_label->cumulated_resource_consumption,
                          new_label->p_pred_label->cumulated_resource_consumption, new_label->pred_edge);
 
@@ -263,7 +259,7 @@ void r_c_shortest_paths_dispatch(const G& g, const VertexIndexMap& vertex_index_
   }
 }  // r_c_shortest_paths_dispatch
 
-}  // namespace detail
+}  // namespace r_c_shortest_paths_detail
 
 // default_r_c_shortest_paths_visitor struct
 struct default_r_c_shortest_paths_visitor {
@@ -290,11 +286,11 @@ using default_r_c_shortest_paths_allocator = std::allocator<int>;
 // r_c_shortest_paths functions (handle/interface)
 // first overload:
 // - return all pareto-optimal solutions
-// - specify LabelAllocator and Visitor arguments
+// - specify Visitor arguments
 template <concepts::VertexListGraph G, concepts::ReadableVertexIndexMap<G> VertexIndexMap,
           concepts::ReadableEdgeIndexMap<G> EdgeIndexMap, class ResourceContainer,
           concepts::ResourceExtensionFunction<G, ResourceContainer> RFunc,
-          concepts::DominanceFunction<ResourceContainer> DFunc, class LabelAllocator, class Visitor>
+          concepts::DominanceFunction<ResourceContainer> DFunc, class Visitor>
 void r_c_shortest_paths(const G& g, const VertexIndexMap& vertex_index_map, const EdgeIndexMap& edge_index_map,
                         graph_vertex_descriptor_t<G> s, graph_vertex_descriptor_t<G> t,
                         // each inner vector corresponds to a pareto-optimal path
@@ -304,34 +300,34 @@ void r_c_shortest_paths(const G& g, const VertexIndexMap& vertex_index_map, cons
                         // and to carry the type information
                         const ResourceContainer& rc, const RFunc& ref, const DFunc& dominance,
                         // to specify the memory management strategy for the labels
-                        LabelAllocator la, Visitor vis) {
-  r_c_shortest_paths_dispatch(g, vertex_index_map, edge_index_map, s, t, pareto_optimal_solutions,
-                              pareto_optimal_resource_containers, true, rc, ref, dominance, la, vis);
+                        Visitor vis) {
+  r_c_shortest_paths_detail::r_c_shortest_paths_dispatch(g, vertex_index_map, edge_index_map, s, t,
+                                                         pareto_optimal_solutions, pareto_optimal_resource_containers,
+                                                         true, rc, ref, dominance, vis);
 }
 
 // second overload:
 // - return only one pareto-optimal solution
-// - specify LabelAllocator and Visitor arguments
+// - specify Visitor arguments
 template <concepts::VertexListGraph G, concepts::ReadableVertexIndexMap<G> VertexIndexMap,
           concepts::ReadableEdgeIndexMap<G> EdgeIndexMap, class ResourceContainer,
           concepts::ResourceExtensionFunction<G, ResourceContainer> RFunc,
-          concepts::DominanceFunction<ResourceContainer> DFunc, class LabelAllocator, class Visitor>
+          concepts::DominanceFunction<ResourceContainer> DFunc, class Visitor>
 void r_c_shortest_paths(const G& g, const VertexIndexMap& vertex_index_map, const EdgeIndexMap& edge_index_map,
-                        graph_vertex_descriptor_t<G> s,
-                        graph_vertex_descriptor_t<G> t,
+                        graph_vertex_descriptor_t<G> s, graph_vertex_descriptor_t<G> t,
                         std::vector<graph_edge_descriptor_t<G>>& pareto_optimal_solution,
                         ResourceContainer& pareto_optimal_resource_container,
                         // to initialize the first label/resource container
                         // and to carry the type information
-                        const ResourceContainer& rc, const RFunc& ref,
-                        const DFunc& dominance,
+                        const ResourceContainer& rc, const RFunc& ref, const DFunc& dominance,
                         // to specify the memory management strategy for the labels
-                        LabelAllocator la, Visitor vis) {
+                        Visitor vis) {
   // each inner vector corresponds to a pareto-optimal path
   std::vector<std::vector<graph_edge_descriptor_t<G>>> pareto_optimal_solutions;
   std::vector<ResourceContainer> pareto_optimal_resource_containers;
-  r_c_shortest_paths_dispatch(g, vertex_index_map, edge_index_map, s, t, pareto_optimal_solutions,
-                              pareto_optimal_resource_containers, false, rc, ref, dominance, la, vis);
+  r_c_shortest_paths_detail::r_c_shortest_paths_dispatch(g, vertex_index_map, edge_index_map, s, t,
+                                                         pareto_optimal_solutions, pareto_optimal_resource_containers,
+                                                         false, rc, ref, dominance, vis);
   if (!pareto_optimal_solutions.empty()) {
     pareto_optimal_solution = pareto_optimal_solutions[0];
     pareto_optimal_resource_container = pareto_optimal_resource_containers[0];
@@ -340,7 +336,7 @@ void r_c_shortest_paths(const G& g, const VertexIndexMap& vertex_index_map, cons
 
 // third overload:
 // - return all pareto-optimal solutions
-// - use default LabelAllocator and Visitor
+// - use default Visitor
 template <concepts::VertexListGraph G, concepts::ReadableVertexIndexMap<G> VertexIndexMap,
           concepts::ReadableEdgeIndexMap<G> EdgeIndexMap, class ResourceContainer,
           concepts::ResourceExtensionFunction<G, ResourceContainer> RFunc,
@@ -354,14 +350,14 @@ void r_c_shortest_paths(
     // to initialize the first label/resource container
     // and to carry the type information
     const ResourceContainer& rc, const RFunc& ref, const DFunc& dominance) {
-  r_c_shortest_paths_dispatch(g, vertex_index_map, edge_index_map, s, t, pareto_optimal_solutions,
-                              pareto_optimal_resource_containers, true, rc, ref, dominance,
-                              default_r_c_shortest_paths_allocator(), default_r_c_shortest_paths_visitor());
+  r_c_shortest_paths_detail::r_c_shortest_paths_dispatch(
+      g, vertex_index_map, edge_index_map, s, t, pareto_optimal_solutions, pareto_optimal_resource_containers, true, rc,
+      ref, dominance, default_r_c_shortest_paths_visitor());
 }
 
 // fourth overload:
 // - return only one pareto-optimal solution
-// - use default LabelAllocator and Visitor
+// - use default Visitor
 template <concepts::VertexListGraph G, concepts::ReadableVertexIndexMap<G> VertexIndexMap,
           concepts::ReadableEdgeIndexMap<G> EdgeIndexMap, class ResourceContainer,
           concepts::ResourceExtensionFunction<G, ResourceContainer> RFunc,
@@ -378,9 +374,9 @@ void r_c_shortest_paths(const G& g, const VertexIndexMap& vertex_index_map, cons
   // each inner vector corresponds to a pareto-optimal path
   std::vector<std::vector<graph_edge_descriptor_t<G>>> pareto_optimal_solutions;
   std::vector<ResourceContainer> pareto_optimal_resource_containers;
-  r_c_shortest_paths_dispatch(g, vertex_index_map, edge_index_map, s, t, pareto_optimal_solutions,
-                              pareto_optimal_resource_containers, false, rc, ref, dominance,
-                              default_r_c_shortest_paths_allocator(), default_r_c_shortest_paths_visitor());
+  r_c_shortest_paths_detail::r_c_shortest_paths_dispatch(
+      g, vertex_index_map, edge_index_map, s, t, pareto_optimal_solutions, pareto_optimal_resource_containers, false,
+      rc, ref, dominance, default_r_c_shortest_paths_allocator(), default_r_c_shortest_paths_visitor());
   if (!pareto_optimal_solutions.empty()) {
     pareto_optimal_solution = pareto_optimal_solutions[0];
     pareto_optimal_resource_container = pareto_optimal_resource_containers[0];

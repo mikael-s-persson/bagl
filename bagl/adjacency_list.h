@@ -26,14 +26,18 @@ namespace bagl {
 
 template <class OutEdgeListS = vec_s, class VertexListS = vec_s, class DirectedS = directed_s>
 struct adjacency_list_traits {
-  using is_rand_access = typename container_detail::is_random_access<VertexListS>::type;
-  using is_bidir = typename DirectedS::is_bidir_t;
-  using is_directed = typename DirectedS::is_directed_t;
+  static constexpr bool is_rand_access = container_detail::is_random_access_v<VertexListS>;
+  /** This meta-value tells if the edges are bidirectional, or not. */
+  static constexpr bool is_bidir = DirectedS::is_bidir;
+  /** This meta-value tells if the edges are directional, or not. */
+  static constexpr bool is_directed = DirectedS::is_directed;
 
-  using directed_category = std::conditional_t<is_bidir::value, bidirectional_tag,
-                                               std::conditional_t<is_directed::value, directed_tag, undirected_tag>>;
+  using directed_category =
+      std::conditional_t<is_bidir, bidirectional_tag, std::conditional_t<is_directed, directed_tag, undirected_tag>>;
 
-  using edge_parallel_category = typename container_detail::parallel_edge_traits<OutEdgeListS>::type;
+  using edge_parallel_category =
+      std::conditional_t<(std::is_same_v<OutEdgeListS, unordered_set_s> || std::is_same_v<OutEdgeListS, set_s>),
+                         disallow_parallel_edge_tag, allow_parallel_edge_tag>;
 
   using traversal_category = adjlist_detail::adjlist_traversal_tag<DirectedS>;
 
@@ -929,6 +933,10 @@ class adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, 
 
   using self =
       adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, EdgeProperties, GraphProperties>;
+
+  using out_edge_list_selector = OutEdgeListS;
+  using vertex_list_selector = VertexListS;
+  using directed_selector = undirected_s;
 
   using vertex_property_type = VertexProperties;
   using edge_property_type = EdgeProperties;

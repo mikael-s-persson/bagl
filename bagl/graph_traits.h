@@ -9,6 +9,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "bagl/detail/container_generators.h"
 #include "bagl/has_trait_member.h"
 #include "bagl/property.h"
 
@@ -76,6 +77,15 @@ template <typename G>
 using graph_edge_range_t = decltype(edges(std::declval<G>()));
 template <typename G>
 using graph_adjacency_range_t = decltype(adjacent_vertices(std::declval<graph_vertex_descriptor_t<G>>(), std::declval<G>()));
+
+// Hash functors for vertex or edge descriptors.
+// Specialize the graph_descriptor_hash class for descriptors not supported in container_generators.h.
+template <typename Desc>
+struct graph_descriptor_hash {
+  using type = container_detail::desc_hasher;
+};
+template <typename Desc>
+using graph_descriptor_hash_t = typename graph_descriptor_hash<Desc>::type;
 
 // directed_category tags
 struct directed_tag {};

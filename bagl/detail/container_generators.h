@@ -14,7 +14,6 @@
 #include <vector>
 
 #include "bagl/graph_selectors.h"
-#include "bagl/graph_traits.h"
 
 namespace bagl {
 
@@ -184,14 +183,6 @@ using indexable_desc_t = std::conditional_t<std::is_integral_v<RawDesc>, RawDesc
 
 }  // namespace container_detail
 
-struct vec_s {};
-struct pool_s {};
-struct list_s {};
-struct set_s {};
-struct multiset_s {};
-struct unordered_set_s {};
-struct unordered_multiset_s {};
-
 template <typename Selector, typename ValueType>
 struct container_gen {};
 
@@ -232,26 +223,8 @@ struct container_gen<unordered_multiset_s, std::pair<Key, Value>> {
 
 namespace container_detail {
 
-template <class Selector>
-struct parallel_edge_traits {
-  using type = allow_parallel_edge_tag;
-};
-
-template <>
-struct parallel_edge_traits<set_s> {
-  using type = disallow_parallel_edge_tag;
-};
-
-template <>
-struct parallel_edge_traits<unordered_set_s> {
-  using type = disallow_parallel_edge_tag;
-};
-
 template <typename Selector>
-struct is_random_access : std::false_type {};
-
-template <>
-struct is_random_access<vec_s> : std::true_type {};
+constexpr bool is_random_access_v = std::is_same_v<Selector, vec_s>;
 
 /*************************************************************************
  *                      edge descriptors
@@ -473,13 +446,6 @@ std::uint64_t desc_get_hash(const std::pair<Key, Value*>& p) {
   return desc_get_hash(p.first);
 }
 
-struct desc_hasher {
-  template <typename T>
-  std::uint64_t operator()(const T& v) const {
-    return desc_get_hash(v);
-  }
-};
-
 template <typename... Args>
 std::uint64_t desc_combined_hash(const Args&... args) {
   std::uint64_t seed = 0;
@@ -496,6 +462,13 @@ template <typename EdgeRawDesc>
 std::uint64_t desc_get_hash(const bagl::container_detail::undir_edge_desc<EdgeRawDesc>& x) {
   return bagl::container_detail::desc_combined_hash(x.is_reversed ? 1 : 0, static_cast<const EdgeRawDesc&>(x));
 }
+
+struct desc_hasher {
+  template <typename T>
+  std::uint64_t operator()(const T& v) const {
+    return desc_get_hash(v);
+  }
+};
 
 }  // namespace container_detail
 

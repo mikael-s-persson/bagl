@@ -518,6 +518,15 @@ cc_test(
 )
 
 cc_test(
+    name = "make_maximal_planar_test",
+    srcs = [ "make_maximal_planar_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "matching_test",
     srcs = [ "matching_test.cc", ],
     deps = [
@@ -574,6 +583,15 @@ cc_test(
 
 
 
+
+cc_test(
+    name = "r_c_shortest_paths_test",
+    srcs = [ "r_c_shortest_paths_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
 
 cc_test(
     name = "random_matching_test",

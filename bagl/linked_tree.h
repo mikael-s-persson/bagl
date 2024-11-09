@@ -36,16 +36,18 @@ struct linked_tree_traits {
       std::conditional_t<is_bidir, bidirectional_tag, std::conditional_t<is_directed, directed_tag, undirected_tag>>;
 
   /** This meta-value tells if the parallel edges are allowed, or not. */
-  using edge_parallel_category = typename container_detail::parallel_edge_traits<OutEdgeListS>::type;
+  using edge_parallel_category =
+      std::conditional_t<(std::is_same_v<OutEdgeListS, unordered_set_s> || std::is_same_v<OutEdgeListS, set_s>),
+                         disallow_parallel_edge_tag, allow_parallel_edge_tag>;
 
   using traversal_category = adjlist_detail::adjlist_traversal_tag<DirectedS>;
 
   /** This meta-value tells if the vertex storage is random-access, or not. */
-  using vertex_rand_access = typename container_detail::is_random_access<VertexListS>::type;
-  using is_rand_access = vertex_rand_access;
+  static constexpr bool is_rand_access = container_detail::is_random_access_v<VertexListS>;
+  static constexpr bool vertex_rand_access = is_rand_access;
 
   /** This meta-value tells if the vertex storage is random-access, or not. */
-  using edge_rand_access = typename container_detail::is_random_access<OutEdgeListS>::type;
+  static constexpr bool edge_rand_access = container_detail::is_random_access_v<OutEdgeListS>;
 
   using vertices_size_type = std::size_t;
   using edges_size_type = std::size_t;
@@ -124,8 +126,8 @@ class linked_tree {
 
   using Traits = linked_tree_traits<OutEdgeListS, VertexListS, DirectedS>;
 
-  using vertex_rand_access = typename Traits::vertex_rand_access;
-  using edge_rand_access = typename Traits::edge_rand_access;
+  static constexpr bool vertex_rand_access = Traits::vertex_rand_access;
+  static constexpr bool edge_rand_access = Traits::edge_rand_access;
   using directed_category = typename Traits::directed_category;
   using edge_parallel_category = typename Traits::edge_parallel_category;
   using traversal_category = typename Traits::traversal_category;

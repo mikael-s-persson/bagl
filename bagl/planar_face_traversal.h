@@ -51,11 +51,12 @@ struct planar_face_traversal_visitor {
 template <concepts::VertexAndEdgeListGraph G, concepts::LvalueVertexPropertyMap<G> PlanarEmbedding,
           concepts::PlanarFaceTraversalVisitor<G> Visitor, concepts::ReadableEdgeIndexMap<G> EdgeIndexMap>
 void planar_face_traversal(const G& g, PlanarEmbedding embedding, Visitor& vis, EdgeIndexMap em) {
-  using vertex_t = graph_vertex_descriptor_t<G>;
-  using edge_t = graph_edge_descriptor_t<G>;
+  using Vertex = graph_vertex_descriptor_t<G>;
+  using Edge = graph_edge_descriptor_t<G>;
 
-  auto visited = vector_property_map(num_edges(g), em, std::unordered_set<vertex_t>{});
-  auto next_edge = vector_property_map(num_edges(g), em, std::unordered_map<vertex_t, edge_t>{});
+  auto visited = vector_property_map(num_edges(g), em, std::unordered_set<Vertex, graph_descriptor_hash_t<Vertex>>{});
+  auto next_edge =
+      vector_property_map(num_edges(g), em, std::unordered_map<Vertex, Edge, graph_descriptor_hash_t<Vertex>>{});
 
   vis.begin_traversal();
 
@@ -63,10 +64,10 @@ void planar_face_traversal(const G& g, PlanarEmbedding embedding, Visitor& vis, 
   // PlanarEmbedding so that get(next_edge, e)[v] is the edge that comes
   // after e in the clockwise embedding around vertex v.
 
-  for (vertex_t v : vertices(g)) {
+  for (Vertex v : vertices(g)) {
     auto p_rg = std::ranges::ref_view(embedding[v]);
     for (auto pi = p_rg.begin(); pi != p_rg.end(); ++pi) {
-      edge_t e(*pi);
+      Edge e(*pi);
       next_edge[e][v] = std::next(pi) == p_rg.end() ? *p_rg.begin() : *std::next(pi);
     }
   }
@@ -77,10 +78,10 @@ void planar_face_traversal(const G& g, PlanarEmbedding embedding, Visitor& vis, 
   // Also, while iterating over all edges in the graph, we single out
   // any self-loops, which need some special treatment in the face traversal.
 
-  std::vector<edge_t> self_loops;
-  std::vector<edge_t> edges_cache;
+  std::vector<Edge> self_loops;
+  std::vector<Edge> edges_cache;
   edges_cache.reserve(num_edges(g));
-  for (edge_t e : edges(g)) {
+  for (Edge e : edges(g)) {
     edges_cache.push_back(e);
     if (source(e, g) == target(e, g)) {
       self_loops.push_back(e);
@@ -88,9 +89,9 @@ void planar_face_traversal(const G& g, PlanarEmbedding embedding, Visitor& vis, 
   }
 
   // Iterate over all edges in the graph
-  for (edge_t e : edges_cache) {
+  for (Edge e : edges_cache) {
     // Iterate over both vertices in the current edge
-    for (vertex_t v : {source(e, g), target(e, g)}) {
+    for (Vertex v : {source(e, g), target(e, g)}) {
       auto* e_visited = &visited[e];
       auto e_visited_found = e_visited->find(v);
 
@@ -116,7 +117,7 @@ void planar_face_traversal(const G& g, PlanarEmbedding embedding, Visitor& vis, 
   // Iterate over all self-loops, visiting them once separately
   // (they've already been visited once, this visitation is for
   // the "inside" of the self-loop)
-  for (edge_t e : self_loops) {
+  for (Edge e : self_loops) {
     vis.begin_face();
     vis.next_edge(e, g);
     vis.next_vertex(source(e, g), g);

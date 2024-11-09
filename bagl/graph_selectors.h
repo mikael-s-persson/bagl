@@ -35,6 +35,14 @@ struct bidirectional_s {
 // A type selector that denotes the use of some default value.
 struct default_s {};
 
+struct vec_s {};
+struct pool_s {};
+struct list_s {};
+struct set_s {};
+struct multiset_s {};
+struct unordered_set_s {};
+struct unordered_multiset_s {};
+
 }  // namespace bagl
 
 #endif  // BAGL_BAGL_GRAPH_SELECTORS_H_
