@@ -603,6 +603,15 @@ cc_test(
 
 
 cc_test(
+    name = "property_map_range_test",
+    srcs = [ "property_map_range_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "r_c_shortest_paths_test",
     srcs = [ "r_c_shortest_paths_test.cc", ],
     deps = [

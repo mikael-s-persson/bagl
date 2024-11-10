@@ -799,6 +799,11 @@ struct edge_property_selector<subgraph_tag> {
   using type = subgraph_detail::subgraph_property_generator;
 };
 
+template <>
+struct graph_property_selector<subgraph_tag> {
+  using type = subgraph_detail::subgraph_property_generator;
+};
+
 // ==================================================
 // get(p, g), get(p, g, k), and put(p, g, k, v)
 // ==================================================

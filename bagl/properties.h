@@ -179,6 +179,13 @@ struct dummy_vertex_property_selector {
     using const_type = identity_property_map;
   };
 };
+struct dummy_graph_property_selector {
+  template <typename Graph, typename Property, typename Tag>
+  struct bind_ {
+    using type = identity_property_map;
+    using const_type = identity_property_map;
+  };
+};
 
 }  // namespace properties_detail
 
@@ -192,6 +199,11 @@ struct edge_property_selector {
 template <typename GraphTag>
 struct vertex_property_selector {
   using type = properties_detail::dummy_vertex_property_selector;
+};
+
+template <typename GraphTag>
+struct graph_property_selector {
+  using type = properties_detail::dummy_graph_property_selector;
 };
 
 namespace properties_detail {
@@ -212,14 +224,21 @@ struct edge_property_map : edge_property_selector<typename graph_tag_or_void<Gra
 template <typename Graph, typename PropertyTag>
 struct vertex_property_map : vertex_property_selector<typename graph_tag_or_void<Graph>::type>::type::template bind_<
                                  Graph, vertex_property_type<Graph>, PropertyTag> {};
+template <typename Graph, typename PropertyTag>
+struct graph_property_map : graph_property_selector<typename graph_tag_or_void<Graph>::type>::type::template bind_<
+                                Graph, graph_property_type<Graph>, PropertyTag> {};
 }  // namespace properties_detail
 
 template <typename Graph, typename Property, typename Enable = void>
 struct property_map
-    : std::conditional_t<std::is_same_v<typename properties_detail::property_kind_from_graph<Graph, Property>::type,
-                                        edge_property_tag>,
-                         properties_detail::edge_property_map<Graph, Property>,
-                         properties_detail::vertex_property_map<Graph, Property>> {};
+    : std::conditional_t<
+          std::is_same_v<typename properties_detail::property_kind_from_graph<Graph, Property>::type,
+                         edge_property_tag>,
+          properties_detail::edge_property_map<Graph, Property>,
+          std::conditional_t<std::is_same_v<typename properties_detail::property_kind_from_graph<Graph, Property>::type,
+                                            vertex_property_tag>,
+                             properties_detail::vertex_property_map<Graph, Property>,
+                             properties_detail::graph_property_map<Graph, Property>>> {};
 template <typename Graph, typename Property>
 using property_map_const_t = typename property_map<Graph, Property>::const_type;
 template <typename Graph, typename Property>

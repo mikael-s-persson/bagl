@@ -1,11 +1,14 @@
 // Copyright Michael Drexl 2005, 2006.
+// Copyright 2024 Andrea Cassioli <cassioliandre@gmail.com>
 // Copyright 2024 Mikael Persson - Modernized to C++20
 
 #include "bagl/r_c_shortest_paths.h"
 
 #include <iostream>
+#include <type_traits>
 
 #include "bagl/adjacency_list.h"
+#include "bagl/graph_traits.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -41,16 +44,17 @@ struct spp_no_rc_res_cont {
 
 // ResourceExtensionFunction model
 struct ref_no_res_cont {
-  bool operator()(const Graph& g, spp_no_rc_res_cont& new_cont, const spp_no_rc_res_cont& old_cont,
-                  graph_edge_descriptor_t<Graph> ed) const {
-    new_cont.cost = old_cont.cost + g[ed].cost;
+  template <typename G, typename NRC, typename Edge>
+  bool operator()(const G& g, NRC& new_cont, const NRC& old_cont, Edge e) const {
+    new_cont.cost = old_cont.cost + g[e].cost;
     return true;
   }
 };
 
 // DominanceFunction model
 struct dominance_no_res_cont {
-  bool operator()(const spp_no_rc_res_cont& res_cont_1, const spp_no_rc_res_cont& res_cont_2) const {
+  template <typename NRC>
+  bool operator()(const NRC& res_cont_1, const NRC& res_cont_2) const {
     // must be "<=" here!!!
     // must NOT be "<"!!!
     return res_cont_1.cost <= res_cont_2.cost;
@@ -94,21 +98,25 @@ bool operator<(const spp_spptw_res_cont& res_cont_1, const spp_spptw_res_cont& r
 
 // ResourceExtensionFunction model
 struct ref_spptw {
-  bool operator()(const Graph& g, spp_spptw_res_cont& new_cont, const spp_spptw_res_cont& old_cont,
-                  graph_edge_descriptor_t<Graph> ed) const {
-    const ArcProp& arc_prop = g[ed];
-    const VertProp& vert_prop = g[target(ed, g)];
+  template <typename G, typename RC, typename Edge>
+  bool operator()(const G& g, RC& new_cont, const RC& old_cont, Edge e) const {
+    const auto& arc_prop = g[e];
     new_cont.cost = old_cont.cost + arc_prop.cost;
-    int& i_time = new_cont.time;
-    i_time = old_cont.time + arc_prop.time;
-    i_time < vert_prop.eat ? i_time = vert_prop.eat : 0;
-    return i_time <= vert_prop.lat ? true : false;
+    new_cont.time = old_cont.time + arc_prop.time;
+    const auto& vert_prop = g[target(e, g)];
+    if constexpr (std::is_convertible_v<decltype(vert_prop), const VertProp&>) {
+      new_cont.time < vert_prop.eat ? new_cont.time = vert_prop.eat : 0;
+      return new_cont.time <= vert_prop.lat;
+    } else {
+      return true;
+    }
   }
 };
 
 // DominanceFunction model
 struct dominance_spptw {
-  bool operator()(const spp_spptw_res_cont& res_cont_1, const spp_spptw_res_cont& res_cont_2) const {
+  template <typename RC>
+  bool operator()(const RC& res_cont_1, const RC& res_cont_2) const {
     // must be "<=" here!!!
     // must NOT be "<"!!!
     return res_cont_1.cost <= res_cont_2.cost && res_cont_1.time <= res_cont_2.time;
@@ -138,28 +146,32 @@ struct spp_spptw_marked_res_cont {
 };
 
 struct ref_spptw_marked {
-  bool operator()(const Graph& g, spp_spptw_marked_res_cont& new_cont, const spp_spptw_marked_res_cont& old_cont,
-                  graph_edge_descriptor_t<Graph> ed) const {
-    const graph_vertex_descriptor_t<Graph> dest = target(ed, g);
+  template <typename G, typename MRC, typename Edge>
+  bool operator()(const G& g, MRC& new_cont, const MRC& old_cont, Edge e) const {
+    auto v = target(e, g);
 
-    if (old_cont.marked.find(dest) != old_cont.marked.end()) {
+    if (old_cont.marked.find(v) != old_cont.marked.end()) {
       return false;
     }
 
-    const ArcProp& arc_prop = g[ed];
-    const VertProp& vert_prop = g[dest];
+    const auto& arc_prop = g[e];
     new_cont.cost = old_cont.cost + arc_prop.cost;
+    new_cont.time = old_cont.time + arc_prop.time;
     new_cont.marked = old_cont.marked;
-    new_cont.marked.insert(dest);
-    int& i_time = new_cont.time;
-    i_time = old_cont.time + arc_prop.time;
-    i_time < vert_prop.eat ? i_time = vert_prop.eat : 0;
-    return i_time <= vert_prop.lat;
+    new_cont.marked.insert(v);
+    const auto& vert_prop = g[v];
+    if constexpr (std::is_convertible_v<decltype(vert_prop), const VertProp&>) {
+      new_cont.time < vert_prop.eat ? new_cont.time = vert_prop.eat : 0;
+      return new_cont.time <= vert_prop.lat;
+    } else {
+      return true;
+    }
   }
 };
 
 struct dominance_spptw_marked {
-  bool operator()(const spp_spptw_marked_res_cont& res_cont_1, const spp_spptw_marked_res_cont& res_cont_2) const {
+  template <typename MRC>
+  bool operator()(const MRC& res_cont_1, const MRC& res_cont_2) const {
     return res_cont_1.time <= res_cont_2.time && res_cont_1.cost <= res_cont_2.cost &&
            std::includes(res_cont_1.marked.begin(), res_cont_1.marked.end(), res_cont_2.marked.begin(),
                          res_cont_2.marked.end());
@@ -409,6 +421,42 @@ TEST(RCShortestPathsTest, Medium) {
     const auto back = path.back();
     EXPECT_EQ(source(back, g), g_source);
   }
+}
+
+TEST(RCShortestPathsTest, SingleSolution) {
+  using BiGraph = adjacency_list<vec_s, vec_s, bidirectional_s, std::string, ArcProp>;
+  BiGraph g;
+
+  /*
+        (1,0)       (10, 1)
+       /-----> [A] ------\
+    [s]                   [t]
+       \-----> [B] ------/
+        (2, 1)      (3,1)
+
+    The shortest path is s->B->t with cost 5.
+  */
+
+  const auto s = add_vertex(g, "s");
+  const auto A = add_vertex(g, "A");
+  const auto B = add_vertex(g, "B");
+  const auto t = add_vertex(g, "t");
+
+  add_edge(s, A, g, 0, 1, 0);
+  add_edge(s, B, g, 1, 2, 1);
+  add_edge(A, t, g, 2, 10, 0);
+  add_edge(B, t, g, 3, 3, 1);
+
+  const auto vindex = get(vertex_index, g);
+  const auto eindex = get(&ArcProp::num, g);
+
+  std::vector<graph_edge_descriptor_t<BiGraph>> single_solution;
+  spp_spptw_res_cont single_resource(0, 0);
+  const spp_spptw_res_cont start_resource(0, 0);
+  r_c_shortest_paths(g, vindex, eindex, s, t, single_solution, single_resource, start_resource, ref_spptw{},
+                     dominance_spptw{}, default_r_c_shortest_paths_visitor());
+
+  EXPECT_EQ(single_resource.cost, 5);
 }
 
 }  // namespace

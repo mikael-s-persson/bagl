@@ -778,6 +778,11 @@ struct edge_property_selector<adj_list_tag> {
   using type = adj_list_property_selector;
 };
 
+template <>
+struct graph_property_selector<adj_list_tag> {
+  using type = adj_list_property_selector;
+};
+
 template <BAGL_ADJACENCY_LIST_ARGS, typename Property>
 auto get(Property p, BAGL_ADJACENCY_LIST& g) {
   using Map = property_map_t<BAGL_ADJACENCY_LIST, Property>;
