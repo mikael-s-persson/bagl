@@ -52,7 +52,6 @@ cc_library(
         "detail/histogram_sort.h",
         "detail/incremental_components.h",
         "detail/index.h",
-        "detail/indexed_properties.h",
         "detail/is_distributed_selector.h",
         "detail/labeled_graph_traits.h",
         "detail/ltree_containers.h",

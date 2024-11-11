@@ -44,7 +44,6 @@
 #include "bagl/detail/histogram_sort.h"
 #include "bagl/detail/incremental_components.h"
 #include "bagl/detail/index.h"
-#include "bagl/detail/indexed_properties.h"
 #include "bagl/detail/is_distributed_selector.h"
 #include "bagl/detail/ltree_containers.h"
 #include "bagl/detail/set_adaptor.h"

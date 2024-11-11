@@ -22,7 +22,6 @@
 #include <vector>
 
 #include "bagl/detail/histogram_sort.h"
-#include "bagl/detail/indexed_properties.h"
 #include "bagl/filtered_graph.h"  // For keep_all
 #include "bagl/graph_selectors.h"
 #include "bagl/graph_traits.h"
@@ -30,50 +29,58 @@
 #include "bagl/property_map.h"
 
 namespace bagl::csr_detail {
-// Forward declaration of CSR edge descriptor type, needed to pass to
-// indexed_edge_properties.
-template <typename Vertex, typename EdgeIndex>
-struct csr_edge_descriptor;
 
-// Add edge_index property map
-template <typename Vertex, typename EdgeIndex>
-struct csr_edge_index_map {
-  using value_type = EdgeIndex;
-  using reference = EdgeIndex;
-  using key_type = csr_edge_descriptor<Vertex, EdgeIndex>;
+struct csr_edge_descriptor {
+  std::size_t src = 0;
+  std::size_t idx = 0;
+
+  csr_edge_descriptor(std::size_t a_src, std::size_t a_idx) : src(a_src), idx(a_idx) {}
+  csr_edge_descriptor() = default;
+
+  bool operator==(const csr_edge_descriptor& e) const { return idx == e.idx; }
+  bool operator!=(const csr_edge_descriptor& e) const { return idx != e.idx; }
+  auto operator<=>(const csr_edge_descriptor& e) const { return idx <=> e.idx; }
 };
 
-template <typename Vertex, typename EdgeIndex>
-EdgeIndex get(const csr_edge_index_map<Vertex, EdgeIndex>&, const csr_edge_descriptor<Vertex, EdgeIndex>& key) {
-  return key.idx;
-}
+// Add edge_index property map
+struct csr_edge_index_map {
+  using value_type = std::size_t;
+};
+
+inline std::size_t get(const csr_edge_index_map&, const csr_edge_descriptor& key) { return key.idx; }
 
 /** Compressed sparse row graph internal structure.
- *
- * Vertex and EdgeIndex should be unsigned integral types and should
- * specialize numeric_limits.
  */
-template <typename EdgeProperty, typename Vertex = std::size_t, typename EdgeIndex = Vertex>
-class compressed_sparse_row_structure
-    : public indexed_detail::indexed_edge_properties<compressed_sparse_row_structure<EdgeProperty, Vertex, EdgeIndex>,
-                                                     EdgeProperty, csr_edge_descriptor<Vertex, EdgeIndex>,
-                                                     csr_edge_index_map<Vertex, EdgeIndex>> {
+template <typename EdgeProperty>
+class compressed_sparse_row_structure {
  public:
-  using inherited_edge_properties =
-      indexed_detail::indexed_edge_properties<compressed_sparse_row_structure<EdgeProperty, Vertex, EdgeIndex>,
-                                              EdgeProperty, csr_edge_descriptor<Vertex, EdgeIndex>,
-                                              csr_edge_index_map<Vertex, EdgeIndex>>;
-
-  using vertices_size_type = Vertex;
-  using vertex_descriptor = Vertex;
-  using edges_size_type = EdgeIndex;
+  using vertices_size_type = std::size_t;
+  using vertex_descriptor = std::size_t;
+  using edges_size_type = std::size_t;
 
   static vertex_descriptor null_vertex() { return std::numeric_limits<vertex_descriptor>::max(); }
 
-  std::vector<EdgeIndex> rowstart_;
-  std::vector<Vertex> column_;
+  std::vector<std::size_t> rowstart_;
+  std::vector<std::size_t> column_;
+  std::vector<EdgeProperty> edge_properties_;
 
-  explicit compressed_sparse_row_structure(Vertex numverts = 0) : rowstart_(numverts + 1, EdgeIndex(0)), column_() {}
+  using edge_property_type = EdgeProperty;
+  using edge_bundled = lookup_one_property_t<EdgeProperty, edge_bundle_t>;
+
+  // Directly access an edge property.
+  edge_property_type& get_property(const csr_edge_descriptor& e) { return edge_properties_[e.idx]; }
+  const edge_property_type& get_property(const csr_edge_descriptor& e) const { return edge_properties_[e.idx]; }
+
+  // Indexing operator. Returns a reference to the edge-bundle associated to the given edge descriptor.
+  edge_bundled& operator[](const csr_edge_descriptor& e) {
+    return get_property_value(edge_properties_[e.idx], edge_bundle);
+  }
+  const edge_bundled& operator[](const csr_edge_descriptor& e) const {
+    return get_property_value(edge_properties_[e.idx], edge_bundle);
+  }
+
+  explicit compressed_sparse_row_structure(std::size_t numverts = 0)
+      : rowstart_(numverts + 1, std::size_t(0)), column_() {}
 
   //  Rebuild graph from number of vertices and multi-pass unsorted list
   //  of edges (filtered using source_pred and mapped using
@@ -90,7 +97,7 @@ class compressed_sparse_row_structure
                                    make_property_map_function(global_to_local));
 
     column_.resize(rowstart_.back());
-    inherited_edge_properties::resize(rowstart_.back());
+    edge_properties_.resize(rowstart_.back());
 
     histogram_detail::histogram_sort(sources, std::ranges::ref_view(rowstart_), numlocalverts, targets,
                                      std::ranges::ref_view(column_), source_pred,
@@ -113,10 +120,10 @@ class compressed_sparse_row_structure
                                    make_property_map_function(global_to_local));
 
     column_.resize(rowstart_.back());
-    inherited_edge_properties::resize(rowstart_.back());
+    edge_properties_.resize(rowstart_.back());
 
     histogram_detail::histogram_sort(sources, std::ranges::ref_view(rowstart_), numlocalverts, targets,
-                                     std::ranges::ref_view(column_), ep_rg, inherited_edge_properties::as_range(),
+                                     std::ranges::ref_view(column_), ep_rg, std::ranges::ref_view(edge_properties_),
                                      source_pred, make_property_map_function(global_to_local));
   }
 
@@ -127,15 +134,15 @@ class compressed_sparse_row_structure
     column_.clear();
     column_.reserve(numedges_or_zero);
     rowstart_.resize(numlocalverts + 1);
-    EdgeIndex current_edge = 0;
-    Vertex current_vertex_plus_one = 1;
+    std::size_t current_edge = 0;
+    std::size_t current_vertex_plus_one = 1;
     rowstart_[0] = 0;
     for (auto vp : edges_rg) {
       if (!source_pred(vp.first)) {
         continue;
       }
-      Vertex src = get(global_to_local, vp.first);
-      Vertex tgt = vp.second;
+      std::size_t src = get(global_to_local, vp.first);
+      std::size_t tgt = vp.second;
       for (; current_vertex_plus_one != src + 1; ++current_vertex_plus_one) {
         rowstart_[current_vertex_plus_one] = current_edge;
       }
@@ -149,7 +156,7 @@ class compressed_sparse_row_structure
     }
 
     // Default-construct properties for edges
-    inherited_edge_properties::resize(column_.size());
+    edge_properties_.resize(column_.size());
   }
 
   //  Assign from number of vertices and sorted list of edges
@@ -167,23 +174,23 @@ class compressed_sparse_row_structure
     }
     column_.clear();
     column_.reserve(numedges_or_zero);
-    inherited_edge_properties::clear();
-    inherited_edge_properties::reserve(numedges_or_zero);
+    edge_properties_.clear();
+    edge_properties_.reserve(numedges_or_zero);
     rowstart_.resize(numlocalverts + 1);
-    EdgeIndex current_edge = 0;
-    Vertex current_vertex_plus_one = 1;
+    std::size_t current_edge = 0;
+    std::size_t current_vertex_plus_one = 1;
     rowstart_[0] = 0;
     for (const auto& [vp, ep] : zip_range(edges_rg, ep_rg)) {
       if (!source_pred(vp.first)) {
         continue;
       }
-      Vertex src = get(global_to_local, vp.first);
-      Vertex tgt = vp.second;
+      std::size_t src = get(global_to_local, vp.first);
+      std::size_t tgt = vp.second;
       for (; current_vertex_plus_one != src + 1; ++current_vertex_plus_one) {
         rowstart_[current_vertex_plus_one] = current_edge;
       }
       column_.push_back(tgt);
-      inherited_edge_properties::push_back(ep);
+      edge_properties_.push_back(ep);
       ++current_edge;
     }
 
@@ -213,7 +220,7 @@ class compressed_sparse_row_structure
     // Now targets is the correct vector (properly sorted by source) for
     // column_
     column_.swap(targets);
-    inherited_edge_properties::resize(rowstart_.back());
+    edge_properties_.resize(rowstart_.back());
   }
 
   // Replace graph with sources and targets and edge properties given,
@@ -221,8 +228,7 @@ class compressed_sparse_row_structure
   // map to get local indices from global ones in the two arrays.
   template <typename GlobalToLocal>
   void assign_sources_and_targets_global(std::vector<vertex_descriptor>& sources,
-                                         std::vector<vertex_descriptor>& targets,
-                                         std::vector<typename inherited_edge_properties::edge_bundled>& edge_props,
+                                         std::vector<vertex_descriptor>& targets, std::vector<EdgeProperty>& edge_props,
                                          std::size_t numverts, GlobalToLocal global_to_local) {
     assert(sources.size() == targets.size());
     assert(sources.size() == edge_props.size());
@@ -249,15 +255,15 @@ class compressed_sparse_row_structure
   void assign(const Graph& g, const VertexIndexMap& vi, std::size_t numverts, std::size_t numedges) {
     rowstart_.resize(numverts + 1);
     column_.resize(numedges);
-    inherited_edge_properties::resize(numedges);
-    EdgeIndex current_edge = 0;
+    edge_properties_.resize(numedges);
+    std::size_t current_edge = 0;
     using g_vertex = graph_vertex_descriptor_t<Graph>;
 
     std::vector<g_vertex> ordered_verts_of_g(numverts);
     for (auto v : vertices(g)) {
       ordered_verts_of_g[get(vertex_index, g, v)] = v;
     }
-    for (Vertex i = 0; i != numverts; ++i) {
+    for (std::size_t i = 0; i != numverts; ++i) {
       rowstart_[i] = current_edge;
       g_vertex v = ordered_verts_of_g[i];
       for (auto e : out_edges(v, g)) {
@@ -271,24 +277,27 @@ class compressed_sparse_row_structure
   // edge properties
   template <std::ranges::bidirectional_range BidirRange, std::ranges::bidirectional_range EPRange,
             typename GlobalToLocal>
-  void add_edges_sorted_internal(BidirRange sorted_rg, EPRange ep_sorted_rg, const GlobalToLocal& global_to_local) {
+  requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<BidirRange>> &&
+      std::constructible_from<EdgeProperty, std::ranges::range_reference_t<EPRange>>
+  void add_edges_sorted_internal(const BidirRange& sorted_rg, const EPRange& ep_sorted_rg,
+                                 const GlobalToLocal& global_to_local) {
     // Flip sequence
-    auto reversed_rg = sorted_rg | std::views::reverse;
-    EdgeIndex new_edge_count = std::ranges::distance(reversed_rg);
-    auto ep_reversed_rg = ep_sorted_rg | std::views::reverse;
-    EdgeIndex edges_added_before_i = new_edge_count;  // Count increment to add to rowstarts
+    auto reversed_rg = std::ranges::ref_view(sorted_rg) | std::views::reverse;
+    std::size_t new_edge_count = std::ranges::distance(reversed_rg);
+    auto ep_reversed_rg = std::ranges::ref_view(ep_sorted_rg) | std::views::reverse;
+    std::size_t edges_added_before_i = new_edge_count;  // Count increment to add to rowstarts
     column_.resize(column_.size() + new_edge_count);
-    inherited_edge_properties::resize(inherited_edge_properties::size() + new_edge_count);
+    edge_properties_.resize(edge_properties_.size() + new_edge_count);
     auto current_new_edge = reversed_rg.begin();
     auto prev_new_edge = reversed_rg.begin();
     auto current_new_edge_prop = ep_reversed_rg.begin();
-    for (Vertex i_plus_1 = rowstart_.size() - 1; i_plus_1 > 0; --i_plus_1) {
-      Vertex i = i_plus_1 - 1;
+    for (std::size_t i_plus_1 = rowstart_.size() - 1; i_plus_1 > 0; --i_plus_1) {
+      std::size_t i = i_plus_1 - 1;
       prev_new_edge = current_new_edge;
       // edges_added_to_this_vertex = #mbrs of new_edges with reversed_rg.begin() == i
-      EdgeIndex edges_added_to_this_vertex = 0;
+      std::size_t edges_added_to_this_vertex = 0;
       while (current_new_edge != reversed_rg.end()) {
-        if (get(global_to_local, current_new_edge->first) != i) {
+        if (get(global_to_local, (*current_new_edge).first) != i) {
           break;
         }
         ++current_new_edge;
@@ -297,16 +306,18 @@ class compressed_sparse_row_structure
       }
       edges_added_before_i -= edges_added_to_this_vertex;
       // Invariant: edges_added_before_i = #mbrs of new_edges with first < i
-      EdgeIndex old_rowstart = rowstart_[i];
-      EdgeIndex new_rowstart = rowstart_[i] + edges_added_before_i;
-      EdgeIndex old_degree = rowstart_[i + 1] - rowstart_[i];
-      EdgeIndex new_degree = old_degree + edges_added_to_this_vertex;
+      std::size_t old_rowstart = rowstart_[i];
+      std::size_t new_rowstart = rowstart_[i] + edges_added_before_i;
+      std::size_t old_degree = rowstart_[i + 1] - rowstart_[i];
+      std::size_t new_degree = old_degree + edges_added_to_this_vertex;
       // Move old edges forward (by #new_edges before this i) to make
       // room new_rowstart > old_rowstart, so use copy_backwards
       if (old_rowstart != new_rowstart) {
         std::copy_backward(column_.begin() + old_rowstart, column_.begin() + old_rowstart + old_degree,
                            column_.begin() + new_rowstart + old_degree);
-        inherited_edge_properties::move_range(old_rowstart, old_rowstart + old_degree, new_rowstart);
+        std::copy_backward(edge_properties_.begin() + old_rowstart,
+                           edge_properties_.begin() + old_rowstart + old_degree,
+                           edge_properties_.begin() + new_rowstart + (old_degree));
       }
       // Add new edges (reversed because current_new_edge is a const_reverse_iterator)
       auto temp = current_new_edge;
@@ -314,8 +325,8 @@ class compressed_sparse_row_structure
       for (; temp != prev_new_edge; ++old_degree) {
         --temp;
         --temp_prop;
-        column_[new_rowstart + old_degree] = temp->second;
-        inherited_edge_properties::write_by_index(new_rowstart + old_degree, *temp_prop);
+        column_[new_rowstart + old_degree] = (*temp).second;
+        edge_properties_[new_rowstart + old_degree] = *temp_prop;
       }
       rowstart_[i + 1] = new_rowstart + new_degree;
       if (edges_added_before_i == 0) {
@@ -328,17 +339,6 @@ class compressed_sparse_row_structure
       }
     }
   }
-};
-
-template <typename Vertex, typename EdgeIndex>
-struct csr_edge_descriptor {
-  Vertex src{};
-  EdgeIndex idx{};
-
-  csr_edge_descriptor(Vertex a_src, EdgeIndex a_idx) : src(a_src), idx(a_idx) {}
-  csr_edge_descriptor() = default;
-
-  auto operator<=>(const csr_edge_descriptor& e) const { return idx <=> e.idx; }
 };
 
 // Common out edge and edge iterators
@@ -395,10 +395,10 @@ auto make_edge_to_index_pair_range(const GraphT& g, const VertexIndexMap& index,
 
 }  // namespace bagl::csr_detail
 
-template <typename Vertex, typename EdgeIndex>
-struct std::hash<bagl::csr_detail::csr_edge_descriptor<Vertex, EdgeIndex>> {
-  std::size_t operator()(bagl::csr_detail::csr_edge_descriptor<Vertex, EdgeIndex> const& x) const {
-    return std::hash<Vertex>()(x.src) ^ std::hash<EdgeIndex>()(x.idx);
+template <>
+struct std::hash<bagl::csr_detail::csr_edge_descriptor> {
+  std::size_t operator()(bagl::csr_detail::csr_edge_descriptor const& x) const {
+    return std::hash<std::size_t>()(x.src) ^ std::hash<std::size_t>()(x.idx);
   }
 };
 

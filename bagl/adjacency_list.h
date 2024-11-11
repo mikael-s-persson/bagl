@@ -1130,9 +1130,9 @@ class adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, 
   }
 
   // Indexing operator. Returns a reference to the graph-bundle associated to the graph.
-  edge_bundled& operator[](graph_bundle_t /*unused*/) { return get_property_value(m_graph_prop, graph_bundle); }
+  graph_bundled& operator[](graph_bundle_t /*unused*/) { return get_property_value(m_graph_prop, graph_bundle); }
   // Indexing operator. Returns a const-reference to the graph-bundle associated to the graph.
-  const edge_bundled& operator[](graph_bundle_t /*unused*/) const {
+  const graph_bundled& operator[](graph_bundle_t /*unused*/) const {
     return get_property_value(m_graph_prop, graph_bundle);
   }
 

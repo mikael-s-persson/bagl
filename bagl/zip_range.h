@@ -199,7 +199,7 @@ class zip_iterator {
 
   int operator-(const self& rhs) const { return -distance_to(rhs); }
 
-  self operator+(int i) {
+  self operator+(int i) const {
     self result = *this;
     result += i;
     return result;  // NRVO

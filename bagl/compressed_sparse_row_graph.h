@@ -18,7 +18,6 @@
 #include <vector>
 
 #include "bagl/detail/compressed_sparse_row_struct.h"
-#include "bagl/detail/indexed_properties.h"
 #include "bagl/detail/is_distributed_selector.h"
 #include "bagl/filtered_graph.h"  // For keep_all
 #include "bagl/graph_selectors.h"
@@ -93,39 +92,24 @@ enum edges_are_unsorted_global_t { edges_are_unsorted_global };
 /****************************************************************************
  * Local helper macros to reduce typing and clutter later on.               *
  ****************************************************************************/
-#define BAGL_CSR_GRAPH_TEMPLATE_PARMS                                                                         \
-  typename Directed, typename VertexProperty, typename EdgeProperty, typename GraphProperty, typename Vertex, \
-      typename EdgeIndex
-#define BAGL_CSR_GRAPH_TYPE \
-  compressed_sparse_row_graph<Directed, VertexProperty, EdgeProperty, GraphProperty, Vertex, EdgeIndex>
-#define BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS \
-  typename VertexProperty, typename EdgeProperty, typename GraphProperty, typename Vertex, typename EdgeIndex
-#define BAGL_DIR_CSR_GRAPH_TYPE \
-  compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, GraphProperty, Vertex, EdgeIndex>
-#define BAGL_BIDIR_CSR_GRAPH_TEMPLATE_PARMS \
-  typename VertexProperty, typename EdgeProperty, typename GraphProperty, typename Vertex, typename EdgeIndex
+#define BAGL_CSR_GRAPH_TEMPLATE_PARMS \
+  typename Directed, typename VertexProperty, typename EdgeProperty, typename GraphProperty
+#define BAGL_CSR_GRAPH_TYPE compressed_sparse_row_graph<Directed, VertexProperty, EdgeProperty, GraphProperty>
+#define BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS typename VertexProperty, typename EdgeProperty, typename GraphProperty
+#define BAGL_DIR_CSR_GRAPH_TYPE compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, GraphProperty>
+#define BAGL_BIDIR_CSR_GRAPH_TEMPLATE_PARMS typename VertexProperty, typename EdgeProperty, typename GraphProperty
 #define BAGL_BIDIR_CSR_GRAPH_TYPE \
-  compressed_sparse_row_graph<bidirectional_s, VertexProperty, EdgeProperty, GraphProperty, Vertex, EdgeIndex>
+  compressed_sparse_row_graph<bidirectional_s, VertexProperty, EdgeProperty, GraphProperty>
 
 /** Compressed sparse row graph.
- *
- * Vertex and EdgeIndex should be unsigned integral types and should
- * specialize numeric_limits.
  */
 template <typename Directed = directed_s, typename VertexProperty = no_property, typename EdgeProperty = no_property,
-          typename GraphProperty = no_property, typename Vertex = std::size_t,
-          typename EdgeIndex = Vertex>
+          typename GraphProperty = no_property>
 class compressed_sparse_row_graph;  // Not defined
 
-template <typename VertexProperty, typename EdgeProperty, typename GraphProperty, typename Vertex, typename EdgeIndex>
-class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, GraphProperty, Vertex, EdgeIndex>
-    : public indexed_detail::indexed_vertex_properties<BAGL_DIR_CSR_GRAPH_TYPE, VertexProperty, Vertex,
-                                                       typed_identity_property_map<Vertex>> {
+template <typename VertexProperty, typename EdgeProperty, typename GraphProperty>
+class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, GraphProperty> {
  public:
-  using inherited_vertex_properties =
-      indexed_detail::indexed_vertex_properties<compressed_sparse_row_graph, VertexProperty, Vertex,
-                                                typed_identity_property_map<Vertex>>;
-
   // Some tests to prevent use of "void" is a property type (as was done in
   // some test cases):
   static_assert(!std::is_same_v<VertexProperty, void>);
@@ -135,7 +119,7 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
   // For Property Graph
   using graph_property_type = GraphProperty;
   using graph_bundled = lookup_one_property_t<GraphProperty, graph_bundle_t>;
-  using forward_type = csr_detail::compressed_sparse_row_structure<EdgeProperty, Vertex, EdgeIndex>;
+  using forward_type = csr_detail::compressed_sparse_row_structure<EdgeProperty>;
 
   /* At this time, the compressed sparse row graph can only be used to
    * create directed and bidirectional graphs. In the future,
@@ -145,8 +129,8 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
 
   // Concept requirements:
   // For Graph
-  using vertex_descriptor = Vertex;
-  using edge_descriptor = csr_detail::csr_edge_descriptor<Vertex, EdgeIndex>;
+  using vertex_descriptor = std::size_t;
+  using edge_descriptor = csr_detail::csr_edge_descriptor;
   using directed_category = directed_tag;
   using edge_parallel_category = allow_parallel_edge_tag;
 
@@ -155,20 +139,22 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
   static vertex_descriptor null_vertex() { return std::numeric_limits<vertex_descriptor>::max(); }
 
   // For VertexListGraph
-  using vertices_size_type = Vertex;
+  using vertices_size_type = std::size_t;
 
   // For EdgeListGraph
-  using edges_size_type = EdgeIndex;
+  using edges_size_type = std::size_t;
 
   // For IncidenceGraph
-  using degree_size_type = EdgeIndex;
+  using degree_size_type = std::size_t;
 
   // For internal use
   using graph_tag = csr_graph_tag;
 
-  using edge_bundled = typename forward_type::inherited_edge_properties::edge_bundled;
-  using edge_push_back_type = typename forward_type::inherited_edge_properties::edge_push_back_type;
-  using edge_property_type = typename forward_type::inherited_edge_properties::edge_property_type;
+  using edge_bundled = typename forward_type::edge_bundled;
+  using edge_property_type = typename forward_type::edge_property_type;
+
+  using vertex_property_type = VertexProperty;
+  using vertex_bundled = lookup_one_property_t<VertexProperty, vertex_bundle_t>;
 
   // Constructors
 
@@ -176,14 +162,13 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
   compressed_sparse_row_graph() : property_() {}
 
   //  With numverts vertices
-  explicit compressed_sparse_row_graph(std::size_t numverts)
-      : inherited_vertex_properties(numverts), forward_(numverts) {}
+  explicit compressed_sparse_row_graph(std::size_t numverts) : vertex_properties_(numverts), forward_(numverts) {}
 
   //  From number of vertices and unsorted list of edges
   template <std::ranges::forward_range EdgeRange>
   compressed_sparse_row_graph(edges_are_unsorted_multi_pass_t /*unused*/, EdgeRange edge_rg, std::size_t numverts,
                               const GraphProperty& prop = GraphProperty())
-      : inherited_vertex_properties(numverts), property_(prop) {
+      : vertex_properties_(numverts), property_(prop) {
     forward_.assign_unsorted_multi_pass_edges(edge_rg, numverts, typed_identity_property_map<std::size_t>(),
                                               keep_all());
   }
@@ -192,7 +177,7 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
   template <std::ranges::forward_range EdgeRange, std::ranges::input_range EdgePropRange>
   compressed_sparse_row_graph(edges_are_unsorted_multi_pass_t /*unused*/, EdgeRange edge_rg, EdgePropRange ep_rg,
                               std::size_t numverts, const GraphProperty& prop = GraphProperty())
-      : inherited_vertex_properties(numverts), forward_(), property_(prop) {
+      : vertex_properties_(numverts), forward_(), property_(prop) {
     forward_.assign_unsorted_multi_pass_edges(edge_rg, ep_rg, numverts, typed_identity_property_map<std::size_t>(),
                                               keep_all());
   }
@@ -203,7 +188,7 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
   compressed_sparse_row_graph(edges_are_unsorted_multi_pass_global_t /*unused*/, EdgeRange edge_rg,
                               std::size_t numlocalverts, const GlobalToLocal& global_to_local,
                               const SourcePred& source_pred, const GraphProperty& prop = GraphProperty())
-      : inherited_vertex_properties(numlocalverts), forward_(), property_(prop) {
+      : vertex_properties_(numlocalverts), forward_(), property_(prop) {
     forward_.assign_unsorted_multi_pass_edges(edge_rg, numlocalverts, global_to_local, source_pred);
   }
 
@@ -214,7 +199,7 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
   compressed_sparse_row_graph(edges_are_unsorted_multi_pass_global_t /*unused*/, EdgeRange edge_rg, EdgePropRange ep_rg,
                               std::size_t numlocalverts, const GlobalToLocal& global_to_local,
                               const SourcePred& source_pred, const GraphProperty& prop = GraphProperty())
-      : inherited_vertex_properties(numlocalverts), forward_(), property_(prop) {
+      : vertex_properties_(numlocalverts), forward_(), property_(prop) {
     forward_.assign_unsorted_multi_pass_edges(edge_rg, ep_rg, numlocalverts, global_to_local, source_pred);
   }
 
@@ -225,7 +210,7 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
       : property_(prop) {
     forward_.assign_from_sorted_edges(edge_rg, typed_identity_property_map<std::size_t>(), keep_all(), numverts,
                                       numedges);
-    inherited_vertex_properties::resize(numverts);
+    vertex_properties_.resize(numverts);
   }
 
   //  From number of vertices and sorted list of edges (new interface)
@@ -236,7 +221,7 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
       : property_(prop) {
     forward_.assign_from_sorted_edges(edge_rg, ep_rg, typed_identity_property_map<std::size_t>(), keep_all(), numverts,
                                       numedges);
-    inherited_vertex_properties::resize(numverts);
+    vertex_properties_.resize(numverts);
   }
 
   //  From number of vertices and sorted list of edges, filtered and global
@@ -247,7 +232,7 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
                               const GraphProperty& prop = GraphProperty())
       : property_(prop) {
     forward_.assign_from_sorted_edges(edge_rg, global_to_local, source_pred, numverts, 0);
-    inherited_vertex_properties::resize(numverts);
+    vertex_properties_.resize(numverts);
   }
 
   //  From number of vertices and sorted list of edges (new interface)
@@ -258,7 +243,7 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
                               const GraphProperty& prop = GraphProperty())
       : property_(prop) {
     forward_.assign_from_sorted_edges(edge_rg, ep_rg, global_to_local, source_pred, numverts, 0);
-    inherited_vertex_properties::resize(numverts);
+    vertex_properties_.resize(numverts);
   }
 
   //  From number of vertices and mutable vectors of sources and targets;
@@ -267,7 +252,7 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
   compressed_sparse_row_graph(construct_inplace_from_sources_and_targets_t /*unused*/,
                               std::vector<vertex_descriptor>& sources, std::vector<vertex_descriptor>& targets,
                               std::size_t numverts, const GraphProperty& prop = GraphProperty())
-      : inherited_vertex_properties(numverts), property_(prop) {
+      : vertex_properties_(numverts), property_(prop) {
     forward_.assign_sources_and_targets_global(sources, targets, numverts, typed_identity_property_map<std::size_t>());
   }
 
@@ -281,7 +266,7 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
                               std::vector<vertex_descriptor>& sources, std::vector<vertex_descriptor>& targets,
                               std::size_t numlocalverts, GlobalToLocal global_to_local,
                               const GraphProperty& prop = GraphProperty())
-      : inherited_vertex_properties(numlocalverts), property_(prop) {
+      : vertex_properties_(numlocalverts), property_(prop) {
     forward_.assign_sources_and_targets_global(sources, targets, numlocalverts, global_to_local);
   }
 
@@ -290,9 +275,9 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
   //  guaranteed not to share storage with the constructed graph.
   compressed_sparse_row_graph(construct_inplace_from_sources_and_targets_t /*unused*/,
                               std::vector<vertex_descriptor>& sources, std::vector<vertex_descriptor>& targets,
-                              std::vector<typename forward_type::inherited_edge_properties::edge_bundled>& edge_props,
-                              std::size_t numverts, const GraphProperty& prop = GraphProperty())
-      : inherited_vertex_properties(numverts), property_(prop) {
+                              std::vector<edge_property_type>& edge_props, std::size_t numverts,
+                              const GraphProperty& prop = GraphProperty())
+      : vertex_properties_(numverts), property_(prop) {
     forward_.assign_sources_and_targets_global(sources, targets, edge_props, numverts,
                                                typed_identity_property_map<std::size_t>());
   }
@@ -305,10 +290,9 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
   template <typename GlobalToLocal>
   compressed_sparse_row_graph(construct_inplace_from_sources_and_targets_global_t /*unused*/,
                               std::vector<vertex_descriptor>& sources, std::vector<vertex_descriptor>& targets,
-                              std::vector<typename forward_type::inherited_edge_properties::edge_bundled>& edge_props,
-                              std::size_t numlocalverts, GlobalToLocal global_to_local,
-                              const GraphProperty& prop = GraphProperty())
-      : inherited_vertex_properties(numlocalverts), property_(prop) {
+                              std::vector<edge_property_type>& edge_props, std::size_t numlocalverts,
+                              GlobalToLocal global_to_local, const GraphProperty& prop = GraphProperty())
+      : vertex_properties_(numlocalverts), property_(prop) {
     forward_.assign_sources_and_targets_global(sources, targets, edge_props, numlocalverts, global_to_local);
   }
 
@@ -317,7 +301,7 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
   template <std::ranges::input_range EdgeRange>
   compressed_sparse_row_graph(edges_are_unsorted_t /*unused*/, EdgeRange edge_rg, std::size_t numverts,
                               const GraphProperty& prop = GraphProperty())
-      : inherited_vertex_properties(numverts), property_(prop) {
+      : vertex_properties_(numverts), property_(prop) {
     std::vector<vertex_descriptor> sources;
     std::vector<vertex_descriptor> targets;
     histogram_detail::split_into_separate_coords(edge_rg, sources, targets);
@@ -330,12 +314,12 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
   template <std::ranges::input_range EdgeRange, std::ranges::input_range EdgePropRange>
   compressed_sparse_row_graph(edges_are_unsorted_t /*unused*/, EdgeRange edge_rg, EdgePropRange ep_rg,
                               std::size_t numverts, const GraphProperty& prop = GraphProperty())
-      : inherited_vertex_properties(numverts), property_(prop) {
+      : vertex_properties_(numverts), property_(prop) {
     std::vector<vertex_descriptor> sources;
     std::vector<vertex_descriptor> targets;
     histogram_detail::split_into_separate_coords(edge_rg, sources, targets);
     std::size_t numedges = sources.size();
-    std::vector<typename forward_type::inherited_edge_properties::edge_bundled> edge_props(numedges);
+    std::vector<edge_property_type> edge_props(numedges);
     auto ep_iter = ep_rg.begin();
     for (std::size_t i = 0; i < numedges; ++i) {
       edge_props[i] = *ep_iter++;
@@ -351,7 +335,7 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
   compressed_sparse_row_graph(edges_are_unsorted_global_t /*unused*/, EdgeRange edge_rg, std::size_t numlocalverts,
                               GlobalToLocal global_to_local, const SourcePred& source_pred,
                               const GraphProperty& prop = GraphProperty())
-      : inherited_vertex_properties(numlocalverts), property_(prop) {
+      : vertex_properties_(numlocalverts), property_(prop) {
     std::vector<vertex_descriptor> sources;
     std::vector<vertex_descriptor> targets;
     histogram_detail::split_into_separate_coords_filtered(edge_rg, sources, targets, source_pred);
@@ -367,7 +351,7 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
   compressed_sparse_row_graph(edges_are_unsorted_global_t /*unused*/, EdgeRange edge_rg, EdgePropRange ep_rg,
                               std::size_t numlocalverts, GlobalToLocal global_to_local, const SourcePred& source_pred,
                               const GraphProperty& prop = GraphProperty())
-      : inherited_vertex_properties(numlocalverts), property_(prop) {
+      : vertex_properties_(numlocalverts), property_(prop) {
     std::vector<vertex_descriptor> sources;
     std::vector<vertex_descriptor> targets;
     std::vector<edge_bundled> edge_props;
@@ -380,7 +364,7 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
   compressed_sparse_row_graph(const Graph& g, const VertexIndexMap& vi, std::size_t numverts, std::size_t numedges)
       : property_() {
     assign(g, vi, numverts, numedges);
-    inherited_vertex_properties::resize(numverts);
+    vertex_properties_.resize(numverts);
   }
 
   //   Requires VertexListGraph and EdgeListGraph
@@ -393,7 +377,7 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
     }
     std::size_t numverts = num_vertices(g);
     assign(g, vi, numverts, numedges);
-    inherited_vertex_properties::resize(numverts);
+    vertex_properties_.resize(numverts);
   }
 
   // Requires vertex index map plus requirements of previous constructor
@@ -407,7 +391,7 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
   template <typename Graph, typename VertexIndexMap>
   void assign(const Graph& g, const VertexIndexMap& vi, std::size_t numverts, std::size_t numedges) {
     forward_.assign(g, vi, numverts, numedges);
-    inherited_vertex_properties::resize(numverts);
+    vertex_properties_.resize(numverts);
   }
 
   // Requires the above, plus VertexListGraph and EdgeListGraph
@@ -431,54 +415,62 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
   // properties
   template <std::ranges::bidirectional_range BidirRange, std::ranges::bidirectional_range EPRange,
             typename GlobalToLocal>
-  void add_edges_sorted_internal(BidirRange sorted_rg, EPRange ep_sorted_rg, const GlobalToLocal& global_to_local) {
-    forward_.add_edges_sorted_internal(sorted_rg, ep_sorted_rg, global_to_local);
-  }
-
-  template <std::ranges::bidirectional_range BidirRange, std::ranges::bidirectional_range EPRange>
-  void add_edges_sorted_internal(BidirRange sorted_rg, EPRange ep_sorted_rg) {
-    forward_.add_edges_sorted_internal(sorted_rg, ep_sorted_rg, typed_identity_property_map<std::size_t>());
-  }
-
-  // Add edges from a sorted (smallest sources first) range of pairs
-  template <std::ranges::bidirectional_range BidirRange>
-  void add_edges_sorted_internal(BidirRange sorted_rg) {
-    forward_.add_edges_sorted_internal(sorted_rg, std::ranges::single_view<edge_bundled>());
-  }
-
-  template <std::ranges::bidirectional_range BidirRange, typename GlobalToLocal>
-  void add_edges_sorted_internal_global(BidirRange sorted_rg, const GlobalToLocal& global_to_local) {
-    forward_.add_edges_sorted_internal(sorted_rg, std::ranges::single_view<edge_bundled>(), global_to_local);
-  }
-
-  template <std::ranges::bidirectional_range BidirRange, std::ranges::bidirectional_range EPRange,
-            typename GlobalToLocal>
-  void add_edges_sorted_internal_global(BidirRange sorted_rg, EPRange ep_sorted_rg,
+  requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<BidirRange>> &&
+      std::constructible_from<EdgeProperty, std::ranges::range_reference_t<EPRange>>
+  void add_edges_sorted_internal_global(const BidirRange& sorted_rg, const EPRange& ep_sorted_rg,
                                         const GlobalToLocal& global_to_local) {
     forward_.add_edges_sorted_internal(sorted_rg, ep_sorted_rg, global_to_local);
   }
 
+  template <std::ranges::bidirectional_range BidirRange, std::ranges::bidirectional_range EPRange>
+  requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<BidirRange>> &&
+      std::constructible_from<EdgeProperty, std::ranges::range_reference_t<EPRange>>
+  void add_edges_sorted_internal(const BidirRange& sorted_rg, const EPRange& ep_sorted_rg) {
+    forward_.add_edges_sorted_internal(sorted_rg, ep_sorted_rg, identity_property_map());
+  }
+
+  // Add edges from a sorted (smallest sources first) range of pairs
+  template <std::ranges::bidirectional_range BidirRange>
+  requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<BidirRange>>
+  void add_edges_sorted_internal(const BidirRange& sorted_rg) {
+    forward_.add_edges_sorted_internal(
+        sorted_rg,
+        std::ranges::iota_view(std::size_t{0}, static_cast<std::size_t>(std::ranges::distance(sorted_rg))) |
+            std::views::transform([](auto /*unused*/) { return edge_property_type{}; }),
+        identity_property_map());
+  }
+
+  template <std::ranges::bidirectional_range BidirRange, typename GlobalToLocal>
+  requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<BidirRange>>
+  void add_edges_sorted_internal_global(const BidirRange& sorted_rg, const GlobalToLocal& global_to_local) {
+    forward_.add_edges_sorted_internal(
+        sorted_rg,
+        std::ranges::iota_view(std::size_t{0}, static_cast<std::size_t>(std::ranges::distance(sorted_rg))) |
+            std::views::transform([](auto /*unused*/) { return edge_property_type{}; }),
+        global_to_local);
+  }
+
   // Add edges from a range of (source, target) pairs that are unsorted
   template <std::ranges::input_range EdgeRange, typename GlobalToLocal>
-  void add_edges_internal(EdgeRange edge_rg, const GlobalToLocal& global_to_local) {
-    std::vector<std::pair<Vertex, Vertex>> new_edges(edge_rg.begin(), edge_rg.end());
+  requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>>
+  void add_edges_internal_global(const EdgeRange& edge_rg, const GlobalToLocal& global_to_local) {
+    std::vector<std::pair<std::size_t, std::size_t>> new_edges(edge_rg.begin(), edge_rg.end());
     if (new_edges.empty()) {
       return;
     }
     std::sort(new_edges.begin(), new_edges.end());
-    add_edges_sorted_internal_global(std::ranges::ref_view(new_edges), global_to_local);
+    add_edges_sorted_internal_global(new_edges, global_to_local);
   }
 
   template <std::ranges::input_range EdgeRange>
-  void add_edges_internal(EdgeRange edge_rg) {
-    add_edges_internal(edge_rg, typed_identity_property_map<std::size_t>());
-  }
+  requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>>
+  void add_edges_internal(const EdgeRange& edge_rg) { add_edges_internal_global(edge_rg, identity_property_map()); }
 
   // Add edges from a range of (source, target) pairs and edge properties that
   // are unsorted
   template <std::ranges::input_range InRange, std::ranges::input_range EPRange, typename GlobalToLocal>
-  void add_edges_internal(InRange uv_range, EPRange ep_range, const GlobalToLocal& global_to_local) {
-    using vertex_pair = std::pair<Vertex, Vertex>;
+  void add_edges_internal_global(InRange uv_range, EPRange ep_range, const GlobalToLocal& global_to_local) {
+    using vertex_pair = std::pair<std::size_t, std::size_t>;
     using edge_vector_t = std::vector<std::tuple<vertex_pair, edge_bundled>>;
     edge_vector_t new_edges;
     if constexpr (std::ranges::random_access_range<InRange>) {
@@ -492,67 +484,64 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
     }
     std::sort(new_edges.begin(), new_edges.end(),
               [](const auto& lhs, const auto& rhs) { return std::get<0>(lhs) < std::get<0>(rhs); });
-    forward_.add_edges_sorted_internal(std::views::transform(new_edges, [](const auto& x) { return std::get<0>(x); }),
-                                       std::views::transform(new_edges, [](const auto& x) { return std::get<1>(x); }),
-                                       global_to_local);
+    forward_.add_edges_sorted_internal(
+        std::views::transform(std::ranges::ref_view(new_edges), [](const auto& x) { return std::get<0>(x); }),
+        std::views::transform(std::ranges::ref_view(new_edges), [](const auto& x) { return std::get<1>(x); }),
+        global_to_local);
   }
 
   // Add edges from a range of (source, target) pairs and edge properties that
   // are unsorted
   template <std::ranges::input_range InRange, std::ranges::input_range EPRange>
   void add_edges_internal(InRange uv_range, EPRange ep_range) {
-    add_edges_internal(uv_range, ep_range, typed_identity_property_map<std::size_t>());
+    add_edges_internal_global(uv_range, ep_range, identity_property_map());
   }
 
-  using inherited_vertex_properties::operator[];
+  // Directly access a vertex or edge bundle
+  vertex_bundled& operator[](std::size_t v) { return get_property_value(vertex_properties_[v], vertex_bundle); }
+  const vertex_bundled& operator[](std::size_t v) const {
+    return get_property_value(vertex_properties_[v], vertex_bundle);
+  }
+  vertex_property_type& get_property(std::size_t v) { return vertex_properties_[v]; }
+  const vertex_property_type& get_property(std::size_t v) const { return vertex_properties_[v]; }
 
   // Directly access a edge or edge bundle
-  edge_push_back_type& operator[](const edge_descriptor& v) {
-    return forward_.edge_properties_[get(edge_index, *this, v)];
+  edge_bundled& operator[](const edge_descriptor& e) { return forward_[e]; }
+  const edge_bundled& operator[](const edge_descriptor& e) const { return forward_[e]; }
+  edge_property_type& get_property(const edge_descriptor& e) { return forward_.get_property(e); }
+  const edge_property_type& get_property(const edge_descriptor& e) const { return forward_.get_property(e); }
+
+  // Indexing operator. Returns a reference to the graph-bundle associated to the graph.
+  graph_bundled& operator[](graph_bundle_t /*unused*/) { return get_property_value(property_, graph_bundle); }
+  const graph_bundled& operator[](graph_bundle_t /*unused*/) const {
+    return get_property_value(property_, graph_bundle);
   }
 
-  const edge_push_back_type& operator[](const edge_descriptor& v) const {
-    return forward_.edge_properties_[get(edge_index, *this, v)];
-  }
+  // Get a reference to the graph-property associated to the graph.
+  GraphProperty& get_property(graph_all_t /*unused*/) { return property_; }
+  const GraphProperty& get_property(graph_all_t /*unused*/) const { return property_; }
 
-  // Directly access a graph bundle
-  graph_bundled& operator[](graph_bundle_t /*unused*/) { return get_property(*this); }
-
-  const graph_bundled& operator[](graph_bundle_t /*unused*/) const { return get_property(*this); }
-
-  // private: non-portable, requires friend templates
-  inherited_vertex_properties& vertex_properties() { return *this; }
-  const inherited_vertex_properties& vertex_properties() const { return *this; }
-  auto& edge_properties() { return forward_; }
-  const auto& edge_properties() const { return forward_; }
-
+  std::vector<VertexProperty> vertex_properties_;
   forward_type forward_;
   GraphProperty property_;
 };
 
-template <typename VertexProperty, typename EdgeProperty, typename GraphProperty, typename Vertex, typename EdgeIndex>
-class compressed_sparse_row_graph<bidirectional_s, VertexProperty, EdgeProperty, GraphProperty, Vertex, EdgeIndex>
-    : public indexed_detail::indexed_vertex_properties<BAGL_BIDIR_CSR_GRAPH_TYPE, VertexProperty, Vertex,
-                                                       typed_identity_property_map<Vertex>> {
+template <typename VertexProperty, typename EdgeProperty, typename GraphProperty>
+class compressed_sparse_row_graph<bidirectional_s, VertexProperty, EdgeProperty, GraphProperty> {
  public:
-  using inherited_vertex_properties =
-      indexed_detail::indexed_vertex_properties<compressed_sparse_row_graph, VertexProperty, Vertex,
-                                                typed_identity_property_map<Vertex>>;
-
   // For Property Graph
   using graph_property_type = GraphProperty;
   using graph_bundled = lookup_one_property_t<GraphProperty, graph_bundle_t>;
   // typedef GraphProperty graph_property_type;
 
-  using forward_type = csr_detail::compressed_sparse_row_structure<EdgeProperty, Vertex, EdgeIndex>;
-  using backward_edge_property =
-      EdgeIndex /* std::conditional_t<std::is_same_v<EdgeProperty, no_property>, no_property, EdgeIndex> */;
-  using backward_type = csr_detail::compressed_sparse_row_structure<backward_edge_property, Vertex, EdgeIndex>;
+  using forward_type = csr_detail::compressed_sparse_row_structure<EdgeProperty>;
+  using backward_edge_property = std::size_t;
+  using backward_type = csr_detail::compressed_sparse_row_structure<backward_edge_property>;
 
   // Concept requirements:
   // For Graph
-  using vertex_descriptor = Vertex;
-  using edge_descriptor = csr_detail::csr_edge_descriptor<Vertex, EdgeIndex>;
+  using vertex_descriptor = std::size_t;
+  using edge_descriptor = csr_detail::csr_edge_descriptor;
   using directed_category = bidirectional_tag;
   using edge_parallel_category = allow_parallel_edge_tag;
 
@@ -564,20 +553,22 @@ class compressed_sparse_row_graph<bidirectional_s, VertexProperty, EdgeProperty,
   static vertex_descriptor null_vertex() { return std::numeric_limits<vertex_descriptor>::max(); }
 
   // For VertexListGraph
-  using vertices_size_type = Vertex;
+  using vertices_size_type = std::size_t;
 
   // For EdgeListGraph
-  using edges_size_type = EdgeIndex;
+  using edges_size_type = std::size_t;
 
   // For IncidenceGraph
-  using degree_size_type = EdgeIndex;
+  using degree_size_type = std::size_t;
 
   // For internal use
   using graph_tag = csr_graph_tag;
 
-  using edge_bundled = typename forward_type::inherited_edge_properties::edge_bundled;
-  using edge_push_back_type = typename forward_type::inherited_edge_properties::edge_push_back_type;
-  using edge_property_type = typename forward_type::inherited_edge_properties::edge_property_type;
+  using edge_bundled = typename forward_type::edge_bundled;
+  using edge_property_type = typename forward_type::edge_property_type;
+
+  using vertex_property_type = VertexProperty;
+  using vertex_bundled = lookup_one_property_t<VertexProperty, vertex_bundle_t>;
 
   // Constructors
 
@@ -586,15 +577,15 @@ class compressed_sparse_row_graph<bidirectional_s, VertexProperty, EdgeProperty,
 
   //  With numverts vertices
   explicit compressed_sparse_row_graph(std::size_t numverts)
-      : inherited_vertex_properties(numverts), forward_(numverts), backward_(numverts) {}
+      : vertex_properties_(numverts), forward_(numverts), backward_(numverts) {}
 
  private:
   void set_up_backward_property_links() {
     auto e_rg = edges(*this);
     auto uv_rg = csr_detail::make_edge_to_index_pair_range(*this, get(vertex_index, *this), e_rg);
-    backward_.assign_unsorted_multi_pass_edges(uv_rg, std::views::iota(0, num_edges(*this)),
-                                               forward_.rowstart_.size() - 1, typed_identity_property_map<Vertex>(),
-                                               keep_all());
+    backward_.assign_unsorted_multi_pass_edges(uv_rg, std::views::iota(std::size_t{0}, num_edges(*this)),
+                                               forward_.rowstart_.size() - 1,
+                                               typed_identity_property_map<std::size_t>(), keep_all());
   }
 
  public:
@@ -602,8 +593,9 @@ class compressed_sparse_row_graph<bidirectional_s, VertexProperty, EdgeProperty,
   template <std::ranges::forward_range EdgeRange>
   compressed_sparse_row_graph(edges_are_unsorted_multi_pass_t /*unused*/, EdgeRange edge_rg, std::size_t numverts,
                               const GraphProperty& prop = GraphProperty())
-      : inherited_vertex_properties(numverts), property_(prop) {
-    forward_.assign_unsorted_multi_pass_edges(edge_rg, numverts, typed_identity_property_map<Vertex>(), keep_all());
+      : vertex_properties_(numverts), property_(prop) {
+    forward_.assign_unsorted_multi_pass_edges(edge_rg, numverts, typed_identity_property_map<std::size_t>(),
+                                              keep_all());
     set_up_backward_property_links();
   }
 
@@ -611,8 +603,8 @@ class compressed_sparse_row_graph<bidirectional_s, VertexProperty, EdgeProperty,
   template <std::ranges::forward_range EdgeRange, std::ranges::input_range EdgePropRange>
   compressed_sparse_row_graph(edges_are_unsorted_multi_pass_t /*unused*/, EdgeRange edge_rg, EdgePropRange ep_rg,
                               std::size_t numverts, const GraphProperty& prop = GraphProperty())
-      : inherited_vertex_properties(numverts), forward_(), property_(prop) {
-    forward_.assign_unsorted_multi_pass_edges(edge_rg, ep_rg, numverts, typed_identity_property_map<Vertex>(),
+      : vertex_properties_(numverts), forward_(), property_(prop) {
+    forward_.assign_unsorted_multi_pass_edges(edge_rg, ep_rg, numverts, typed_identity_property_map<std::size_t>(),
                                               keep_all());
     set_up_backward_property_links();
   }
@@ -623,7 +615,7 @@ class compressed_sparse_row_graph<bidirectional_s, VertexProperty, EdgeProperty,
   compressed_sparse_row_graph(edges_are_unsorted_multi_pass_global_t /*unused*/, EdgeRange edge_rg,
                               std::size_t numlocalverts, const GlobalToLocal& global_to_local,
                               const SourcePred& source_pred, const GraphProperty& prop = GraphProperty())
-      : inherited_vertex_properties(numlocalverts), forward_(), property_(prop) {
+      : vertex_properties_(numlocalverts), forward_(), property_(prop) {
     forward_.assign_unsorted_multi_pass_edges(edge_rg, numlocalverts, global_to_local, source_pred);
     set_up_backward_property_links();
   }
@@ -635,7 +627,7 @@ class compressed_sparse_row_graph<bidirectional_s, VertexProperty, EdgeProperty,
   compressed_sparse_row_graph(edges_are_unsorted_multi_pass_global_t /*unused*/, EdgeRange edge_rg, EdgePropRange ep_rg,
                               std::size_t numlocalverts, const GlobalToLocal& global_to_local,
                               const SourcePred& source_pred, const GraphProperty& prop = GraphProperty())
-      : inherited_vertex_properties(numlocalverts), forward_(), property_(prop) {
+      : vertex_properties_(numlocalverts), forward_(), property_(prop) {
     forward_.assign_unsorted_multi_pass_edges(edge_rg, ep_rg, numlocalverts, global_to_local, source_pred);
     set_up_backward_property_links();
   }
@@ -645,7 +637,7 @@ class compressed_sparse_row_graph<bidirectional_s, VertexProperty, EdgeProperty,
   compressed_sparse_row_graph(const Graph& g, const VertexIndexMap& vi, std::size_t numverts, std::size_t numedges)
       : property_() {
     assign(g, vi, numverts, numedges);
-    inherited_vertex_properties::resize(numverts);
+    vertex_properties_.resize(numverts);
   }
 
   //   Requires VertexListGraph and EdgeListGraph
@@ -658,7 +650,7 @@ class compressed_sparse_row_graph<bidirectional_s, VertexProperty, EdgeProperty,
     }
     std::size_t numverts = num_vertices(g);
     assign(g, vi, numverts, numedges);
-    inherited_vertex_properties::resize(numverts);
+    vertex_properties_.resize(numverts);
   }
 
   // Requires vertex index map plus requirements of previous constructor
@@ -672,7 +664,7 @@ class compressed_sparse_row_graph<bidirectional_s, VertexProperty, EdgeProperty,
   template <typename Graph, typename VertexIndexMap>
   void assign(const Graph& g, const VertexIndexMap& vi, vertices_size_type numverts, edges_size_type numedges) {
     forward_.assign(g, vi, numverts, numedges);
-    inherited_vertex_properties::resize(numverts);
+    vertex_properties_.resize(numverts);
     set_up_backward_property_links();
   }
 
@@ -693,23 +685,31 @@ class compressed_sparse_row_graph<bidirectional_s, VertexProperty, EdgeProperty,
     assign(g, get(vertex_index, g));
   }
 
-  using inherited_vertex_properties::operator[];
+  // Directly access a vertex or edge bundle
+  vertex_bundled& operator[](std::size_t v) { return get_property_value(vertex_properties_[v], vertex_bundle); }
+  const vertex_bundled& operator[](std::size_t v) const {
+    return get_property_value(vertex_properties_[v], vertex_bundle);
+  }
+  vertex_property_type& get_property(std::size_t v) { return vertex_properties_[v]; }
+  const vertex_property_type& get_property(std::size_t v) const { return vertex_properties_[v]; }
 
   // Directly access a edge or edge bundle
-  edge_push_back_type& operator[](const edge_descriptor& v) {
-    return forward_.edge_properties_[get(edge_index, *this, v)];
+  edge_bundled& operator[](const edge_descriptor& e) { return forward_[e]; }
+  const edge_bundled& operator[](const edge_descriptor& e) const { return forward_[e]; }
+  edge_property_type& get_property(const edge_descriptor& e) { return forward_.get_property(e); }
+  const edge_property_type& get_property(const edge_descriptor& e) const { return forward_.get_property(e); }
+
+  // Indexing operator. Returns a reference to the graph-bundle associated to the graph.
+  graph_bundled& operator[](graph_bundle_t /*unused*/) { return get_property_value(property_, graph_bundle); }
+  const graph_bundled& operator[](graph_bundle_t /*unused*/) const {
+    return get_property_value(property_, graph_bundle);
   }
 
-  const edge_push_back_type& operator[](const edge_descriptor& v) const {
-    return forward_.edge_properties_[get(edge_index, *this, v)];
-  }
+  // Get a reference to the graph-property associated to the graph.
+  GraphProperty& get_property(graph_all_t /*unused*/) { return property_; }
+  const GraphProperty& get_property(graph_all_t /*unused*/) const { return property_; }
 
-  // private: non-portable, requires friend templates
-  inherited_vertex_properties& vertex_properties() { return *this; }
-  const inherited_vertex_properties& vertex_properties() const { return *this; }
-  auto& edge_properties() { return forward_; }
-  const auto& edge_properties() const { return forward_; }
-
+  std::vector<VertexProperty> vertex_properties_;
   forward_type forward_;
   backward_type backward_;
   GraphProperty property_;
@@ -717,31 +717,31 @@ class compressed_sparse_row_graph<bidirectional_s, VertexProperty, EdgeProperty,
 
 // Construction functions
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-Vertex add_vertex(BAGL_CSR_GRAPH_TYPE& g) {
-  add_vertex(g, typename BAGL_CSR_GRAPH_TYPE::vertex_bundled());
+auto add_vertex(BAGL_CSR_GRAPH_TYPE& g) {
+  return add_vertex(g, typename BAGL_CSR_GRAPH_TYPE::vertex_bundled());
 }
 
-template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS>
-Vertex add_vertex(BAGL_DIR_CSR_GRAPH_TYPE& g, typename BAGL_DIR_CSR_GRAPH_TYPE::vertex_bundled const& p) {
-  Vertex old_num_verts_plus_one = g.forward_.rowstart_.size();
+template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, typename... VPArgs>
+auto add_vertex(BAGL_DIR_CSR_GRAPH_TYPE& g, VPArgs&&... vp_args) {
+  auto old_num_verts_plus_one = g.forward_.rowstart_.size();
   g.forward_.rowstart_.push_back(g.forward_.rowstart_.back());
-  g.vertex_properties().push_back(p);
+  g.vertex_properties().emplace_back(std::forward<VPArgs>(vp_args)...);
   return old_num_verts_plus_one - 1;
 }
 
-template <BAGL_BIDIR_CSR_GRAPH_TEMPLATE_PARMS>
-Vertex add_vertex(BAGL_BIDIR_CSR_GRAPH_TYPE& g, typename BAGL_BIDIR_CSR_GRAPH_TYPE::vertex_bundled const& p) {
-  Vertex old_num_verts_plus_one = g.forward_.rowstart_.size();
+template <BAGL_BIDIR_CSR_GRAPH_TEMPLATE_PARMS, typename... VPArgs>
+auto add_vertex(BAGL_BIDIR_CSR_GRAPH_TYPE& g, VPArgs&&... vp_args) {
+  auto old_num_verts_plus_one = g.forward_.rowstart_.size();
   g.forward_.rowstart_.push_back(g.forward_.rowstart_.back());
   g.backward_.rowstart_.push_back(g.backward_.rowstart_.back());
-  g.vertex_properties().push_back(p);
+  g.vertex_properties().push_back(std::forward<VPArgs>(vp_args)...);
   return old_num_verts_plus_one - 1;
 }
 
 template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS>
-Vertex add_vertices(typename BAGL_DIR_CSR_GRAPH_TYPE::vertices_size_type count, BAGL_DIR_CSR_GRAPH_TYPE& g) {
-  Vertex old_num_verts_plus_one = g.forward_.rowstart_.size();
-  EdgeIndex numedges = g.forward_.rowstart_.back();
+auto add_vertices(std::size_t count, BAGL_DIR_CSR_GRAPH_TYPE& g) {
+  auto old_num_verts_plus_one = g.forward_.rowstart_.size();
+  std::size_t numedges = g.forward_.rowstart_.back();
   g.forward_.rowstart_.resize(old_num_verts_plus_one + count, numedges);
   g.vertex_properties().resize(num_vertices(g));
   return old_num_verts_plus_one - 1;
@@ -749,126 +749,132 @@ Vertex add_vertices(typename BAGL_DIR_CSR_GRAPH_TYPE::vertices_size_type count, 
 
 // Add edges from a sorted (smallest sources first) range of pairs and edge
 // properties
-template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, typename BidirectionalIteratorOrig, typename EPIterOrig>
-void add_edges_sorted(BidirectionalIteratorOrig first_sorted, BidirectionalIteratorOrig last_sorted,
-                      EPIterOrig ep_iter_sorted, BAGL_DIR_CSR_GRAPH_TYPE& g) {
-  g.add_edges_sorted_internal(first_sorted, last_sorted, ep_iter_sorted);
+template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, std::ranges::bidirectional_range EdgeRange,
+          std::ranges::bidirectional_range EdgePropRange>
+requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>> &&
+    std::constructible_from<EdgeProperty, std::ranges::range_reference_t<EdgePropRange>>
+void add_edges_sorted(const EdgeRange& e_range, const EdgePropRange& ep_range, BAGL_DIR_CSR_GRAPH_TYPE& g) {
+  g.add_edges_sorted_internal(e_range, ep_range);
 }
 
 // Add edges from a sorted (smallest sources first) range of pairs
-template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, typename BidirectionalIteratorOrig>
-void add_edges_sorted(BidirectionalIteratorOrig first_sorted, BidirectionalIteratorOrig last_sorted,
-                      BAGL_DIR_CSR_GRAPH_TYPE& g) {
-  g.add_edges_sorted_internal(first_sorted, last_sorted);
-}
+template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, std::ranges::bidirectional_range EdgeRange>
+requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>>
+void add_edges_sorted(const EdgeRange& e_range, BAGL_DIR_CSR_GRAPH_TYPE& g) { g.add_edges_sorted_internal(e_range); }
 
-template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, typename BidirectionalIteratorOrig, typename EPIterOrig,
-          typename GlobalToLocal>
-void add_edges_sorted_global(BidirectionalIteratorOrig first_sorted, BidirectionalIteratorOrig last_sorted,
-                             EPIterOrig ep_iter_sorted, const GlobalToLocal& global_to_local,
-                             BAGL_DIR_CSR_GRAPH_TYPE& g) {
-  g.add_edges_sorted_internal_global(first_sorted, last_sorted, ep_iter_sorted, global_to_local);
-}
-
-// Add edges from a sorted (smallest sources first) range of pairs
-template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, typename BidirectionalIteratorOrig, typename GlobalToLocal>
-void add_edges_sorted_global(BidirectionalIteratorOrig first_sorted, BidirectionalIteratorOrig last_sorted,
+template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, std::ranges::bidirectional_range EdgeRange,
+          std::ranges::bidirectional_range EdgePropRange, typename GlobalToLocal>
+requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>> &&
+    std::constructible_from<EdgeProperty, std::ranges::range_reference_t<EdgePropRange>>
+void add_edges_sorted_global(const EdgeRange& e_range, const EdgePropRange& ep_range,
                              const GlobalToLocal& global_to_local, BAGL_DIR_CSR_GRAPH_TYPE& g) {
-  g.add_edges_sorted_internal_global(first_sorted, last_sorted, global_to_local);
+  g.add_edges_sorted_internal_global(e_range, ep_range, global_to_local);
+}
+
+// Add edges from a sorted (smallest sources first) range of pairs
+template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, std::ranges::bidirectional_range EdgeRange, typename GlobalToLocal>
+requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>>
+void add_edges_sorted_global(const EdgeRange& e_range, const GlobalToLocal& global_to_local,
+                             BAGL_DIR_CSR_GRAPH_TYPE& g) {
+  g.add_edges_sorted_internal_global(e_range, global_to_local);
 }
 
 // Add edges from a range of (source, target) pairs that are unsorted
-template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, typename InputIterator, typename GlobalToLocal>
-void add_edges_global(InputIterator first, InputIterator last, const GlobalToLocal& global_to_local,
-                      BAGL_DIR_CSR_GRAPH_TYPE& g) {
-  g.add_edges_internal(first, last, global_to_local);
+template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, std::ranges::input_range EdgeRange, typename GlobalToLocal>
+requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>>
+void add_edges_global(const EdgeRange& e_range, const GlobalToLocal& global_to_local, BAGL_DIR_CSR_GRAPH_TYPE& g) {
+  g.add_edges_internal_global(e_range, global_to_local);
 }
 
 // Add edges from a range of (source, target) pairs that are unsorted
-template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, typename InputIterator>
-void add_edges(InputIterator first, InputIterator last, BAGL_DIR_CSR_GRAPH_TYPE& g) {
-  g.add_edges_internal(first, last);
-}
+template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, std::ranges::input_range EdgeRange>
+requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>>
+void add_edges(const EdgeRange& e_range, BAGL_DIR_CSR_GRAPH_TYPE& g) { g.add_edges_internal(e_range); }
 
 // Add edges from a range of (source, target) pairs and edge properties that
 // are unsorted
-template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, typename InputIterator, typename EPIterator>
-void add_edges(InputIterator first, InputIterator last, EPIterator ep_iter, EPIterator ep_iter_end,
-               BAGL_DIR_CSR_GRAPH_TYPE& g) {
-  g.add_edges_internal(first, last, ep_iter, ep_iter_end);
+template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, std::ranges::input_range EdgeRange, std::ranges::input_range EdgePropRange>
+requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>> &&
+    std::constructible_from<EdgeProperty, std::ranges::range_reference_t<EdgePropRange>>
+void add_edges(const EdgeRange& e_range, const EdgePropRange& ep_range, BAGL_DIR_CSR_GRAPH_TYPE& g) {
+  g.add_edges_internal(e_range, ep_range);
 }
 
-template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, typename InputIterator, typename EPIterator, typename GlobalToLocal>
-void add_edges_global(InputIterator first, InputIterator last, EPIterator ep_iter, EPIterator ep_iter_end,
-                      const GlobalToLocal& global_to_local, BAGL_DIR_CSR_GRAPH_TYPE& g) {
-  g.add_edges_internal(first, last, ep_iter, ep_iter_end, global_to_local);
+template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, std::ranges::input_range EdgeRange, std::ranges::input_range EdgePropRange,
+          typename GlobalToLocal>
+requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>> &&
+    std::constructible_from<EdgeProperty, std::ranges::range_reference_t<EdgePropRange>>
+void add_edges_global(const EdgeRange& e_range, const EdgePropRange& ep_range, const GlobalToLocal& global_to_local,
+                      BAGL_DIR_CSR_GRAPH_TYPE& g) {
+  g.add_edges_internal_global(e_range, ep_range, global_to_local);
 }
 
 // From VertexListGraph
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-Vertex num_vertices(const BAGL_CSR_GRAPH_TYPE& g) {
+auto num_vertices(const BAGL_CSR_GRAPH_TYPE& g) {
   return g.forward_.rowstart_.size() - 1;
 }
 
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
 auto vertices(const BAGL_CSR_GRAPH_TYPE& g) {
-  return std::views::iota(Vertex{0}, Vertex{num_vertices(g)});
+  return std::views::iota(std::size_t{0}, std::size_t{num_vertices(g)});
 }
 
 // From IncidenceGraph
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-Vertex source(typename BAGL_CSR_GRAPH_TYPE::edge_descriptor e, const BAGL_CSR_GRAPH_TYPE& /*unused*/) {
+auto source(typename BAGL_CSR_GRAPH_TYPE::edge_descriptor e, const BAGL_CSR_GRAPH_TYPE& /*unused*/) {
   return e.src;
 }
 
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-Vertex target(typename BAGL_CSR_GRAPH_TYPE::edge_descriptor e, const BAGL_CSR_GRAPH_TYPE& g) {
+auto target(typename BAGL_CSR_GRAPH_TYPE::edge_descriptor e, const BAGL_CSR_GRAPH_TYPE& g) {
   return g.forward_.column_[e.idx];
 }
 
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-auto out_edges(Vertex v, const BAGL_CSR_GRAPH_TYPE& g) {
+auto out_edges(std::size_t v, const BAGL_CSR_GRAPH_TYPE& g) {
   return csr_detail::make_csr_out_edge_range<BAGL_CSR_GRAPH_TYPE>(g.forward_.rowstart_[v], g.forward_.rowstart_[v + 1],
                                                                   v);
 }
 
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-EdgeIndex out_degree(Vertex v, const BAGL_CSR_GRAPH_TYPE& g) {
-  EdgeIndex v_row_start = g.forward_.rowstart_[v];
-  EdgeIndex next_row_start = g.forward_.rowstart_[v + 1];
+auto out_degree(std::size_t v, const BAGL_CSR_GRAPH_TYPE& g) {
+  auto v_row_start = g.forward_.rowstart_[v];
+  auto next_row_start = g.forward_.rowstart_[v + 1];
   return next_row_start - v_row_start;
 }
 
 template <BAGL_BIDIR_CSR_GRAPH_TEMPLATE_PARMS>
-auto in_edges(Vertex v, const BAGL_BIDIR_CSR_GRAPH_TYPE& g) {
+auto in_edges(std::size_t v, const BAGL_BIDIR_CSR_GRAPH_TYPE& g) {
   return csr_detail::make_csr_in_edge_range(g.backward_.rowstart_[v], g.backward_.rowstart_[v + 1], g);
 }
 
 template <BAGL_BIDIR_CSR_GRAPH_TEMPLATE_PARMS>
-EdgeIndex in_degree(Vertex v, const BAGL_BIDIR_CSR_GRAPH_TYPE& g) {
-  EdgeIndex v_row_start = g.backward_.rowstart_[v];
-  EdgeIndex next_row_start = g.backward_.rowstart_[v + 1];
+auto in_degree(std::size_t v, const BAGL_BIDIR_CSR_GRAPH_TYPE& g) {
+  auto v_row_start = g.backward_.rowstart_[v];
+  auto next_row_start = g.backward_.rowstart_[v + 1];
   return next_row_start - v_row_start;
 }
 
 // From AdjacencyGraph
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-auto adjacent_vertices(Vertex v, const BAGL_CSR_GRAPH_TYPE& g) {
-  EdgeIndex v_row_start = g.forward_.rowstart_[v];
-  EdgeIndex next_row_start = g.forward_.rowstart_[v + 1];
+auto adjacent_vertices(std::size_t v, const BAGL_CSR_GRAPH_TYPE& g) {
+  std::size_t v_row_start = g.forward_.rowstart_[v];
+  std::size_t next_row_start = g.forward_.rowstart_[v + 1];
   return std::ranges::subrange(g.forward_.column_.begin() + v_row_start, g.forward_.column_.begin() + next_row_start);
 }
 
 // Extra, common functions
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-Vertex vertex(Vertex i, const BAGL_CSR_GRAPH_TYPE& /*unused*/) {
+auto vertex(std::size_t i, const BAGL_CSR_GRAPH_TYPE& /*unused*/) {
   return i;
 }
 
 // edge() can be provided in linear time for the new interface
 
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-std::pair<typename BAGL_CSR_GRAPH_TYPE::edge_descriptor, bool> edge(Vertex i, Vertex j, const BAGL_CSR_GRAPH_TYPE& g) {
+std::pair<typename BAGL_CSR_GRAPH_TYPE::edge_descriptor, bool> edge(std::size_t i, std::size_t j,
+                                                                    const BAGL_CSR_GRAPH_TYPE& g) {
   for (auto e : out_edges(i, g)) {
     if (target(e, g) == j) {
       return {e, true};
@@ -879,17 +885,17 @@ std::pair<typename BAGL_CSR_GRAPH_TYPE::edge_descriptor, bool> edge(Vertex i, Ve
 
 // Find an edge given its index in the graph
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-auto edge_from_index(EdgeIndex idx, const BAGL_CSR_GRAPH_TYPE& g) {
+auto edge_from_index(std::size_t idx, const BAGL_CSR_GRAPH_TYPE& g) {
   assert(idx < num_edges(g));
   auto src_plus_1 = std::upper_bound(g.forward_.rowstart_.begin(), g.forward_.rowstart_.end(), idx);
   // Get last source whose rowstart is at most idx
   // upper_bound returns this position plus 1
-  Vertex src = (src_plus_1 - g.forward_.rowstart_.begin()) - 1;
+  auto src = (src_plus_1 - g.forward_.rowstart_.begin()) - 1;
   return typename BAGL_CSR_GRAPH_TYPE::edge_descriptor(src, idx);
 }
 
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-EdgeIndex num_edges(const BAGL_CSR_GRAPH_TYPE& g) {
+auto num_edges(const BAGL_CSR_GRAPH_TYPE& g) {
   return g.forward_.column_.size();
 }
 
@@ -898,255 +904,319 @@ auto edges(const BAGL_CSR_GRAPH_TYPE& g) {
   return edges_from_out_edges(g);
 }
 
-// For Property Graph
+/***********************************************************************************************
+ *                             Property Maps (from bundles)
+ * ********************************************************************************************/
 
-// Graph properties
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, class Tag, class Value>
-void set_property(BAGL_CSR_GRAPH_TYPE& g, Tag tag, const Value& value) {
-  get_property_value(g.property_, tag) = value;
+// Returns a const-reference to the vertex-bundle associated to the given vertex descriptor.
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
+const auto& get(const BAGL_CSR_GRAPH_TYPE& g, typename BAGL_CSR_GRAPH_TYPE::vertex_descriptor v) {
+  return g[v];
+}
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
+auto& get(BAGL_CSR_GRAPH_TYPE& g, typename BAGL_CSR_GRAPH_TYPE::vertex_descriptor v) {
+  return g[v];
 }
 
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, class Tag>
-auto& get_property(BAGL_CSR_GRAPH_TYPE& g, Tag tag) {
-  return get_property_value(g.property_, tag);
+// Returns a const-reference to the edge-bundle associated to the given edge descriptor.
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
+const auto& get(const BAGL_CSR_GRAPH_TYPE& g, const typename BAGL_CSR_GRAPH_TYPE::edge_descriptor& e) {
+  return g[e];
+}
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
+auto& get(BAGL_CSR_GRAPH_TYPE& g, const typename BAGL_CSR_GRAPH_TYPE::edge_descriptor& e) {
+  return g[e];
 }
 
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, class Tag>
-const auto& get_property(const BAGL_CSR_GRAPH_TYPE& g, Tag tag) {
-  return get_property_value(g.property_, tag);
+// Returns a const-reference to the graph-bundle associated to the graph.
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
+const auto& get(const BAGL_CSR_GRAPH_TYPE& g, graph_bundle_t /*unused*/) {
+  return g[graph_bundle];
+}
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
+auto& get(BAGL_CSR_GRAPH_TYPE& g, graph_bundle_t /*unused*/) {
+  return g[graph_bundle];
 }
 
-template <typename G, typename Tag, typename Kind>
-struct csr_property_map_helper {};
-// Kind == void for invalid property tags, so we can use that to SFINAE out
-
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Tag>
-struct csr_property_map_helper<BAGL_CSR_GRAPH_TYPE, Tag, vertex_property_tag> {
-  using all_tag = vertex_all_t;
-  using plist_type = VertexProperty;
-  using all_type = property_map_t<BAGL_CSR_GRAPH_TYPE, vertex_all_t>;
-  using all_const_type = property_map_const_t<BAGL_CSR_GRAPH_TYPE, vertex_all_t>;
-  using type = transform_property_map<property_detail::lookup_one_property_f<plist_type, Tag>, all_type>;
-  using const_type =
-      transform_property_map<property_detail::lookup_one_property_f<const plist_type, Tag>, all_const_type>;
-};
-
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Tag>
-struct csr_property_map_helper<BAGL_CSR_GRAPH_TYPE, Tag, edge_property_tag> {
-  using all_tag = edge_all_t;
-  using plist_type = EdgeProperty;
-  using all_type = property_map_t<BAGL_CSR_GRAPH_TYPE, edge_all_t>;
-  using all_const_type = property_map_const_t<BAGL_CSR_GRAPH_TYPE, edge_all_t>;
-  using type = transform_property_map<property_detail::lookup_one_property_f<plist_type, Tag>, all_type>;
-  using const_type =
-      transform_property_map<property_detail::lookup_one_property_f<const plist_type, Tag>, all_const_type>;
-};
-
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Tag>
-struct csr_property_map_helper<BAGL_CSR_GRAPH_TYPE, Tag, graph_property_tag> {
-  using all_tag = graph_all_t;
-  using plist_type = GraphProperty;
-  using all_type = property_map_t<BAGL_CSR_GRAPH_TYPE, graph_all_t>;
-  using all_const_type = property_map_const_t<BAGL_CSR_GRAPH_TYPE, graph_all_t>;
-  using type = transform_property_map<property_detail::lookup_one_property_f<plist_type, Tag>, all_type>;
-  using const_type =
-      transform_property_map<property_detail::lookup_one_property_f<const plist_type, Tag>, all_const_type>;
-};
-
-// disable_if isn't truly necessary but required to avoid ambiguity with
-// specializations below
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Tag>
-struct property_map<BAGL_CSR_GRAPH_TYPE, Tag, std::enable_if_t<!distributed_detail::is_distributed_selector_v<Vertex>>>
-    : csr_property_map_helper<BAGL_CSR_GRAPH_TYPE, Tag,
-                              typename properties_detail::property_kind_from_graph<BAGL_CSR_GRAPH_TYPE, Tag>::type> {};
-
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Tag>
-decltype(auto) get(Tag tag, BAGL_CSR_GRAPH_TYPE& g) {
-  return property_map_t<BAGL_CSR_GRAPH_TYPE, Tag>(tag,
-                                                  get(typename property_map<BAGL_CSR_GRAPH_TYPE, Tag>::all_tag(), g));
+// Sets the vertex-bundle associated to the given vertex descriptor.
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename VProp>
+void put(BAGL_CSR_GRAPH_TYPE& g, typename BAGL_CSR_GRAPH_TYPE::vertex_descriptor v, VProp&& value) {
+  g[v] = std::forward<VProp>(value);
 }
 
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Tag>
-decltype(auto) get(Tag tag, const BAGL_CSR_GRAPH_TYPE& g) {
-  return property_map_const_t<BAGL_CSR_GRAPH_TYPE, Tag>(
-      tag, get(typename property_map<BAGL_CSR_GRAPH_TYPE, Tag>::all_tag(), g));
+// Sets the edge-bundle associated to the given edge descriptor.
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename EProp>
+void put(BAGL_CSR_GRAPH_TYPE& g, const typename BAGL_CSR_GRAPH_TYPE::edge_descriptor& e, EProp&& value) {
+  g[e] = std::forward<EProp>(value);
 }
 
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Tag, typename Key>
-decltype(auto) get(Tag tag, BAGL_CSR_GRAPH_TYPE& g, const Key& k) {
-  using all_tag = typename property_map<BAGL_CSR_GRAPH_TYPE, Tag>::all_tag;
-  using outer_pm = typename property_map<BAGL_CSR_GRAPH_TYPE, all_tag>::type;
-  return lookup_one_property<property_traits_value_t<outer_pm>, Tag>::lookup(get(all_tag(), g, k), tag);
+// Sets the graph-bundle associated to the graph.
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename GProp>
+void put(BAGL_CSR_GRAPH_TYPE& g, graph_bundle_t /*unused*/, GProp&& value) {
+  g[graph_bundle] = std::forward<GProp>(value);
 }
 
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Tag, typename Key>
-decltype(auto) get(Tag tag, const BAGL_CSR_GRAPH_TYPE& g, const Key& k) {
-  using all_tag = typename property_map<BAGL_CSR_GRAPH_TYPE, Tag>::all_tag;
-  using outer_pm = typename property_map<BAGL_CSR_GRAPH_TYPE, all_tag>::type;
-  return lookup_one_property<const property_traits_value_t<outer_pm>, Tag>::lookup(get(all_tag(), g, k), tag);
+// Returns a reference to the vertex-property associated to the given vertex descriptor.
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
+auto& get_property(typename BAGL_CSR_GRAPH_TYPE::vertex_descriptor v, BAGL_CSR_GRAPH_TYPE& g) {
+  return g.get_property(v);
 }
 
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Tag, typename Key>
-void put(Tag tag, BAGL_CSR_GRAPH_TYPE& g, const Key& k,
-         lookup_one_property_t<typename property_map<BAGL_CSR_GRAPH_TYPE, Tag>::plist_type, Tag> val) {
-  using all_tag = typename property_map<BAGL_CSR_GRAPH_TYPE, Tag>::all_tag;
-  lookup_one_property<typename property_map<BAGL_CSR_GRAPH_TYPE, Tag>::plist_type, Tag>::lookup(get(all_tag(), g, k),
-                                                                                                tag) = val;
+// Returns a const-reference to the vertex-property associated to the given vertex descriptor.
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
+const auto& get_property(typename BAGL_CSR_GRAPH_TYPE::vertex_descriptor v, const BAGL_CSR_GRAPH_TYPE& g) {
+  return g.get_property(v);
+}
+
+// Returns a reference to the edge-property associated to the given edge descriptor.
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
+auto& get_property(const typename BAGL_CSR_GRAPH_TYPE::edge_descriptor& e, BAGL_CSR_GRAPH_TYPE& g) {
+  return g.get_property(e);
+}
+
+// Returns a const-reference to the edge-property associated to the given edge descriptor.
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
+const auto& get_property(const typename BAGL_CSR_GRAPH_TYPE::edge_descriptor& e, const BAGL_CSR_GRAPH_TYPE& g) {
+  return g.get_property(e);
 }
 
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-struct property_map<BAGL_CSR_GRAPH_TYPE, vertex_index_t,
-                    std::enable_if_t<!distributed_detail::is_distributed_selector_v<Vertex>>> {
-  using type = typed_identity_property_map<Vertex>;
+auto& get_property(BAGL_CSR_GRAPH_TYPE& g, graph_all_t /*unused*/) {
+  return g.get_property(graph_all);
+}
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
+const auto& get_property(const BAGL_CSR_GRAPH_TYPE& g, graph_all_t /*unused*/) {
+  return g.get_property(graph_all);
+}
+
+// Handle graph property tags, also handles graph_bundle_t.
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Tag>
+std::enable_if_t<std::is_same_v<property_kind_t<Tag>, graph_property_tag>, lookup_one_property_t<GraphProperty, Tag>&>
+get_property(BAGL_CSR_GRAPH_TYPE& g, Tag /*unused*/) {
+  return get_property_value(g.get_property(graph_all), Tag{});
+}
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Tag>
+std::enable_if_t<std::is_same_v<property_kind_t<Tag>, graph_property_tag>,
+                 const lookup_one_property_t<GraphProperty, Tag>&>
+get_property(const BAGL_CSR_GRAPH_TYPE& g, Tag /*unused*/) {
+  return get_property_value(g.get_property(graph_all), Tag{});
+}
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Tag, typename T>
+std::enable_if_t<std::is_same_v<property_kind_t<Tag>, graph_property_tag>> set_property(BAGL_CSR_GRAPH_TYPE& g,
+                                                                                        Tag /*unused*/, T&& value) {
+  get_property_value(g.get_property(graph_all), Tag{}) = std::forward<T>(value);
+}
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename T, typename Bundle>
+struct property_map<BAGL_CSR_GRAPH_TYPE, T Bundle::*> {
+  using non_const_Bundle = std::remove_cv_t<Bundle>;
+  using non_const_T = std::remove_cv_t<T>;
+  static constexpr bool is_vertex_bundle_v =
+      std::is_convertible_v<typename BAGL_CSR_GRAPH_TYPE::vertex_bundled*, non_const_Bundle*>;
+  static constexpr bool is_edge_bundle_v =
+      std::is_convertible_v<typename BAGL_CSR_GRAPH_TYPE::edge_bundled*, non_const_Bundle*>;
+  using tag_type = std::conditional_t<is_vertex_bundle_v, vertex_bundle_t,
+                                      std::conditional_t<is_edge_bundle_v, edge_bundle_t, graph_bundle_t>>;
+  using type = bundle_member_property_map<non_const_T, BAGL_CSR_GRAPH_TYPE, tag_type>;
+  using const_type = bundle_member_property_map<const non_const_T, const BAGL_CSR_GRAPH_TYPE, tag_type>;
+};
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename T, typename Bundle>
+auto get(T Bundle::*p, BAGL_CSR_GRAPH_TYPE& g) {
+  return typename property_map<BAGL_CSR_GRAPH_TYPE, T Bundle::*>::type{&g, p};
+}
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename T, typename Bundle>
+auto get(T Bundle::*p, const BAGL_CSR_GRAPH_TYPE& g) {
+  return typename property_map<BAGL_CSR_GRAPH_TYPE, T Bundle::*>::const_type{&g, p};
+}
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename T, typename Bundle, typename Key>
+const std::remove_cv_t<T>& get(T Bundle::*p, const BAGL_CSR_GRAPH_TYPE& g, const Key& k) {
+  return (g[k]).*p;
+}
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename T, typename Bundle, typename Key>
+void put(T Bundle::*p, BAGL_CSR_GRAPH_TYPE& g, const Key& k, T&& val) {
+  (g[k]).*p = std::forward<T>(val);
+}
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
+struct property_map<BAGL_CSR_GRAPH_TYPE, vertex_degree_t> {
+  using type = degree_property_map<BAGL_CSR_GRAPH_TYPE>;
+  using const_type = degree_property_map<BAGL_CSR_GRAPH_TYPE>;
+};
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
+auto get(vertex_degree_t /*unused*/, BAGL_CSR_GRAPH_TYPE& g) {
+  return property_map_t<BAGL_CSR_GRAPH_TYPE, vertex_degree_t>{g};
+}
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
+auto get(vertex_degree_t /*unused*/, const BAGL_CSR_GRAPH_TYPE& g) {
+  return property_map_const_t<BAGL_CSR_GRAPH_TYPE, vertex_degree_t>{g};
+}
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Key>
+auto get(vertex_degree_t /*unused*/, const BAGL_CSR_GRAPH_TYPE& g, const Key& k) {
+  return degree(k, g);
+}
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
+struct property_map<BAGL_CSR_GRAPH_TYPE, vertex_out_degree_t> {
+  using type = degree_property_map<BAGL_CSR_GRAPH_TYPE>;
+  using const_type = degree_property_map<BAGL_CSR_GRAPH_TYPE>;
+};
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
+auto get(vertex_out_degree_t /*unused*/, BAGL_CSR_GRAPH_TYPE& g) {
+  return property_map_t<BAGL_CSR_GRAPH_TYPE, vertex_out_degree_t>{g};
+}
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
+auto get(vertex_out_degree_t /*unused*/, const BAGL_CSR_GRAPH_TYPE& g) {
+  return property_map_const_t<BAGL_CSR_GRAPH_TYPE, vertex_out_degree_t>{g};
+}
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Key>
+auto get(vertex_out_degree_t /*unused*/, const BAGL_CSR_GRAPH_TYPE& g, const Key& k) {
+  return out_degree(k, g);
+}
+
+template <BAGL_BIDIR_CSR_GRAPH_TEMPLATE_PARMS>
+struct property_map<BAGL_BIDIR_CSR_GRAPH_TYPE, vertex_in_degree_t> {
+  using type = degree_property_map<BAGL_BIDIR_CSR_GRAPH_TYPE>;
+  using const_type = degree_property_map<BAGL_BIDIR_CSR_GRAPH_TYPE>;
+};
+
+template <BAGL_BIDIR_CSR_GRAPH_TEMPLATE_PARMS>
+auto get(vertex_in_degree_t /*unused*/, BAGL_BIDIR_CSR_GRAPH_TYPE& g) {
+  return property_map_t<BAGL_BIDIR_CSR_GRAPH_TYPE, vertex_in_degree_t>{g};
+}
+
+template <BAGL_BIDIR_CSR_GRAPH_TEMPLATE_PARMS>
+auto get(vertex_in_degree_t /*unused*/, const BAGL_BIDIR_CSR_GRAPH_TYPE& g) {
+  return property_map_const_t<BAGL_BIDIR_CSR_GRAPH_TYPE, vertex_in_degree_t>{g};
+}
+
+template <BAGL_BIDIR_CSR_GRAPH_TEMPLATE_PARMS, typename Key>
+auto get(vertex_in_degree_t /*unused*/, const BAGL_BIDIR_CSR_GRAPH_TYPE& g, const Key& k) {
+  return in_degree(k, g);
+}
+
+/***********************************************************************************************
+ *                             Property Maps (from tags)
+ * ********************************************************************************************/
+
+struct csr_property_selector {
+  template <class Graph, class Property, class Tag>
+  struct bind_ {
+    using value_type = typename property_value<Property, Tag>::type;
+
+    using type = tagged_in_property_property_map<value_type, Graph, Tag>;
+    using const_type = tagged_in_property_property_map<value_type, const Graph, Tag>;
+  };
+};
+
+/* specializations used by graph/properties.hpp */
+template <>
+struct vertex_property_selector<csr_graph_tag> {
+  using type = csr_property_selector;
+};
+
+template <>
+struct edge_property_selector<csr_graph_tag> {
+  using type = csr_property_selector;
+};
+
+template <>
+struct graph_property_selector<csr_graph_tag> {
+  using type = csr_property_selector;
+};
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Property>
+auto get(Property p, BAGL_CSR_GRAPH_TYPE& g) {
+  using Map = property_map_t<BAGL_CSR_GRAPH_TYPE, Property>;
+  return Map(&g, p);
+}
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Property>
+auto get(Property p, const BAGL_CSR_GRAPH_TYPE& g) {
+  using Map = property_map_const_t<BAGL_CSR_GRAPH_TYPE, Property>;
+  return Map(&g, p);
+}
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Property, typename Key>
+decltype(auto) get(Property p, const BAGL_CSR_GRAPH_TYPE& g, const Key& k) {
+  return get_property_value(g.get_property(k), p);
+}
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Property, typename Key>
+decltype(auto) get(Property p, BAGL_CSR_GRAPH_TYPE& g, const Key& k) {
+  return get_property_value(g.get_property(k), p);
+}
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS, typename Property, typename Key, typename Value>
+void put(Property p, BAGL_CSR_GRAPH_TYPE& g, const Key& k, Value&& val) {
+  get_property_value(g.get_property(k), p) = std::forward<Value>(val);
+}
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
+struct property_map<BAGL_CSR_GRAPH_TYPE, vertex_index_t> {
+  using type = identity_property_map;
   using const_type = type;
 };
 
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-struct property_map<BAGL_CSR_GRAPH_TYPE, edge_index_t,
-                    std::enable_if_t<!distributed_detail::is_distributed_selector_v<Vertex>>> {
-  using type = csr_detail::csr_edge_index_map<Vertex, EdgeIndex>;
+auto get(vertex_index_t /*unused*/, BAGL_CSR_GRAPH_TYPE& /*g*/) {
+  return identity_property_map{};
+}
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
+auto get(vertex_index_t /*unused*/, const BAGL_CSR_GRAPH_TYPE& /*g*/) {
+  return identity_property_map{};
+}
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
+std::size_t get(vertex_index_t /*unused*/, const BAGL_CSR_GRAPH_TYPE& /*g*/, const std::size_t& k) {
+  return k;
+}
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
+std::size_t get(vertex_index_t /*unused*/, BAGL_CSR_GRAPH_TYPE& /*g*/, const std::size_t& k) {
+  return k;
+}
+
+template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
+struct property_map<BAGL_CSR_GRAPH_TYPE, edge_index_t> {
+  using type = csr_detail::csr_edge_index_map;
   using const_type = type;
 };
 
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-struct property_map<BAGL_CSR_GRAPH_TYPE, vertex_all_t,
-                    std::enable_if_t<!distributed_detail::is_distributed_selector_v<Vertex>>> {
-  using type = typename BAGL_CSR_GRAPH_TYPE::inherited_vertex_properties::vertex_map_type;
-  using const_type = typename BAGL_CSR_GRAPH_TYPE::inherited_vertex_properties::const_vertex_map_type;
-};
-
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-struct property_map<BAGL_CSR_GRAPH_TYPE, edge_all_t,
-                    std::enable_if_t<!distributed_detail::is_distributed_selector_v<Vertex>>> {
-  using type = typename BAGL_CSR_GRAPH_TYPE::forward_type::inherited_edge_properties::edge_map_type;
-  using const_type = typename BAGL_CSR_GRAPH_TYPE::forward_type::inherited_edge_properties::const_edge_map_type;
-};
-
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-struct property_map<BAGL_CSR_GRAPH_TYPE, graph_all_t,
-                    std::enable_if_t<!distributed_detail::is_distributed_selector_v<Vertex>>> {
-  using type = single_ref_property_map<typename BAGL_CSR_GRAPH_TYPE::graph_property_type>;
-  using const_type = single_ref_property_map<const typename BAGL_CSR_GRAPH_TYPE::graph_property_type>;
-};
-
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-auto get(vertex_index_t /*unused*/, const BAGL_CSR_GRAPH_TYPE& /*unused*/) {
-  return typed_identity_property_map<Vertex>();
+auto get(edge_index_t /*unused*/, BAGL_CSR_GRAPH_TYPE& /*g*/) {
+  return csr_detail::csr_edge_index_map{};
 }
 
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-Vertex get(vertex_index_t /*unused*/, const BAGL_CSR_GRAPH_TYPE& /*unused*/, Vertex v) {
-  return v;
+auto get(edge_index_t /*unused*/, const BAGL_CSR_GRAPH_TYPE& /*g*/) {
+  return csr_detail::csr_edge_index_map{};
 }
 
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-auto get(vertex_index_t /*unused*/, BAGL_CSR_GRAPH_TYPE& /*unused*/) {
-  return typed_identity_property_map<Vertex>();
-}
-
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-Vertex get(vertex_index_t /*unused*/, BAGL_CSR_GRAPH_TYPE& /*unused*/, Vertex v) {
-  return v;
-}
-
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-auto get(edge_index_t /*unused*/, const BAGL_CSR_GRAPH_TYPE& /*unused*/) {
-  return property_map_const_t<BAGL_CSR_GRAPH_TYPE, edge_index_t>{};
-}
-
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-EdgeIndex get(edge_index_t /*unused*/, const BAGL_CSR_GRAPH_TYPE& /*unused*/,
-              typename BAGL_CSR_GRAPH_TYPE::edge_descriptor e) {
+std::size_t get(edge_index_t /*unused*/, const BAGL_CSR_GRAPH_TYPE& /*g*/,
+                const typename BAGL_CSR_GRAPH_TYPE::edge_descriptor& e) {
   return e.idx;
 }
 
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-auto get(edge_index_t /*unused*/, BAGL_CSR_GRAPH_TYPE& /*unused*/) {
-  return property_map_const_t<BAGL_CSR_GRAPH_TYPE, edge_index_t>{};
-}
-
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-EdgeIndex get(edge_index_t /*unused*/, BAGL_CSR_GRAPH_TYPE& /*unused*/,
-              typename BAGL_CSR_GRAPH_TYPE::edge_descriptor e) {
+std::size_t get(edge_index_t /*unused*/, BAGL_CSR_GRAPH_TYPE& /*g*/,
+                const typename BAGL_CSR_GRAPH_TYPE::edge_descriptor& e) {
   return e.idx;
-}
-
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-auto get(vertex_all_t /*unused*/, BAGL_CSR_GRAPH_TYPE& g) {
-  return g.get_vertex_bundle(get(vertex_index, g));
-}
-
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-auto get(vertex_all_t /*unused*/, const BAGL_CSR_GRAPH_TYPE& g) {
-  return g.get_vertex_bundle(get(vertex_index, g));
-}
-
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-VertexProperty& get(vertex_all_t /*unused*/, BAGL_CSR_GRAPH_TYPE& g, Vertex v) {
-  return get(vertex_all, g)[v];
-}
-
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-const VertexProperty& get(vertex_all_t /*unused*/, const BAGL_CSR_GRAPH_TYPE& g, Vertex v) {
-  return get(vertex_all, g)[v];
-}
-
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-void put(vertex_all_t /*unused*/, BAGL_CSR_GRAPH_TYPE& g, Vertex v, const VertexProperty& val) {
-  put(get(vertex_all, g), v, val);
-}
-
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-auto get(edge_all_t /*unused*/, BAGL_CSR_GRAPH_TYPE& g) {
-  return g.forward_.get_edge_bundle(get(edge_index, g));
-}
-
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-auto get(edge_all_t /*unused*/, const BAGL_CSR_GRAPH_TYPE& g) {
-  return g.forward_.get_edge_bundle(get(edge_index, g));
-}
-
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-EdgeProperty& get(edge_all_t /*unused*/, BAGL_CSR_GRAPH_TYPE& g,
-                  const typename BAGL_CSR_GRAPH_TYPE::edge_descriptor& e) {
-  return get(edge_all, g)[e];
-}
-
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-const EdgeProperty& get(edge_all_t /*unused*/, const BAGL_CSR_GRAPH_TYPE& g,
-                        const typename BAGL_CSR_GRAPH_TYPE::edge_descriptor& e) {
-  return get(edge_all, g)[e];
-}
-
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-void put(edge_all_t /*unused*/, BAGL_CSR_GRAPH_TYPE& g, const typename BAGL_CSR_GRAPH_TYPE::edge_descriptor& e,
-         const EdgeProperty& val) {
-  put(get(edge_all, g), e, val);
-}
-
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-auto get(graph_all_t /*unused*/, BAGL_CSR_GRAPH_TYPE& g) {
-  return property_map_t<BAGL_CSR_GRAPH_TYPE, graph_all_t>(g.property_);
-}
-
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-auto get(graph_all_t /*unused*/, const BAGL_CSR_GRAPH_TYPE& g) {
-  return property_map_const_t<BAGL_CSR_GRAPH_TYPE, graph_all_t>(g.property_);
-}
-
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-GraphProperty& get(graph_all_t /*unused*/, BAGL_CSR_GRAPH_TYPE& g, BAGL_CSR_GRAPH_TYPE* /*unused*/) {
-  return g.property_;
-}
-
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-const GraphProperty& get(graph_all_t /*unused*/, const BAGL_CSR_GRAPH_TYPE& g, BAGL_CSR_GRAPH_TYPE* /*unused*/) {
-  return g.property_;
-}
-
-template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-void put(graph_all_t /*unused*/, BAGL_CSR_GRAPH_TYPE& g, BAGL_CSR_GRAPH_TYPE* /*unused*/, const GraphProperty& val) {
-  g.property_ = val;
 }
 
 #undef BAGL_CSR_GRAPH_TYPE

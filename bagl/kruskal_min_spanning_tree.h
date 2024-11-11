@@ -12,6 +12,7 @@
 #include "bagl/disjoint_sets.h"
 #include "bagl/graph_concepts.h"
 #include "bagl/graph_traits.h"
+#include "bagl/graph_utility.h"
 #include "bagl/indirect_cmp.h"
 #include "bagl/property_map.h"
 
@@ -63,12 +64,19 @@ void kruskal_minimum_spanning_tree(const Graph& g, OutputIterator spanning_tree_
   }
 }
 
+template <concepts::VertexAndEdgeListGraph Graph, std::output_iterator<graph_edge_descriptor_t<Graph>> OutputIterator,
+          concepts::ReadableEdgePropertyMap<Graph> Weight>
+requires std::totally_ordered<property_traits_value_t<Weight>>
+void kruskal_minimum_spanning_tree(const Graph& g, OutputIterator spanning_tree_edges, Weight weight) {
+  std::size_t n = num_vertices_or_zero(g);
+  kruskal_minimum_spanning_tree(
+      g, spanning_tree_edges, vector_property_map(n, get(vertex_index, g), std::size_t{0}).ref(),
+      vector_property_map(n, get(vertex_index, g), graph_traits<Graph>::null_vertex()).ref(), weight);
+}
+
 template <concepts::VertexAndEdgeListGraph Graph, std::output_iterator<graph_edge_descriptor_t<Graph>> OutputIterator>
 void kruskal_minimum_spanning_tree(const Graph& g, OutputIterator spanning_tree_edges) {
-  std::size_t n = num_vertices(g);
-  if (n == 0) {
-    return;  // Nothing to do in this case
-  }
+  std::size_t n = num_vertices_or_zero(g);
   kruskal_minimum_spanning_tree(
       g, spanning_tree_edges, vector_property_map(n, get(vertex_index, g), std::size_t{0}).ref(),
       vector_property_map(n, get(vertex_index, g), graph_traits<Graph>::null_vertex()).ref(), get(edge_weight, g));

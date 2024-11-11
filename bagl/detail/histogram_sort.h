@@ -49,7 +49,6 @@ void count_starts(KeyRange keys, RowstartRange starts, std::size_t numkeys, KeyF
 template <std::ranges::input_range KeyRange, std::ranges::random_access_range RowstartRange,
           std::ranges::input_range InputRange, std::ranges::random_access_range OutputRange, typename KeyFilter,
           typename KeyTransform>
-requires std::ranges::output_range<OutputRange, std::ranges::range_value_t<InputRange>>
 void histogram_sort(KeyRange keys, RowstartRange rowstarts, std::size_t numkeys, InputRange values_in,
                     OutputRange values_out, KeyFilter key_filter, KeyTransform key_transform) {
   assert(rowstarts.size() >= numkeys + 1);
@@ -76,8 +75,6 @@ template <std::ranges::input_range KeyRange, std::ranges::random_access_range Ro
           std::ranges::input_range InputRange1, std::ranges::random_access_range OutputRange1,
           std::ranges::input_range InputRange2, std::ranges::random_access_range OutputRange2, typename KeyFilter,
           typename KeyTransform>
-requires std::ranges::output_range<OutputRange1, std::ranges::range_value_t<InputRange1>> &&
-    std::ranges::output_range<OutputRange2, std::ranges::range_value_t<InputRange2>>
 void histogram_sort(KeyRange keys, RowstartRange rowstarts, std::size_t numkeys, InputRange1 values1_in,
                     OutputRange1 values1_out, InputRange2 values2_in, OutputRange2 values2_out, KeyFilter key_filter,
                     KeyTransform key_transform) {
@@ -87,8 +84,6 @@ void histogram_sort(KeyRange keys, RowstartRange rowstarts, std::size_t numkeys,
 
 template <std::ranges::random_access_range KeyRange, std::ranges::random_access_range RowstartRange,
           std::ranges::random_access_range OutputRange, typename KeyTransform>
-requires std::ranges::output_range<OutputRange, std::ranges::range_value_t<OutputRange>> &&
-    std::ranges::output_range<KeyRange, std::ranges::range_value_t<KeyRange>>
 void histogram_sort_inplace(KeyRange keys, RowstartRange rowstarts, std::size_t numkeys, OutputRange values,
                             KeyTransform key_transform) {
   assert(rowstarts.size() >= numkeys + 1);
@@ -118,9 +113,6 @@ void histogram_sort_inplace(KeyRange keys, RowstartRange rowstarts, std::size_t 
 template <std::ranges::random_access_range KeyRange, std::ranges::random_access_range RowstartRange,
           std::ranges::random_access_range OutputRange1, std::ranges::random_access_range OutputRange2,
           typename KeyTransform>
-requires std::ranges::output_range<OutputRange1, std::ranges::range_value_t<OutputRange1>> &&
-    std::ranges::output_range<OutputRange2, std::ranges::range_value_t<OutputRange2>> &&
-    std::ranges::output_range<KeyRange, std::ranges::range_value_t<KeyRange>>
 void histogram_sort_inplace(KeyRange keys, RowstartRange rowstarts, std::size_t numkeys, OutputRange1 values1,
                             OutputRange2 values2, KeyTransform key_transform) {
   histogram_sort_inplace(keys, rowstarts, numkeys, zip_range(values1, values2), key_transform);

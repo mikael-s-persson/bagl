@@ -332,6 +332,15 @@ cc_test(
 )
 
 cc_test(
+    name = "csr_graph_test",
+    srcs = [ "csr_graph_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "cuthill_mckee_ordering_test",
     srcs = [ "cuthill_mckee_ordering_test.cc", ],
     deps = [
