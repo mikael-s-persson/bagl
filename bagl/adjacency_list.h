@@ -400,6 +400,11 @@ auto num_vertices(const BAGL_ADJACENCY_LIST& g) {
   return g.m_pack.size();
 }
 
+template <BAGL_ADJACENCY_LIST_ARGS>
+auto vertex(std::size_t i, const BAGL_ADJACENCY_LIST& g) {
+  return *std::next(g.m_pack.vertices().begin(), i);
+}
+
 /***********************************************************************************************
  *                             EdgeListGraphConcept
  * ********************************************************************************************/

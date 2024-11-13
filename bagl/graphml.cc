@@ -150,8 +150,8 @@ void read_graphml(std::istream& in, dynamic_graph_mutator& g, std::size_t desire
          e = e->NextSiblingElement("edge")) {
       std::string source = e->Attribute("source");
       std::string target = e->Attribute("target");
-      std::string local_directed = e->Attribute("directed");
-      bool is_directed = (local_directed.empty() ? default_directed : local_directed == "true");
+      const char* local_directed = e->Attribute("directed");
+      bool is_directed = (local_directed == nullptr ? default_directed : local_directed == std::string_view{"true"});
       if (is_directed != g.is_directed()) {
         if (is_directed) {
           throw directed_graph_error();
@@ -257,7 +257,7 @@ void write_graphml(std::ostream& out, const dynamic_graph_observer& g, bool orde
     }
     doc.OpenElement("data");
     doc.PushAttribute("key", graph_key_ids[name].c_str());
-    doc.PushText(pmap->get_string(&g).c_str());
+    doc.PushText(pmap->get_string(g.get_graph_key()).c_str());
     doc.CloseElement();  // data
   }
 

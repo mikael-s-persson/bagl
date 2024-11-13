@@ -321,8 +321,8 @@ class dynamic_graph_observer_wrapper : public dynamic_graph_observer {
  protected:
   const Graph& g_;
   const dynamic_properties& dp_;
-  std::map<vertex_descriptor, std::size_t> vindex_;
-  std::map<edge_descriptor, std::size_t> eindex_;
+  std::unordered_map<vertex_descriptor, std::size_t, graph_descriptor_hash_t<vertex_descriptor>> vindex_;
+  std::unordered_map<edge_descriptor, std::size_t, graph_descriptor_hash_t<edge_descriptor>> eindex_;
 };
 
 template <concepts::Graph Graph>

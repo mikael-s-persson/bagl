@@ -43,7 +43,7 @@ void read_graphml(std::istream& in, Graph& g, dynamic_properties& dp, std::size_
 
 void write_graphml(std::ostream& out, const dynamic_graph_observer& g, bool ordered_vertices = false);
 
-template <concepts::VertexAndEdgeListGraph Graph, concepts::ReadableVertexIndexMap<Graph> VertexIndexMap>
+template <concepts::VertexAndEdgeListGraph Graph>
 void write_graphml(std::ostream& out, const Graph& g, const dynamic_properties& dp, bool ordered_vertices = false) {
   dynamic_graph_observer_wrapper<Graph> mg(g, dp);
   write_graphml(out, mg, ordered_vertices);

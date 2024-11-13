@@ -509,6 +509,19 @@ cc_test(
 )
 
 cc_test(
+    name = "graphml_test",
+    srcs = [ "graphml_test.cc", ],
+    data = [
+        "testdata/graphml_test.xml",
+    ],
+    deps = [
+        "//bagl",
+        "//bagl:graphml",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "graph_concepts_test",
     srcs = [ "graph_concepts_test.cc", ],
     deps = [
@@ -547,6 +560,15 @@ cc_test(
 cc_test(
     name = "layout_test",
     srcs = [ "layout_test.cc", ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "make_bicon_planar_test",
+    srcs = [ "make_bicon_planar_test.cc", ],
     deps = [
         "//bagl",
         "@com_google_googletest//:gtest_main",

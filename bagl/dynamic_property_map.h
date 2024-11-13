@@ -132,6 +132,32 @@ class dynamic_property_map_adaptor : public dynamic_property_map {
   using key_type = Key;
   using value_type = property_traits_value_t<PropertyMap>;
 
+  template <bool ForGetter = false>
+  static decltype(auto) cast_key(const std::any& in_key) {
+    if constexpr (std::is_pointer_v<key_type>) {
+      // Handle both const T* and T*.
+      using key_value = std::remove_pointer_t<key_type>;
+      using non_const_key = std::remove_cv_t<key_value>;
+      using ptr_to_const_key = std::add_pointer_t<std::add_const_t<non_const_key>>;
+      using ptr_to_non_const_key = std::add_pointer_t<non_const_key>;
+      if constexpr (std::is_const_v<key_value> || ForGetter) {
+        if (in_key.type() == typeid(ptr_to_const_key)) {
+          return *std::any_cast<ptr_to_const_key>(in_key);
+        }
+        if (in_key.type() == typeid(ptr_to_non_const_key)) {
+          return std::as_const(*std::any_cast<ptr_to_non_const_key>(in_key));
+        }
+        // Probably will throw a bad_any_cast exception.
+        return *std::any_cast<ptr_to_const_key>(in_key);
+      } else {
+        // Might throw a bad_any_cast exception.
+        return *std::any_cast<ptr_to_non_const_key>(in_key);
+      }
+    } else {
+      return std::any_cast<key_type>(in_key);
+    }
+  }
+
   // do_put - overloaded dispatches from the put() member function.
   //   Attempts to "put" to a property map that does not model
   //   WritablePropertyMap result in a runtime exception.
@@ -139,16 +165,15 @@ class dynamic_property_map_adaptor : public dynamic_property_map {
   //   in_value must either hold an object of value_type or a string that
   //   can be converted to value_type via iostreams.
   void do_put(const std::any& in_key, const std::any& in_value) {
-    key_type key = std::any_cast<key_type>(in_key);
     if (in_value.type() == std::type_index{typeid(value_type)}) {
-      put(property_map_, key, std::any_cast<value_type>(in_value));
+      put(property_map_, cast_key(in_key), std::any_cast<value_type>(in_value));
     } else {
       //  if in_value is an empty string, put a default constructed value_type.
       auto v = std::any_cast<std::string>(in_value);
       if (v.empty()) {
-        put(property_map_, key, value_type());
+        put(property_map_, cast_key(in_key), value_type());
       } else {
-        put(property_map_, key, dynamic_pmap_detail::read_value<value_type>(v));
+        put(property_map_, cast_key(in_key), dynamic_pmap_detail::read_value<value_type>(v));
       }
     }
   }
@@ -156,22 +181,11 @@ class dynamic_property_map_adaptor : public dynamic_property_map {
  public:
   explicit dynamic_property_map_adaptor(PropertyMap property_map) : property_map_(std::move(property_map)) {}
 
-  [[nodiscard]] auto get_value_impl(const std::any& in_key) {
+  [[nodiscard]] decltype(auto) get_value_impl(const std::any& in_key) {
     if constexpr (std::is_pointer_v<key_type>) {
-      // Handle both const T* and T*.
-      using non_const_key = std::remove_cv_t<std::remove_pointer_t<key_type>>;
-      using ptr_to_const_key = std::add_pointer_t<std::add_const_t<non_const_key>>;
-      using ptr_to_non_const_key = std::add_pointer_t<non_const_key>;
-      if (in_key.type() == typeid(ptr_to_const_key)) {
-        return get(property_map_, std::any_cast<ptr_to_const_key>(in_key));
-      }
-      if (in_key.type() == typeid(ptr_to_non_const_key)) {
-        return get(property_map_, std::any_cast<ptr_to_non_const_key>(in_key));
-      }
-      // Probably will throw a bad_any_cast exception.
-      return get(property_map_, std::any_cast<key_type>(in_key));
+      return property_map_[cast_key<true>(in_key)];
     } else {
-      return get(property_map_, std::any_cast<key_type>(in_key));
+      return get(property_map_, cast_key<true>(in_key));
     }
   }
 
@@ -184,17 +198,17 @@ class dynamic_property_map_adaptor : public dynamic_property_map {
   }
 
   void put_value(const std::any& in_key, const std::any& in_value) override {
-    if constexpr (!concepts::WritablePropertyMap<PropertyMap, key_type>) {
+    if constexpr (!concepts::WritablePropertyMap<PropertyMap, decltype(cast_key(in_key))>) {
       throw dynamic_const_put_error();
     } else {
       do_put(in_key, in_value);
     }
   }
   void put_value(const std::any& in_key, const std::string& in_value) override {
-    if constexpr (!concepts::WritablePropertyMap<PropertyMap, key_type>) {
+    if constexpr (!concepts::WritablePropertyMap<PropertyMap, decltype(cast_key(in_key))>) {
       throw dynamic_const_put_error();
     } else {
-      put(property_map_, std::any_cast<key_type>(in_key), dynamic_pmap_detail::read_value<value_type>(in_value));
+      put(property_map_, cast_key(in_key), dynamic_pmap_detail::read_value<value_type>(in_value));
     }
   }
 
@@ -266,7 +280,7 @@ struct dynamic_properties {
     } else if constexpr (is_edge_property_kind_v<PropertyTag>) {
       return property<graph_edge_descriptor_t<Graph>>(std::move(name), get(property_tag, std::forward<Graph>(g)));
     } else {
-      return property<Graph*>(std::move(name), get(property_tag, std::forward<Graph>(g)));
+      return property<std::remove_reference_t<Graph>*>(std::move(name), get(property_tag, std::forward<Graph>(g)));
     }
   }
   // Add property maps from tags:

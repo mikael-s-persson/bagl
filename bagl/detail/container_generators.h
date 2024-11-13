@@ -415,12 +415,14 @@ struct ignore_output_iter {
   using reference = value_type&;
   using iterator_category = std::bidirectional_iterator_tag;
 
+  mutable value_type empty_obj;
+
   ignore_output_iter& operator++() { return *this; }
   ignore_output_iter& operator++(int) { return *this; }
   ignore_output_iter& operator--() { return *this; }
   ignore_output_iter& operator--(int) { return *this; }
 
-  value_type operator*() const { return {}; }
+  reference operator*() const { return empty_obj; }
 };
 
 // We use Jon Maiga's implementation from
