@@ -184,7 +184,7 @@ class kamada_kawai_spring_layout_impl {
     using std::sqrt;
 
     // Compute d_{ij} and place it in the distance matrix
-    if (!johnson_all_pairs_shortest_paths(g_, distance_, index_, weight_, weight_type(0))) {
+    if (!johnson_all_pairs_shortest_paths(g_, distance_, index_, weight_)) {
       return false;
     }
 
@@ -209,7 +209,7 @@ class kamada_kawai_spring_layout_impl {
     }
 
     // Compute Delta_i and find max
-    vertex_descriptor p = *vertices(g_).first;
+    vertex_descriptor p = *vertices(g_).begin();
     weight_type delta_p(0);
 
     for (auto u : v_rg) {

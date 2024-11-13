@@ -193,7 +193,7 @@ class convex_topology {
   }
 };
 
-template <std::size_t Dims, typename RandomNumberGenerator = std::minstd_rand>
+template <std::size_t Dims, typename RandomNumberGenerator = std::mt19937>
 class hypercube_topology : public convex_topology<Dims> {
   using rand_t = std::uniform_real_distribution<double>;
 
@@ -263,7 +263,7 @@ class hypercube_topology : public convex_topology<Dims> {
   double scaling_;
 };
 
-template <typename RandomNumberGenerator = std::minstd_rand>
+template <typename RandomNumberGenerator = std::mt19937>
 class square_topology : public hypercube_topology<2, RandomNumberGenerator> {
   using inherited = hypercube_topology<2, RandomNumberGenerator>;
 
@@ -273,7 +273,7 @@ class square_topology : public hypercube_topology<2, RandomNumberGenerator> {
   explicit square_topology(RandomNumberGenerator& gen, double scaling = 1.0) : inherited(gen, scaling) {}
 };
 
-template <typename RandomNumberGenerator = std::minstd_rand>
+template <typename RandomNumberGenerator = std::mt19937>
 class rectangle_topology : public convex_topology<2> {
   using rand_t = std::uniform_real_distribution<double>;
 
@@ -350,7 +350,7 @@ class rectangle_topology : public convex_topology<2> {
   double bottom_;
 };
 
-template <typename RandomNumberGenerator = std::minstd_rand>
+template <typename RandomNumberGenerator = std::mt19937>
 class cube_topology : public hypercube_topology<3, RandomNumberGenerator> {
   using inherited = hypercube_topology<3, RandomNumberGenerator>;
 
@@ -360,7 +360,7 @@ class cube_topology : public hypercube_topology<3, RandomNumberGenerator> {
   explicit cube_topology(RandomNumberGenerator& gen, double scaling = 1.0) : inherited(gen, scaling) {}
 };
 
-template <std::size_t Dims, typename RandomNumberGenerator = std::minstd_rand>
+template <std::size_t Dims, typename RandomNumberGenerator = std::mt19937>
 class ball_topology : public convex_topology<Dims> {
   using rand_t = std::uniform_real_distribution<double>;
 
@@ -442,7 +442,7 @@ class ball_topology : public convex_topology<Dims> {
   double radius_;
 };
 
-template <typename RandomNumberGenerator = std::minstd_rand>
+template <typename RandomNumberGenerator = std::mt19937>
 class circle_topology : public ball_topology<2, RandomNumberGenerator> {
   using inherited = ball_topology<2, RandomNumberGenerator>;
 
@@ -452,7 +452,7 @@ class circle_topology : public ball_topology<2, RandomNumberGenerator> {
   explicit circle_topology(RandomNumberGenerator& gen, double radius = 1.0) : inherited(gen, radius) {}
 };
 
-template <typename RandomNumberGenerator = std::minstd_rand>
+template <typename RandomNumberGenerator = std::mt19937>
 class sphere_topology : public ball_topology<3, RandomNumberGenerator> {
   using inherited = ball_topology<3, RandomNumberGenerator>;
 
@@ -462,7 +462,7 @@ class sphere_topology : public ball_topology<3, RandomNumberGenerator> {
   explicit sphere_topology(RandomNumberGenerator& gen, double radius = 1.0) : inherited(gen, radius) {}
 };
 
-template <typename RandomNumberGenerator = std::minstd_rand>
+template <typename RandomNumberGenerator = std::mt19937>
 class heart_topology {
   // Heart is defined as the union of three shapes:
   // Square w/ corners (+-1000, -1000), (0, 0), (0, -2000)

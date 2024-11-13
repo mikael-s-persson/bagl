@@ -37,7 +37,9 @@ using choose_default_map =
 // select a pair associative container or a vecS, which is only valid if
 // Label is an integral type.
 template <typename Selector, typename Label, typename Vertex>
-struct generate_label_map {};
+struct generate_label_map {
+  using type = void;
+};
 
 template <typename Label, typename Vertex>
 struct generate_label_map<vec_s, Label, Vertex> {
@@ -80,49 +82,51 @@ using choose_map = std::conditional_t<is_default_v<Selector>, choose_default_map
 // basically requires a) that Container is vector<Label> and that Label
 // is an unsigned integral value. Note that this will resize the vector
 // to accommodate indices.
-template <typename Container, typename Graph, typename Label, typename Prop>
-auto insert_labeled_vertex(Container& c, Graph& g, Label const& l, Prop const& p,
-                           container_traits_detail::random_access_container_tag) {
+template <typename Container, typename Graph, typename Label, typename... Prop>
+auto insert_labeled_vertex_impl(Container& c, Graph& g, Label const& l,
+                                container_traits_detail::random_access_container_tag, Prop&&... p_args) {
   // If the label is out of bounds, resize the vector to accommodate.
   // Resize by 2x the index so we don't cause quadratic insertions over
   // time.
   if (l >= c.size()) {
     c.resize((l + 1) * 2);
   }
-  c[l] = add_vertex(g, p);
+  c[l] = add_vertex(g, std::forward<Prop>(p_args)...);
   return std::pair{c[l], true};
 }
 
 // Tag dispatch on multi associative containers (i.e. multimaps).
-template <typename Container, typename Graph, typename Label, typename Prop>
-auto insert_labeled_vertex(Container& c, Graph& g, Label const& l, Prop const& p,
-                           container_traits_detail::multiple_associative_container_tag) {
+template <typename Container, typename Graph, typename Label, typename... Prop>
+auto insert_labeled_vertex_impl(Container& c, Graph& g, Label const& l,
+                                container_traits_detail::multiple_associative_container_tag, Prop&&... p_args) {
   // Note that insertion always succeeds so we can add the vertex first
   // and then the mapping to the label.
-  auto v = add_vertex(g, p);
+  auto v = add_vertex(g, std::forward<Prop>(p_args)...);
   c.insert(std::make_pair(l, v));
   return std::pair{v, true};
 }
 
 // Tag dispatch on unique associative containers (i.e. maps).
-template <typename Container, typename Graph, typename Label, typename Prop>
-auto insert_labeled_vertex(Container& c, Graph& g, Label const& l, Prop const& p,
-                           container_traits_detail::unique_associative_container_tag) {
+template <typename Container, typename Graph, typename Label, typename... Prop>
+auto insert_labeled_vertex_impl(Container& c, Graph& g, Label const& l,
+                                container_traits_detail::unique_associative_container_tag, Prop&&... p_args) {
   // Here, we actually have to try the insertion first, and only add
   // the vertex if we get a new element.
   using Vertex = graph_vertex_descriptor_t<Graph>;
   auto [it, inserted] = c.emplace(l, Vertex());
   if (inserted) {
     it->second = add_vertex(g);
-    put(vertex_all, g, it->second, p);
+    using VProp = vertex_property_type<Graph>;
+    put(vertex_all, g, it->second, VProp{std::forward<Prop>(p_args)...});
   }
   return std::pair{it->second, inserted};
 }
 
 // Dispatcher
-template <typename Container, typename Graph, typename Label, typename Prop>
-auto insert_labeled_vertex(Container& c, Graph& g, Label const& l, Prop const& p) {
-  return insert_labeled_vertex(c, g, l, p, container_traits_detail::container_category(c));
+template <typename Container, typename Graph, typename Label, typename... Prop>
+auto insert_labeled_vertex(Container& c, Graph& g, Label const& l, Prop&&... p_args) {
+  return insert_labeled_vertex_impl(c, g, l, container_traits_detail::container_category(c),
+                                    std::forward<Prop>(p_args)...);
 }
 
 // Find Labeled Vertex
@@ -144,7 +148,7 @@ auto find_labeled_vertex(Container const& c, Graph const&, Label const& l,
 // Dispatcher
 template <typename Container, typename Graph, typename Label>
 auto find_labeled_vertex(Container const& c, Graph const& g, Label const& l) {
-  return find_labeled_vertex(c, g, l, container_category(c));
+  return find_labeled_vertex(c, g, l, container_traits_detail::container_category(c));
 }
 
 // Put Vertex Label
@@ -179,7 +183,7 @@ bool put_vertex_label(Container& c, Graph const&, Label const& l, Vertex v,
 // Dispatcher
 template <typename Container, typename Label, typename Graph, typename Vertex>
 bool put_vertex_label(Container& c, Graph const& g, Label const& l, Vertex v) {
-  return put_vertex_label(c, g, l, v, container_category(c));
+  return put_vertex_label(c, g, l, v, container_traits_detail::container_category(c));
 }
 
 // Remove Labeled Vertex
@@ -218,7 +222,7 @@ void remove_labeled_vertex(Container& c, Graph& g, Label const& l,
 // Dispatcher
 template <typename Container, typename Label, typename Graph>
 void remove_labeled_vertex(Container& c, Graph& g, Label const& l) {
-  remove_labeled_vertex(c, g, l, container_category(c));
+  remove_labeled_vertex(c, g, l, container_traits_detail::container_category(c));
 }
 
 }  // namespace graph_detail
@@ -276,7 +280,7 @@ class labeled_graph : protected labeled_graph_types<Graph, Label, Selector> {
   using map_type = typename Base::map_type;
 
  public:
-  labeled_graph(graph_property_type const& gp = graph_property_type()) : graph_(gp), map_() {}
+  labeled_graph(graph_property_type const& gp = graph_property_type()) : graph_(0, gp), map_() {}
 
   labeled_graph(labeled_graph const& x) : graph_(x.graph_), map_(x.map_) {}
 
@@ -294,7 +298,9 @@ class labeled_graph : protected labeled_graph_types<Graph, Label, Selector> {
   // necessarily slower than the underlying counterpart.
   template <typename LabelIter>
   labeled_graph(vertices_size_type n, LabelIter l, graph_property_type const& gp = graph_property_type()) : graph_(gp) {
-    while (n-- > 0) add_vertex(*l++);
+    while (n-- > 0) {
+      add_vertex(*l++);
+    }
   }
 
   // Construct the graph over n vertices each of which has a label in the
@@ -302,7 +308,9 @@ class labeled_graph : protected labeled_graph_types<Graph, Label, Selector> {
   template <typename LabelIter, typename PropIter>
   labeled_graph(vertices_size_type n, LabelIter l, PropIter p, graph_property_type const& gp = graph_property_type())
       : graph_(gp) {
-    while (n-- > 0) add_vertex(*l++, *p++);
+    while (n-- > 0) {
+      add_vertex(*l++, *p++);
+    }
   }
 
   labeled_graph& operator=(labeled_graph const& x) {
@@ -607,10 +615,10 @@ auto add_edge(typename LABELED_GRAPH::vertex_descriptor const& u, typename LABEL
   return add_edge(u, v, g.graph());
 }
 
-template <LABELED_GRAPH_PARAMS>
+template <LABELED_GRAPH_PARAMS, typename... EPArgs>
 auto add_edge(typename LABELED_GRAPH::vertex_descriptor const& u, typename LABELED_GRAPH::vertex_descriptor const& v,
-              LABELED_GRAPH& g, typename LABELED_GRAPH::edge_property_type const& p) {
-  return add_edge(u, v, g.graph(), p);
+              LABELED_GRAPH& g, EPArgs&&... ep_args) {
+  return add_edge(u, v, g.graph(), std::forward<EPArgs>(ep_args)...);
 }
 
 template <LABELED_GRAPH_PARAMS>
@@ -630,16 +638,10 @@ void remove_edge(typename LABELED_GRAPH::vertex_descriptor u, typename LABELED_G
 }
 
 // Labeled extensions
-template <LABELED_GRAPH_PARAMS>
+template <LABELED_GRAPH_PARAMS, typename... EPArgs>
 auto add_edge_by_label(typename LABELED_GRAPH::label_type const& u, typename LABELED_GRAPH::label_type const& v,
-                       LABELED_GRAPH& g) {
-  return add_edge(g.vertex(u), g.vertex(v), g);
-}
-
-template <LABELED_GRAPH_PARAMS>
-auto add_edge_by_label(typename LABELED_GRAPH::label_type const& u, typename LABELED_GRAPH::label_type const& v,
-                       LABELED_GRAPH& g, typename LABELED_GRAPH::edge_property_type const& p) {
-  return add_edge(g.vertex(u), g.vertex(v), g, p);
+                       LABELED_GRAPH& g, EPArgs&&... ep_args) {
+  return add_edge(g.vertex(u), g.vertex(v), g, std::forward<EPArgs>(ep_args)...);
 }
 
 template <LABELED_GRAPH_PARAMS>
@@ -658,16 +660,9 @@ void remove_edge_by_label(typename LABELED_GRAPH::label_type const& u, typename 
 // the mutable graph concept. Note that the remove_vertex is hidden because
 // removing the vertex without its key could leave a dangling reference in
 // the map.
-template <LABELED_GRAPH_PARAMS>
-auto add_vertex(typename LABELED_GRAPH::label_type const& l, LABELED_GRAPH& g) {
-  return g.add_vertex(l);
-}
-
-// MutableLabeledPropertyGraph::add_vertex(l, vp, g)
-template <LABELED_GRAPH_PARAMS>
-auto add_vertex(typename LABELED_GRAPH::label_type const& l, LABELED_GRAPH& g,
-                typename LABELED_GRAPH::vertex_property_type const& p) {
-  return g.add_vertex(l, p);
+template <LABELED_GRAPH_PARAMS, typename... VPArgs>
+auto add_vertex(LABELED_GRAPH& g, typename LABELED_GRAPH::label_type const& l, VPArgs&&... vp_args) {
+  return g.add_vertex(l, std::forward<VPArgs>(vp_args)...);
 }
 
 template <LABELED_GRAPH_PARAMS>
