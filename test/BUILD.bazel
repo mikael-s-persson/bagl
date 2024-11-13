@@ -650,6 +650,18 @@ cc_test(
 )
 
 cc_test(
+    name = "metis_test",
+    srcs = [ "metis_test.cc", ],
+    data = [
+        "testdata/weighted_graph.gr",
+    ],
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "minimum_degree_ordering_test",
     srcs = [ "minimum_degree_ordering_test.cc", ],
     deps = [
