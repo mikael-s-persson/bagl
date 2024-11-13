@@ -34,6 +34,7 @@ class dynamic_graph_mutator {
 
   virtual std::any do_add_vertex() = 0;
   virtual std::pair<std::any, bool> do_add_edge(std::any source, std::any target) = 0;
+  [[nodiscard]] virtual std::pair<std::any, bool> get_edge(const std::any& u, const std::any& v) const = 0;
 
   virtual void set_graph_property(const std::string& name, const std::string& value, const std::string& value_type) = 0;
 
@@ -59,6 +60,14 @@ class dynamic_graph_mutator_wrapper : public dynamic_graph_mutator {
   std::pair<std::any, bool> do_add_edge(std::any source, std::any target) override {
     auto [e, added] = add_edge(std::any_cast<vertex_descriptor>(source), std::any_cast<vertex_descriptor>(target), g_);
     return std::make_pair(std::any(e), added);
+  }
+
+  [[nodiscard]] std::pair<std::any, bool> get_edge(const std::any& u, const std::any& v) const override {
+    if constexpr (concepts::AdjacencyMatrix<Graph>) {
+      return edge(std::any_cast<vertex_descriptor>(u), std::any_cast<vertex_descriptor>(v), g_);
+    } else {
+      return {edge_descriptor{}, false};
+    }
   }
 
   void set_graph_property(const std::string& name, const std::string& value, const std::string& value_type) override {

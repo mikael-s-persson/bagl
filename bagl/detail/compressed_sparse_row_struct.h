@@ -276,21 +276,24 @@ class compressed_sparse_row_structure {
   // Add edges from a sorted (smallest sources first) range of pairs and
   // edge properties
   template <std::ranges::bidirectional_range BidirRange, std::ranges::bidirectional_range EPRange,
-            typename GlobalToLocal>
+            typename GlobalToLocal, std::ranges::bidirectional_range OutputRange>
   requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<BidirRange>> &&
-      std::constructible_from<EdgeProperty, std::ranges::range_reference_t<EPRange>>
+      std::constructible_from<EdgeProperty, std::ranges::range_reference_t<EPRange>> &&
+      std::ranges::output_range<OutputRange, csr_edge_descriptor>
   void add_edges_sorted_internal(const BidirRange& sorted_rg, const EPRange& ep_sorted_rg,
-                                 const GlobalToLocal& global_to_local) {
+                                 const GlobalToLocal& global_to_local, OutputRange& e_out_rg) {
     // Flip sequence
     auto reversed_rg = std::ranges::ref_view(sorted_rg) | std::views::reverse;
     std::size_t new_edge_count = std::ranges::distance(reversed_rg);
     auto ep_reversed_rg = std::ranges::ref_view(ep_sorted_rg) | std::views::reverse;
+    auto e_out_reversed_rg = std::ranges::ref_view(e_out_rg) | std::views::reverse;
     std::size_t edges_added_before_i = new_edge_count;  // Count increment to add to rowstarts
     column_.resize(column_.size() + new_edge_count);
     edge_properties_.resize(edge_properties_.size() + new_edge_count);
     auto current_new_edge = reversed_rg.begin();
     auto prev_new_edge = reversed_rg.begin();
     auto current_new_edge_prop = ep_reversed_rg.begin();
+    auto current_new_e_out = e_out_reversed_rg.begin();
     for (std::size_t i_plus_1 = rowstart_.size() - 1; i_plus_1 > 0; --i_plus_1) {
       std::size_t i = i_plus_1 - 1;
       prev_new_edge = current_new_edge;
@@ -302,6 +305,7 @@ class compressed_sparse_row_structure {
         }
         ++current_new_edge;
         ++current_new_edge_prop;
+        ++current_new_e_out;
         ++edges_added_to_this_vertex;
       }
       edges_added_before_i -= edges_added_to_this_vertex;
@@ -311,22 +315,25 @@ class compressed_sparse_row_structure {
       std::size_t old_degree = rowstart_[i + 1] - rowstart_[i];
       std::size_t new_degree = old_degree + edges_added_to_this_vertex;
       // Move old edges forward (by #new_edges before this i) to make
-      // room new_rowstart > old_rowstart, so use copy_backwards
+      // room new_rowstart > old_rowstart, so use move_backward
       if (old_rowstart != new_rowstart) {
-        std::copy_backward(column_.begin() + old_rowstart, column_.begin() + old_rowstart + old_degree,
+        std::move_backward(column_.begin() + old_rowstart, column_.begin() + old_rowstart + old_degree,
                            column_.begin() + new_rowstart + old_degree);
-        std::copy_backward(edge_properties_.begin() + old_rowstart,
+        std::move_backward(edge_properties_.begin() + old_rowstart,
                            edge_properties_.begin() + old_rowstart + old_degree,
-                           edge_properties_.begin() + new_rowstart + (old_degree));
+                           edge_properties_.begin() + new_rowstart + old_degree);
       }
       // Add new edges (reversed because current_new_edge is a const_reverse_iterator)
       auto temp = current_new_edge;
       auto temp_prop = current_new_edge_prop;
+      auto temp_e_out = current_new_e_out;
       for (; temp != prev_new_edge; ++old_degree) {
         --temp;
         --temp_prop;
+        --temp_e_out;
         column_[new_rowstart + old_degree] = (*temp).second;
         edge_properties_[new_rowstart + old_degree] = *temp_prop;
+        *temp_e_out = csr_edge_descriptor(i, new_rowstart + old_degree);
       }
       rowstart_[i + 1] = new_rowstart + new_degree;
       if (edges_added_before_i == 0) {
@@ -337,6 +344,93 @@ class compressed_sparse_row_structure {
         // of the break or because rowstart_[0] is always 0)
         break;
       }
+    }
+  }
+
+  template <std::ranges::forward_range ERange, typename GlobalToLocal,
+            std::ranges::output_range<EdgeProperty> OutputRange>
+  requires std::constructible_from<csr_edge_descriptor, std::ranges::range_value_t<ERange>>
+  void remove_edges_sorted_internal(const ERange& sorted_rg, const GlobalToLocal& global_to_local,
+                                    OutputRange& ep_out_rg) {
+    auto current_e_rm = sorted_rg.begin();
+    auto current_ep_out = ep_out_rg.begin();
+    std::size_t old_rowstart = rowstart_[0];
+    std::size_t new_rowstart = old_rowstart;
+    for (std::size_t i = 0; i < rowstart_.size() - 1; ++i) {
+      // Move old edges back (by #removed_edges so far) to compress
+      // when new_rowstart < old_rowstart, so use move
+      std::size_t old_degree = rowstart_[i + 1] - rowstart_[i];
+      if (old_rowstart != new_rowstart) {
+        std::move(column_.begin() + old_rowstart, column_.begin() + old_rowstart + old_degree,
+                  column_.begin() + new_rowstart);
+        std::move(edge_properties_.begin() + old_rowstart, edge_properties_.begin() + old_rowstart + old_degree,
+                  edge_properties_.begin() + new_rowstart);
+        rowstart_[i] = new_rowstart;
+      }
+      // Find next e_rm that doesn't have 'i' as source.
+      auto next_e_rm = current_e_rm;
+      while (next_e_rm != sorted_rg.end()) {
+        csr_edge_descriptor e = *next_e_rm;
+        if (get(global_to_local, e.src) != i) {
+          break;
+        }
+        ++next_e_rm;
+      }
+      // A simple "remove" loop.
+      std::size_t old_outedge = new_rowstart;
+      std::size_t new_outedge = old_outedge;
+      while (old_outedge != new_rowstart + old_degree) {
+        if (current_e_rm == next_e_rm) {
+          // Skip to the end of remaining out edges.
+          new_outedge += (new_rowstart + old_degree) - old_outedge;
+          old_outedge = new_rowstart + old_degree;
+          break;
+        }
+        csr_edge_descriptor e = *current_e_rm;
+        std::size_t old_outedge_idx = (old_outedge - new_rowstart) + old_rowstart;
+        if (e.idx == old_outedge_idx) {
+          // Remove this edge.
+          *current_ep_out = std::move(edge_properties_[new_outedge]);
+          ++old_outedge;
+          ++current_e_rm;
+          ++current_ep_out;
+        } else {
+          // Keep this edge.
+          if (old_outedge != new_outedge) {
+            column_[new_outedge] = column_[old_outedge];
+            edge_properties_[new_outedge] = std::move(edge_properties_[old_outedge]);
+          }
+          ++old_outedge;
+          ++new_outedge;
+        }
+      }
+      // Now, new_outedge is at the end of this row.
+      // If we had not-found edges in current e_rm range, just skip them.
+      current_e_rm = next_e_rm;
+      old_rowstart = rowstart_[i + 1];
+      new_rowstart = new_outedge;
+      // If current_e_rm reached the end, we continue to move edges and update row starts.
+    }
+    // We should end up with new_rowstart pointing to the last "rowstart".
+    rowstart_.back() = new_rowstart;
+    column_.resize(new_rowstart);
+    edge_properties_.resize(new_rowstart);
+  }
+
+  // Pre: The vertices must be cleared already (no in or out edges).
+  template <std::ranges::forward_range VRange>
+  void erase_vertices(const VRange& sorted_rg) {
+    // If a vertex is cleared, rowstart_[u] == rowstart_[u+1], and u should not appear in any column_ entry.
+    // We just need to shift down all vertex indices greater than u.
+    for (auto& v : column_) {
+      std::size_t id_shift = 0;
+      for (auto u : sorted_rg) {
+        if (v <= u) {
+          break;
+        }
+        ++id_shift;
+      }
+      v -= id_shift;
     }
   }
 };

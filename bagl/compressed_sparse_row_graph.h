@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "bagl/detail/compressed_sparse_row_struct.h"
+#include "bagl/detail/container_generators.h"
 #include "bagl/detail/is_distributed_selector.h"
 #include "bagl/filtered_graph.h"  // For keep_all
 #include "bagl/graph_selectors.h"
@@ -414,62 +415,70 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
   // Add edges from a sorted (smallest sources first) range of pairs and edge
   // properties
   template <std::ranges::bidirectional_range BidirRange, std::ranges::bidirectional_range EPRange,
-            typename GlobalToLocal>
+            typename GlobalToLocal, std::ranges::bidirectional_range OutputRange>
   requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<BidirRange>> &&
       std::constructible_from<EdgeProperty, std::ranges::range_reference_t<EPRange>>
   void add_edges_sorted_internal_global(const BidirRange& sorted_rg, const EPRange& ep_sorted_rg,
-                                        const GlobalToLocal& global_to_local) {
-    forward_.add_edges_sorted_internal(sorted_rg, ep_sorted_rg, global_to_local);
+                                        const GlobalToLocal& global_to_local, OutputRange& e_out_rg) {
+    forward_.add_edges_sorted_internal(sorted_rg, ep_sorted_rg, global_to_local, e_out_rg);
   }
 
-  template <std::ranges::bidirectional_range BidirRange, std::ranges::bidirectional_range EPRange>
+  template <std::ranges::bidirectional_range BidirRange, std::ranges::bidirectional_range EPRange,
+            std::ranges::bidirectional_range OutputRange>
   requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<BidirRange>> &&
       std::constructible_from<EdgeProperty, std::ranges::range_reference_t<EPRange>>
-  void add_edges_sorted_internal(const BidirRange& sorted_rg, const EPRange& ep_sorted_rg) {
-    forward_.add_edges_sorted_internal(sorted_rg, ep_sorted_rg, identity_property_map());
+  void add_edges_sorted_internal(const BidirRange& sorted_rg, const EPRange& ep_sorted_rg, OutputRange& e_out_rg) {
+    forward_.add_edges_sorted_internal(sorted_rg, ep_sorted_rg, identity_property_map(), e_out_rg);
   }
 
   // Add edges from a sorted (smallest sources first) range of pairs
-  template <std::ranges::bidirectional_range BidirRange>
+  template <std::ranges::bidirectional_range BidirRange, std::ranges::bidirectional_range OutputRange>
   requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<BidirRange>>
-  void add_edges_sorted_internal(const BidirRange& sorted_rg) {
+  void add_edges_sorted_internal(const BidirRange& sorted_rg, OutputRange& e_out_rg) {
     forward_.add_edges_sorted_internal(
         sorted_rg,
         std::ranges::iota_view(std::size_t{0}, static_cast<std::size_t>(std::ranges::distance(sorted_rg))) |
             std::views::transform([](auto /*unused*/) { return edge_property_type{}; }),
-        identity_property_map());
+        identity_property_map(), e_out_rg);
   }
 
-  template <std::ranges::bidirectional_range BidirRange, typename GlobalToLocal>
+  template <std::ranges::bidirectional_range BidirRange, typename GlobalToLocal,
+            std::ranges::bidirectional_range OutputRange>
   requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<BidirRange>>
-  void add_edges_sorted_internal_global(const BidirRange& sorted_rg, const GlobalToLocal& global_to_local) {
+  void add_edges_sorted_internal_global(const BidirRange& sorted_rg, const GlobalToLocal& global_to_local,
+                                        OutputRange& e_out_rg) {
     forward_.add_edges_sorted_internal(
         sorted_rg,
         std::ranges::iota_view(std::size_t{0}, static_cast<std::size_t>(std::ranges::distance(sorted_rg))) |
             std::views::transform([](auto /*unused*/) { return edge_property_type{}; }),
-        global_to_local);
+        global_to_local, e_out_rg);
   }
 
   // Add edges from a range of (source, target) pairs that are unsorted
-  template <std::ranges::input_range EdgeRange, typename GlobalToLocal>
+  template <std::ranges::input_range EdgeRange, typename GlobalToLocal, std::ranges::bidirectional_range OutputRange>
   requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>>
-  void add_edges_internal_global(const EdgeRange& edge_rg, const GlobalToLocal& global_to_local) {
+  void add_edges_internal_global(const EdgeRange& edge_rg, const GlobalToLocal& global_to_local,
+                                 OutputRange& e_out_rg) {
     std::vector<std::pair<std::size_t, std::size_t>> new_edges(edge_rg.begin(), edge_rg.end());
     if (new_edges.empty()) {
       return;
     }
     std::sort(new_edges.begin(), new_edges.end());
-    add_edges_sorted_internal_global(new_edges, global_to_local);
+    add_edges_sorted_internal_global(new_edges, global_to_local, e_out_rg);
   }
 
-  template <std::ranges::input_range EdgeRange>
+  template <std::ranges::input_range EdgeRange, std::ranges::bidirectional_range OutputRange>
   requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>>
-  void add_edges_internal(const EdgeRange& edge_rg) { add_edges_internal_global(edge_rg, identity_property_map()); }
+  void add_edges_internal(const EdgeRange& edge_rg, OutputRange& e_out_rg) {
+    add_edges_internal_global(edge_rg, identity_property_map(), e_out_rg);
+  }
 
   // Add edges from a range of (source, target) pairs and edge properties that
   // are unsorted
-  template <std::ranges::input_range InRange, std::ranges::input_range EPRange, typename GlobalToLocal>
-  void add_edges_internal_global(InRange uv_range, EPRange ep_range, const GlobalToLocal& global_to_local) {
+  template <std::ranges::input_range InRange, std::ranges::input_range EPRange, typename GlobalToLocal,
+            std::ranges::bidirectional_range OutputRange>
+  void add_edges_internal_global(InRange uv_range, EPRange ep_range, const GlobalToLocal& global_to_local,
+                                 OutputRange& e_out_rg) {
     using vertex_pair = std::pair<std::size_t, std::size_t>;
     using edge_vector_t = std::vector<std::tuple<vertex_pair, edge_bundled>>;
     edge_vector_t new_edges;
@@ -487,14 +496,50 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
     forward_.add_edges_sorted_internal(
         std::views::transform(std::ranges::ref_view(new_edges), [](const auto& x) { return std::get<0>(x); }),
         std::views::transform(std::ranges::ref_view(new_edges), [](const auto& x) { return std::get<1>(x); }),
-        global_to_local);
+        global_to_local, e_out_rg);
   }
 
   // Add edges from a range of (source, target) pairs and edge properties that
   // are unsorted
-  template <std::ranges::input_range InRange, std::ranges::input_range EPRange>
-  void add_edges_internal(InRange uv_range, EPRange ep_range) {
-    add_edges_internal_global(uv_range, ep_range, identity_property_map());
+  template <std::ranges::input_range InRange, std::ranges::input_range EPRange,
+            std::ranges::bidirectional_range OutputRange>
+  void add_edges_internal(InRange uv_range, EPRange ep_range, OutputRange& e_out_rg) {
+    add_edges_internal_global(uv_range, ep_range, identity_property_map(), e_out_rg);
+  }
+
+  // Remove edges from a sorted (smallest sources first) range of edges
+  template <std::ranges::forward_range ERange, typename GlobalToLocal,
+            std::ranges::output_range<EdgeProperty> OutputRange>
+  requires std::constructible_from<edge_descriptor, std::ranges::range_value_t<ERange>>
+  void remove_edges_sorted_internal_global(const ERange& sorted_rg, const GlobalToLocal& global_to_local,
+                                           OutputRange& e_out_rg) {
+    forward_.remove_edges_sorted_internal(sorted_rg, global_to_local, e_out_rg);
+  }
+
+  template <std::ranges::forward_range ERange, std::ranges::output_range<EdgeProperty> OutputRange>
+  requires std::constructible_from<edge_descriptor, std::ranges::range_value_t<ERange>>
+  void remove_edges_sorted_internal(const ERange& sorted_rg, OutputRange& e_out_rg) {
+    forward_.add_edges_sorted_internal(sorted_rg, identity_property_map(), e_out_rg);
+  }
+
+  // Add edges from a range of (source, target) pairs that are unsorted
+  template <std::ranges::input_range ERange, typename GlobalToLocal,
+            std::ranges::output_range<EdgeProperty> OutputRange>
+  requires std::constructible_from<edge_descriptor, std::ranges::range_value_t<ERange>>
+  void remove_edges_internal_global(const ERange& edge_rg, const GlobalToLocal& global_to_local,
+                                    OutputRange& e_out_rg) {
+    std::vector<edge_descriptor> sorted_rg(edge_rg.begin(), edge_rg.end());
+    if (sorted_rg.empty()) {
+      return;
+    }
+    std::sort(sorted_rg.begin(), sorted_rg.end());
+    remove_edges_sorted_internal_global(sorted_rg, global_to_local, e_out_rg);
+  }
+
+  template <std::ranges::input_range ERange, std::ranges::output_range<EdgeProperty> OutputRange>
+  requires std::constructible_from<edge_descriptor, std::ranges::range_value_t<ERange>>
+  void remove_edges_internal(const ERange& edge_rg, OutputRange& e_out_rg) {
+    remove_edges_internal_global(edge_rg, identity_property_map(), e_out_rg);
   }
 
   // Directly access a vertex or edge bundle
@@ -725,7 +770,7 @@ template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, typename... VPArgs>
 auto add_vertex(BAGL_DIR_CSR_GRAPH_TYPE& g, VPArgs&&... vp_args) {
   auto old_num_verts_plus_one = g.forward_.rowstart_.size();
   g.forward_.rowstart_.push_back(g.forward_.rowstart_.back());
-  g.vertex_properties().emplace_back(std::forward<VPArgs>(vp_args)...);
+  g.vertex_properties_.emplace_back(std::forward<VPArgs>(vp_args)...);
   return old_num_verts_plus_one - 1;
 }
 
@@ -734,7 +779,7 @@ auto add_vertex(BAGL_BIDIR_CSR_GRAPH_TYPE& g, VPArgs&&... vp_args) {
   auto old_num_verts_plus_one = g.forward_.rowstart_.size();
   g.forward_.rowstart_.push_back(g.forward_.rowstart_.back());
   g.backward_.rowstart_.push_back(g.backward_.rowstart_.back());
-  g.vertex_properties().push_back(std::forward<VPArgs>(vp_args)...);
+  g.vertex_properties_.push_back(std::forward<VPArgs>(vp_args)...);
   return old_num_verts_plus_one - 1;
 }
 
@@ -743,7 +788,7 @@ auto add_vertices(std::size_t count, BAGL_DIR_CSR_GRAPH_TYPE& g) {
   auto old_num_verts_plus_one = g.forward_.rowstart_.size();
   std::size_t numedges = g.forward_.rowstart_.back();
   g.forward_.rowstart_.resize(old_num_verts_plus_one + count, numedges);
-  g.vertex_properties().resize(num_vertices(g));
+  g.vertex_properties_.resize(num_vertices(g));
   return old_num_verts_plus_one - 1;
 }
 
@@ -754,13 +799,164 @@ template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, std::ranges::bidirectional_range Ed
 requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>> &&
     std::constructible_from<EdgeProperty, std::ranges::range_reference_t<EdgePropRange>>
 void add_edges_sorted(const EdgeRange& e_range, const EdgePropRange& ep_range, BAGL_DIR_CSR_GRAPH_TYPE& g) {
-  g.add_edges_sorted_internal(e_range, ep_range);
+  auto e_out = container_detail::ignore_output_range();
+  g.add_edges_sorted_internal(e_range, ep_range, e_out);
 }
 
 // Add edges from a sorted (smallest sources first) range of pairs
 template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, std::ranges::bidirectional_range EdgeRange>
 requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>>
-void add_edges_sorted(const EdgeRange& e_range, BAGL_DIR_CSR_GRAPH_TYPE& g) { g.add_edges_sorted_internal(e_range); }
+void add_edges_sorted(const EdgeRange& e_range, BAGL_DIR_CSR_GRAPH_TYPE& g) {
+  auto e_out = container_detail::ignore_output_range();
+  g.add_edges_sorted_internal(e_range, e_out);
+}
+
+// Remove edges from a sorted (smallest sources first) range of edges
+template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, std::ranges::forward_range EdgeRange>
+requires std::constructible_from<graph_edge_descriptor_t<BAGL_DIR_CSR_GRAPH_TYPE>,
+                                 std::ranges::range_value_t<EdgeRange>>
+void remove_edges_sorted(const EdgeRange& e_range, BAGL_DIR_CSR_GRAPH_TYPE& g) {
+  auto e_out = container_detail::ignore_output_range();
+  g.remove_edges_sorted_internal(e_range, e_out);
+}
+
+template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, typename... EPArgs>
+std::pair<typename BAGL_DIR_CSR_GRAPH_TYPE::edge_descriptor, bool> add_edge(
+    typename BAGL_DIR_CSR_GRAPH_TYPE::vertex_descriptor u, typename BAGL_DIR_CSR_GRAPH_TYPE::vertex_descriptor v,
+    BAGL_DIR_CSR_GRAPH_TYPE& g, EPArgs&&... ep_args) {
+  auto result_view = std::ranges::single_view<typename BAGL_DIR_CSR_GRAPH_TYPE::edge_descriptor>();
+  g.add_edges_sorted_internal(
+      std::ranges::single_view{std::pair{u, v}},
+      std::ranges::single_view{typename BAGL_DIR_CSR_GRAPH_TYPE::edge_property_type{std::forward<EPArgs>(ep_args)...}},
+      result_view);
+  return {*result_view.data(), true};
+}
+
+// Remove edge
+template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS>
+void remove_edge(typename BAGL_DIR_CSR_GRAPH_TYPE::edge_descriptor e, BAGL_DIR_CSR_GRAPH_TYPE& g) {
+  auto e_out = container_detail::ignore_output_range();
+  g.remove_edges_sorted_internal(std::ranges::single_view{e}, e_out);
+}
+
+template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS>
+void remove_edge(typename BAGL_DIR_CSR_GRAPH_TYPE::vertex_descriptor u,
+                 typename BAGL_DIR_CSR_GRAPH_TYPE::vertex_descriptor v, BAGL_DIR_CSR_GRAPH_TYPE& g) {
+  auto e_out = container_detail::ignore_output_range();
+  std::vector<typename BAGL_DIR_CSR_GRAPH_TYPE::edge_descriptor> e_rg;
+  for (auto e : out_edges(u, g)) {
+    if (target(e, g) == v) {
+      e_rg.push_back(e);
+    }
+  }
+  if (e_rg.empty()) {
+    return;
+  }
+  g.remove_edges_sorted_internal(e_rg, e_out);
+}
+
+// Clear vertices from a sorted (smallest first) range of vertices
+template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, std::ranges::forward_range VRange>
+requires std::constructible_from<graph_vertex_descriptor_t<BAGL_DIR_CSR_GRAPH_TYPE>, std::ranges::range_value_t<VRange>>
+void clear_vertices_sorted(const VRange& v_range, BAGL_DIR_CSR_GRAPH_TYPE& g) {
+  if (v_range.empty()) {
+    return;
+  }
+  // Gather a sorted list of all edges to remove.
+  std::vector<typename BAGL_DIR_CSR_GRAPH_TYPE::edge_descriptor> e_rg;
+  auto u = v_range.begin();
+  for (auto v : vertices(g)) {
+    const bool v_is_u = (u != v_range.end() && v == *u);
+    if (v_is_u) {
+      ++u;
+    }
+    for (auto e : out_edges(v, g)) {
+      if (v_is_u) {
+        e_rg.push_back(e);
+      } else {
+        if (!std::ranges::equal_range(v_range, target(e, g)).empty()) {
+          e_rg.push_back(e);
+        }
+      }
+    }
+  }
+  if (e_rg.empty()) {
+    return;
+  }
+  auto e_out = container_detail::ignore_output_range();
+  g.remove_edges_sorted_internal(e_rg, e_out);
+}
+
+template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, std::ranges::input_range VRange>
+requires std::constructible_from<graph_vertex_descriptor_t<BAGL_DIR_CSR_GRAPH_TYPE>, std::ranges::range_value_t<VRange>>
+void clear_vertices(const VRange& v_range, BAGL_DIR_CSR_GRAPH_TYPE& g) {
+  if (v_range.empty()) {
+    return;
+  }
+  std::vector<graph_vertex_descriptor_t<BAGL_DIR_CSR_GRAPH_TYPE>> sorted_rg(v_range.begin(), v_range.end());
+  std::sort(sorted_rg.begin(), sorted_rg.end());
+  clear_vertices_sorted(sorted_rg, g);
+}
+
+template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS>
+void clear_vertex(typename BAGL_DIR_CSR_GRAPH_TYPE::vertex_descriptor u, BAGL_DIR_CSR_GRAPH_TYPE& g) {
+  // Gather a sorted list of all edges to remove.
+  std::vector<typename BAGL_DIR_CSR_GRAPH_TYPE::edge_descriptor> e_rg;
+  for (auto v : vertices(g)) {
+    for (auto e : out_edges(v, g)) {
+      if (v == u || target(e, g) == u) {
+        e_rg.push_back(e);
+      }
+    }
+  }
+  if (e_rg.empty()) {
+    return;
+  }
+  auto e_out = container_detail::ignore_output_range();
+  g.remove_edges_sorted_internal(e_rg, e_out);
+}
+
+// Remove vertices from a sorted (smallest first) range of vertices
+template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, std::ranges::forward_range VRange>
+requires std::constructible_from<graph_vertex_descriptor_t<BAGL_DIR_CSR_GRAPH_TYPE>, std::ranges::range_value_t<VRange>>
+void remove_vertices_sorted(const VRange& v_range, BAGL_DIR_CSR_GRAPH_TYPE& g) {
+  if (v_range.empty()) {
+    return;
+  }
+  clear_vertices_sorted(v_range, g);
+  std::size_t base_i = 0;
+  for (auto v_cur = v_range.begin(), v_end = v_range.end(); v_cur != v_end; ++v_cur) {
+    auto old_i = *v_cur;
+    auto v_next = std::next(v_cur);
+    auto old_i_1 = (v_next != v_range.end() ? *v_next : g.vertex_properties_.size());
+    std::move(g.vertex_properties_.begin() + old_i + 1, g.vertex_properties_.begin() + old_i_1,
+              g.vertex_properties_.begin() + base_i);
+    base_i += old_i_1 - old_i;
+  }
+  g.vertex_properties_.resize(base_i);
+  g.forward_.erase_vertices(v_range);
+}
+
+template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, std::ranges::input_range VRange>
+requires std::constructible_from<graph_vertex_descriptor_t<BAGL_DIR_CSR_GRAPH_TYPE>, std::ranges::range_value_t<VRange>>
+void remove_vertices(const VRange& v_range, BAGL_DIR_CSR_GRAPH_TYPE& g) {
+  if (v_range.empty()) {
+    return;
+  }
+  std::vector<graph_vertex_descriptor_t<BAGL_DIR_CSR_GRAPH_TYPE>> sorted_rg(v_range.begin(), v_range.end());
+  std::sort(sorted_rg.begin(), sorted_rg.end());
+  remove_vertices_sorted(sorted_rg, g);
+}
+
+template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS>
+void remove_vertex(typename BAGL_DIR_CSR_GRAPH_TYPE::vertex_descriptor u, BAGL_DIR_CSR_GRAPH_TYPE& g) {
+  if (u >= g.vertex_properties_.size()) {
+    return;
+  }
+  clear_vertex(u, g);
+  std::move(g.vertex_properties_.begin() + u + 1, g.vertex_properties_.end(), g.vertex_properties_.begin() + u);
+  g.forward_.erase_vertices(std::ranges::single_view{u});
+}
 
 template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, std::ranges::bidirectional_range EdgeRange,
           std::ranges::bidirectional_range EdgePropRange, typename GlobalToLocal>
@@ -768,7 +964,8 @@ requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::range
     std::constructible_from<EdgeProperty, std::ranges::range_reference_t<EdgePropRange>>
 void add_edges_sorted_global(const EdgeRange& e_range, const EdgePropRange& ep_range,
                              const GlobalToLocal& global_to_local, BAGL_DIR_CSR_GRAPH_TYPE& g) {
-  g.add_edges_sorted_internal_global(e_range, ep_range, global_to_local);
+  auto e_out = container_detail::ignore_output_range();
+  g.add_edges_sorted_internal_global(e_range, ep_range, global_to_local, e_out);
 }
 
 // Add edges from a sorted (smallest sources first) range of pairs
@@ -776,20 +973,25 @@ template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, std::ranges::bidirectional_range Ed
 requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>>
 void add_edges_sorted_global(const EdgeRange& e_range, const GlobalToLocal& global_to_local,
                              BAGL_DIR_CSR_GRAPH_TYPE& g) {
-  g.add_edges_sorted_internal_global(e_range, global_to_local);
+  auto e_out = container_detail::ignore_output_range();
+  g.add_edges_sorted_internal_global(e_range, global_to_local, e_out);
 }
 
 // Add edges from a range of (source, target) pairs that are unsorted
 template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, std::ranges::input_range EdgeRange, typename GlobalToLocal>
 requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>>
 void add_edges_global(const EdgeRange& e_range, const GlobalToLocal& global_to_local, BAGL_DIR_CSR_GRAPH_TYPE& g) {
-  g.add_edges_internal_global(e_range, global_to_local);
+  auto e_out = container_detail::ignore_output_range();
+  g.add_edges_internal_global(e_range, global_to_local, e_out);
 }
 
 // Add edges from a range of (source, target) pairs that are unsorted
 template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, std::ranges::input_range EdgeRange>
 requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>>
-void add_edges(const EdgeRange& e_range, BAGL_DIR_CSR_GRAPH_TYPE& g) { g.add_edges_internal(e_range); }
+void add_edges(const EdgeRange& e_range, BAGL_DIR_CSR_GRAPH_TYPE& g) {
+  auto e_out = container_detail::ignore_output_range();
+  g.add_edges_internal(e_range, e_out);
+}
 
 // Add edges from a range of (source, target) pairs and edge properties that
 // are unsorted
@@ -797,7 +999,8 @@ template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, std::ranges::input_range EdgeRange,
 requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>> &&
     std::constructible_from<EdgeProperty, std::ranges::range_reference_t<EdgePropRange>>
 void add_edges(const EdgeRange& e_range, const EdgePropRange& ep_range, BAGL_DIR_CSR_GRAPH_TYPE& g) {
-  g.add_edges_internal(e_range, ep_range);
+  auto e_out = container_detail::ignore_output_range();
+  g.add_edges_internal(e_range, ep_range, e_out);
 }
 
 template <BAGL_DIR_CSR_GRAPH_TEMPLATE_PARMS, std::ranges::input_range EdgeRange, std::ranges::input_range EdgePropRange,
@@ -806,7 +1009,8 @@ requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::range
     std::constructible_from<EdgeProperty, std::ranges::range_reference_t<EdgePropRange>>
 void add_edges_global(const EdgeRange& e_range, const EdgePropRange& ep_range, const GlobalToLocal& global_to_local,
                       BAGL_DIR_CSR_GRAPH_TYPE& g) {
-  g.add_edges_internal_global(e_range, ep_range, global_to_local);
+  auto e_out = container_detail::ignore_output_range();
+  g.add_edges_internal_global(e_range, ep_range, global_to_local, e_out);
 }
 
 // From VertexListGraph

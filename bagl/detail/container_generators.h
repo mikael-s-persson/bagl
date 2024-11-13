@@ -418,12 +418,18 @@ struct ignore_output_iter {
   mutable value_type empty_obj;
 
   ignore_output_iter& operator++() { return *this; }
-  ignore_output_iter& operator++(int) { return *this; }
+  ignore_output_iter operator++(int) { return *this; }
   ignore_output_iter& operator--() { return *this; }
-  ignore_output_iter& operator--(int) { return *this; }
+  ignore_output_iter operator--(int) { return *this; }
 
   reference operator*() const { return empty_obj; }
+
+  // Never equal, aka infinite range.
+  bool operator==(const ignore_output_iter& /*unused*/) const { return false; }
+  bool operator!=(const ignore_output_iter& /*unused*/) const { return true; }
 };
+
+inline auto ignore_output_range() { return std::ranges::subrange<ignore_output_iter, ignore_output_iter>(); }
 
 // We use Jon Maiga's implementation from
 // http://jonkagstrom.com/mx3/mx3_rev2.html

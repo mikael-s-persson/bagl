@@ -1042,7 +1042,9 @@ void translate_results_to_graph(const parser_result& r, dynamic_graph_mutator& m
   }
   for (const edge_info& ei : r.edges) {
     auto [e, e_added] = mg.do_add_edge(v_by_name[ei.source.name], v_by_name[ei.target.name]);
-    assert(e_added);
+    if (!e_added) {
+      throw bad_parallel_edge(ei.source.name, ei.target.name);
+    }
     for (const auto& [prop_name, prop_value] : ei.props) {
       mg.set_edge_property(prop_name, e, prop_value, "string");
     }
