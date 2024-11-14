@@ -24,8 +24,8 @@ class vector_property_map : public property_store_helper<vector_property_map<T, 
   explicit vector_property_map(IndexMap index = IndexMap(), T default_value = T{})
       : vector_property_map(0, std::move(index), std::move(default_value)) {}
 
-  auto storage_range() { return std::ranges::ref_view(store_); }
-  auto storage_range() const { return std::ranges::ref_view(store_); }
+  auto storage_range() { return std::ranges::subrange(store_.begin(), store_.begin() + (store_.size() - 1)); }
+  auto storage_range() const { return std::ranges::subrange(store_.begin(), store_.begin() + (store_.size() - 1)); }
 
   IndexMap& get_index_map() { return index_; }
   const IndexMap& get_index_map() const { return index_; }

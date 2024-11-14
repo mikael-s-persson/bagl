@@ -1,12 +1,6 @@
 // Copyright 2007 Aaron Windsor
 // Copyright 2024 Mikael Persson - Modernized to C++20
 
-/*
-This test is almost identical to all_planar_input_files_test.cc
-except that parallel edges and loops are added to the graphs as
-they are read in.
-*/
-
 #include <cstddef>
 #include <filesystem>
 #include <fstream>

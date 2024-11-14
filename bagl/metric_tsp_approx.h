@@ -34,8 +34,7 @@ namespace bagl {
 
 namespace concepts {
 template <typename V, typename G>
-concept TSPVertexVisitor = std::copy_constructible<V> &&
-    requires(const V& vis, const G& g, graph_vertex_descriptor_t<G> u) {
+concept TSPVertexVisitor = std::copy_constructible<V> && requires(V& vis, const G& g, graph_vertex_descriptor_t<G> u) {
   vis.visit_vertex(u, g);
 };
 
@@ -69,13 +68,14 @@ class tsp_tour_len_visitor;
 
 template <concepts::VertexListGraph G, std::output_iterator<graph_vertex_descriptor_t<G>> OutIter>
 void metric_tsp_approx_tour(const G& g, OutIter o) {
-  metric_tsp_approx_from_vertex(g, *vertices(g).first, get(edge_weight, g), get(vertex_index, g), tsp_tour_visitor{o});
+  metric_tsp_approx_from_vertex(g, *vertices(g).begin(), get(edge_weight, g), get(vertex_index, g),
+                                tsp_tour_visitor{o});
 }
 
 template <concepts::VertexListGraph G, concepts::ReadableEdgePropertyMap<G> WeightMap,
           std::output_iterator<graph_vertex_descriptor_t<G>> OutIter>
 void metric_tsp_approx_tour(const G& g, WeightMap w, OutIter o) {
-  metric_tsp_approx_from_vertex(g, *vertices(g).first, w, tsp_tour_visitor{o});
+  metric_tsp_approx_from_vertex(g, *vertices(g).begin(), w, tsp_tour_visitor{o});
 }
 
 template <concepts::VertexListGraph G, std::output_iterator<graph_vertex_descriptor_t<G>> OutIter>
@@ -91,19 +91,19 @@ void metric_tsp_approx_tour_from_vertex(const G& g, graph_vertex_descriptor_t<G>
 
 template <concepts::VertexListGraph G, concepts::TSPVertexVisitor<G> V>
 void metric_tsp_approx(const G& g, V vis) {
-  metric_tsp_approx_from_vertex(g, *vertices(g).first, get(edge_weight, g), get(vertex_index, g), vis);
+  metric_tsp_approx_from_vertex(g, *vertices(g).begin(), get(edge_weight, g), get(vertex_index, g), vis);
 }
 
 template <concepts::VertexListGraph G, concepts::ReadableEdgePropertyMap<G> Weightmap,
           concepts::TSPVertexVisitor<G> V>
 void metric_tsp_approx(const G& g, Weightmap w, V vis) {
-  metric_tsp_approx_from_vertex(g, *vertices(g).first, w, get(vertex_index, g), vis);
+  metric_tsp_approx_from_vertex(g, *vertices(g).begin(), w, get(vertex_index, g), vis);
 }
 
 template <concepts::VertexListGraph G, concepts::ReadableEdgePropertyMap<G> WeightMap,
           concepts::ReadWriteVertexPropertyMap<G> VertexIndexMap, concepts::TSPVertexVisitor<G> V>
 void metric_tsp_approx(const G& g, WeightMap w, VertexIndexMap id, V vis) {
-  metric_tsp_approx_from_vertex(g, *vertices(g).first, w, id, vis);
+  metric_tsp_approx_from_vertex(g, *vertices(g).begin(), w, id, vis);
 }
 
 template <concepts::VertexListGraph G, concepts::ReadableEdgePropertyMap<G> WeightMap,
@@ -121,15 +121,14 @@ void metric_tsp_approx_from_vertex(const G& g, graph_vertex_descriptor_t<G> star
 
   // We build a custom graph in this algorithm.
   using MSTImpl = adjacency_list<vec_s, vec_s, directed_s, no_property, no_property>;
-  using MSTVertex = graph_vertex_descriptor_t<MSTImpl>;
 
   // And then re-cast it as a tree.
 
   // A predecessor map.
-  auto pred_pmap = make_vector_property_map<GVertex>(num_vertices(g), indexmap);
+  auto pred_pmap = vector_property_map(num_vertices(g), indexmap, graph_traits<G>::null_vertex());
 
   // Compute a spanning tree over the in put g.
-  prim_minimum_spanning_tree(g, pred_pmap.ref(), root_vertex(start).vertex_index_map(indexmap).weight_map(weightmap));
+  prim_minimum_spanning_tree(g, start, pred_pmap.ref(), weightmap, indexmap);
 
   // Build a MST using the predecessor map from prim mst
   MSTImpl mst{num_vertices(g)};
@@ -143,8 +142,8 @@ void metric_tsp_approx_from_vertex(const G& g, graph_vertex_descriptor_t<G> star
   }
 
   // Build a tree abstraction over the MST.
-  auto t = make_graph_as_tree(mst, tree_root(mst),
-                              make_vector_property_map<MSTVertex>(num_vertices(mst), get(vertex_index, mst)));
+  auto t_vmap = vector_property_map(num_vertices(mst), get(vertex_index, mst), graph_traits<MSTImpl>::null_vertex());
+  auto t = make_graph_as_tree(mst, tree_root(mst), t_vmap.ref());
   using Tree = decltype(t);
   using Node = tree_node_descriptor_t<Tree>;
 
@@ -185,7 +184,7 @@ class tsp_tour_len_visitor {
  public:
   using Vertex = graph_vertex_descriptor_t<G>;
 
-  tsp_tour_len_visitor(const G&, OutIter iter, Length& l, WeightMap& map)
+  tsp_tour_len_visitor(const G&, OutIter iter, Length& l, WeightMap map)
       : iter_(iter), tourlen_(l), wmap_(map), previous_(null()) {}
 
   void visit_vertex(Vertex v, const G& g) {
@@ -210,24 +209,12 @@ class tsp_tour_len_visitor {
  private:
   OutIter iter_;
   Length& tourlen_;
-  WeightMap& wmap_;
+  WeightMap wmap_;
   Vertex previous_;
 
   // Helper function for getting the null vertex.
   Vertex null() { return graph_traits<G>::null_vertex(); }
 };
-
-// Object generator(s)
-template <typename OutIter>
-auto make_tsp_tour_visitor(OutIter iter) {
-  return tsp_tour_visitor<OutIter>(iter);
-}
-
-template <concepts::Graph G, concepts::ReadableEdgePropertyMap<G> WeightMap,
-          std::output_iterator<graph_vertex_descriptor_t<G>> OutIter, typename Length>
-auto make_tsp_tour_len_visitor(const G& g, OutIter iter, Length& l, WeightMap map) {
-  return tsp_tour_len_visitor<G, WeightMap, OutIter, Length>(g, iter, l, map);
-}
 
 }  // namespace bagl
 

@@ -39,7 +39,7 @@ void traverse_tree(tree_node_descriptor_t<Tree> v, Tree& t, TreeVisitor visitor)
         visitor.inorder(u, t);
       }
       visitor.postorder(u, t);
-      stack.pop();
+      stack.pop_back();
       if (!stack.empty() && !std::get<1>(stack.back())) {
         visitor.inorder(std::get<0>(stack.back()), t);
         std::get<1>(stack.back()) = true;

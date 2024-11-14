@@ -117,6 +117,7 @@ cc_library(
         "mcgregor_common_subgraphs.h",
         "mesh_graph_generator.h",
         "metis.h",
+        "metric_tsp_approx.h",
         "minimum_degree_ordering.h",
         "more_property_maps.h",
         "mutable_heap.h",

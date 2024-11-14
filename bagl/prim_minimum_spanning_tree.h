@@ -7,8 +7,9 @@
 
 #include <functional>
 
-#include "bagl/graph_traits.h"
 #include "bagl/dijkstra_shortest_paths.h"
+#include "bagl/graph_traits.h"
+#include "bagl/vector_property_map.h"
 
 namespace bagl {
 
@@ -24,6 +25,17 @@ void prim_minimum_spanning_tree(const G& g, graph_vertex_descriptor_t<G> start, 
   auto combine = [](auto, auto b) { return b; };
   dijkstra_shortest_paths(g, start, predecessor, distance, weight, index_map, compare, combine,
                           std::numeric_limits<W>::max(), W{}, vis);
+}
+
+template <concepts::VertexListGraph G, concepts::ReadWriteVertexPropertyMap<G> PredecessorMap,
+          concepts::ReadableEdgePropertyMap<G> WeightMap, concepts::ReadWriteVertexPropertyMap<G> IndexMap>
+void prim_minimum_spanning_tree(const G& g, graph_vertex_descriptor_t<G> start, PredecessorMap predecessor,
+                                WeightMap weight, IndexMap index_map) {
+  using W = property_traits_value_t<WeightMap>;
+  auto compare = std::less<>{};
+  auto combine = [](auto, auto b) { return b; };
+  dijkstra_shortest_paths(g, start, predecessor, vector_property_map(num_vertices(g), index_map, W{}).ref(), weight,
+                          index_map, compare, combine, std::numeric_limits<W>::max(), W{}, default_dijkstra_visitor());
 }
 
 }  // namespace bagl

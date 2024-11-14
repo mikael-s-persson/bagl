@@ -13,7 +13,7 @@
 
 namespace bagl {
 
-// This library provides function templates to adapt a MutableGraph from the Boost Graph Library
+// This library provides function templates to adapt a MutableGraph
 // such that it has the mutable interface of a tree structure.
 
 //================= Tree =================
