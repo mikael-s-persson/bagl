@@ -674,6 +674,16 @@ cc_test(
 
 
 cc_test(
+    name = "planar_input_files_test",
+    srcs = [ "planar_input_files_test.cc", ],
+    data = glob(["testdata/planar_input_graphs/*.dimacs"]),
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "property_map_range_test",
     srcs = [ "property_map_range_test.cc", ],
     deps = [

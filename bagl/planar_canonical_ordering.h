@@ -16,7 +16,12 @@
 
 namespace bagl {
 
-enum class planar_canonical_ordering_state { processed, unprocessed, one_neighbor_processed, ready_to_be_processed, discard };
+namespace planar_canonical_ordering_state {
+constexpr int processed = 0;
+constexpr int unprocessed = 1;
+constexpr int one_neighbor_processed = 2;
+constexpr int ready_to_be_processed = 3;
+}  // namespace planar_canonical_ordering_state
 
 template <concepts::VertexListGraph Graph, concepts::LvalueVertexPropertyMap<Graph> PlanarEmbedding,
           std::output_iterator<graph_vertex_descriptor_t<Graph>> OutputIterator,
@@ -103,7 +108,7 @@ void planar_canonical_ordering(const Graph& g, PlanarEmbedding embedding, Output
             (prior_vertex == x && !(first_vertex == x && second_vertex == u))) {
           status[v] = planar_canonical_ordering_state::ready_to_be_processed;
         } else {
-          status[v] = planar_canonical_ordering_state::discard;
+          status[v] = planar_canonical_ordering_state::ready_to_be_processed + 1;
         }
       } else if (status[v] > planar_canonical_ordering_state::one_neighbor_processed) {
         // check the two edges before and after (v,u) in the planar
@@ -121,7 +126,6 @@ void planar_canonical_ordering(const Graph& g, PlanarEmbedding embedding, Output
 
         if (!processed_before && !processed_after) {
           ++status[v];
-
         } else if (processed_before && processed_after) {
           --status[v];
         }

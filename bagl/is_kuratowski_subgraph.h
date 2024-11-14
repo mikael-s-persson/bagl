@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <map>
+#include <ranges>
 #include <set>
 #include <tuple>
 #include <vector>
@@ -69,10 +70,9 @@ enum target_graph_t { tg_k_3_3, tg_k_5 };
 
 }  // namespace detail
 
-template <typename Graph, typename ForwardIterator, typename VertexIndexMap>
-bool is_kuratowski_subgraph(const Graph& g, ForwardIterator begin, ForwardIterator end, VertexIndexMap vm) {
-  using vertex_t = graph_vertex_descriptor_t<Graph>;
-  using edge_t = graph_edge_descriptor_t<Graph>;
+template <typename Graph, std::ranges::input_range ERange, typename VertexIndexMap>
+bool is_kuratowski_subgraph(const Graph& g, ERange e_rg, VertexIndexMap vm) {
+  using Vertex = graph_vertex_descriptor_t<Graph>;
 
   using small_graph_t = adjacency_list<vec_s, vec_s, undirected_s>;
 
@@ -85,24 +85,23 @@ bool is_kuratowski_subgraph(const Graph& g, ForwardIterator begin, ForwardIterat
   std::size_t n_vertices(num_vertices(g));
   std::size_t max_num_edges(3 * n_vertices - 5);
 
-  auto neighbors = vector_property_map(n_vertices, vm, std::vector<vertex_t>{});
+  auto neighbors = vector_property_map(n_vertices, vm, std::vector<Vertex>{});
 
   std::size_t count = 0;
-  for (ForwardIterator itr = begin; itr != end; ++itr) {
+  for (auto e : e_rg) {
     if (count++ > max_num_edges) {
       return false;
     }
 
-    edge_t e(*itr);
-    vertex_t u(source(e, g));
-    vertex_t v(target(e, g));
+    Vertex u(source(e, g));
+    Vertex v(target(e, g));
 
     neighbors[u].push_back(v);
     neighbors[v].push_back(u);
   }
 
   for (std::size_t max_size = 2; max_size < 5; ++max_size) {
-    for (vertex_t v : vertices(g)) {
+    for (Vertex v : vertices(g)) {
       // a hack to make sure we don't contract the middle edge of a path
       // of four degree-3 vertices
       if (max_size == 4 && neighbors[v].size() == 3) {
@@ -122,8 +121,8 @@ bool is_kuratowski_subgraph(const Graph& g, ForwardIterator begin, ForwardIterat
 
         bool neighbor_sets_intersect = false;
 
-        vertex_t min_u = graph_traits<Graph>::null_vertex();
-        for (vertex_t u : neighbors[v]) {
+        Vertex min_u = graph_traits<Graph>::null_vertex();
+        for (Vertex u : neighbors[v]) {
           neighbor_sets_intersect = false;
           for (auto u_neighbor : neighbors[u]) {
             for (auto inner_v_neighbor : neighbors[v]) {
@@ -172,7 +171,7 @@ bool is_kuratowski_subgraph(const Graph& g, ForwardIterator begin, ForwardIterat
 
   // Now, there should only be 5 or 6 vertices with any neighbors. Find them.
 
-  std::vector<vertex_t> main_vertices;
+  std::vector<Vertex> main_vertices;
   for (auto v : vertices(g)) {
     if (!neighbors[v].empty()) {
       main_vertices.push_back(v);
@@ -182,7 +181,7 @@ bool is_kuratowski_subgraph(const Graph& g, ForwardIterator begin, ForwardIterat
   // create a graph isomorphic to the contracted graph to test
   // against k_5 and k_3_3
   small_graph_t contracted_graph(main_vertices.size());
-  std::map<vertex_t, graph_vertex_descriptor_t<small_graph_t> > contracted_vertex_map;
+  std::map<Vertex, graph_vertex_descriptor_t<small_graph_t> > contracted_vertex_map;
 
   auto sv_rg = vertices(contracted_graph);
   auto si = sv_rg.begin();
@@ -215,9 +214,9 @@ bool is_kuratowski_subgraph(const Graph& g, ForwardIterator begin, ForwardIterat
   }
 }
 
-template <typename Graph, typename ForwardIterator>
-bool is_kuratowski_subgraph(const Graph& g, ForwardIterator begin, ForwardIterator end) {
-  return is_kuratowski_subgraph(g, begin, end, get(vertex_index, g));
+template <typename Graph, std::ranges::input_range ERange>
+bool is_kuratowski_subgraph(const Graph& g, ERange e_rg) {
+  return is_kuratowski_subgraph(g, e_rg, get(vertex_index, g));
 }
 
 }  // namespace bagl

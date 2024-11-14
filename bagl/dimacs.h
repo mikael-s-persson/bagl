@@ -91,8 +91,6 @@ class dimacs_basic_reader {
         read_edge_line(buf_, source, dest, weight);
 
         seen_edges_++;
-        source--;
-        dest--;
 
         read_edges_.push(edge_type(source, dest));
         if (want_weights_) {

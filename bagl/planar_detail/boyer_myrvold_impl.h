@@ -822,11 +822,8 @@ class boyer_myrvold_impl {
 
     // upper_face_vertex is true for x,y, and all vertices above x and y in
     // the bicomp
-    std::vector<bool> upper_face_vertex_vector(num_vertices(g_), false);
-    vertex_to_bool_map_t upper_face_vertex(upper_face_vertex_vector.begin(), vm_);
-
-    std::vector<bool> lower_face_vertex_vector(num_vertices(g_), false);
-    vertex_to_bool_map_t lower_face_vertex(lower_face_vertex_vector.begin(), vm_);
+    vertex_to_bool_map_t upper_face_vertex(num_vertices(g_), vm_, false);
+    vertex_to_bool_map_t lower_face_vertex(num_vertices(g_), vm_, false);
 
     // These next few variable declarations are all things that we need
     // to find.
@@ -1077,8 +1074,7 @@ class boyer_myrvold_impl {
       old_face_iterators.push_back(first_old_face_itr);
       old_face_iterators.push_back(second_old_face_itr);
 
-      std::vector<bool> x_y_path_vertex_vector(num_vertices(g_), false);
-      vertex_to_bool_map_t x_y_path_vertex(x_y_path_vertex_vector.begin(), vm_);
+      vertex_to_bool_map_t x_y_path_vertex(num_vertices(g_), vm_, false);
 
       for (old_face_iterator_t old_face_itr : old_face_iterators) {
         vertex_t prev_v;
