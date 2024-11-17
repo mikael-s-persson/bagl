@@ -10,9 +10,29 @@ cc_library(
 )
 
 cc_library(
+    name = "graph_properties_test_suite",
+    hdrs = [ "graph_properties_test_suite.h", ],
+    testonly = True,
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+cc_library(
     name = "min_cost_max_flow_utils",
     srcs = [],
     hdrs = [ "min_cost_max_flow_utils.h", ],
+    testonly = True,
+    deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+cc_library(
+    name = "tree_mutation_test_suite",
+    hdrs = [ "tree_mutation_test_suite.h", ],
     testonly = True,
     deps = [
         "//bagl",
@@ -34,6 +54,7 @@ cc_test(
     srcs = [ "adjacency_vec_test.cc", ],
     deps = [
         ":graph_mutation_test_suite",
+        ":graph_properties_test_suite",
         "//bagl",
         "@com_google_googletest//:gtest_main",
     ],
@@ -44,6 +65,7 @@ cc_test(
     srcs = [ "adjacency_pool_test.cc", ],
     deps = [
         ":graph_mutation_test_suite",
+        ":graph_properties_test_suite",
         "//bagl",
         "@com_google_googletest//:gtest_main",
     ],
@@ -54,6 +76,7 @@ cc_test(
     srcs = [ "adjacency_list_test.cc", ],
     deps = [
         ":graph_mutation_test_suite",
+        ":graph_properties_test_suite",
         "//bagl",
         "@com_google_googletest//:gtest_main",
     ],
@@ -64,6 +87,7 @@ cc_test(
     srcs = [ "adjacency_set_test.cc", ],
     deps = [
         ":graph_mutation_test_suite",
+        ":graph_properties_test_suite",
         "//bagl",
         "@com_google_googletest//:gtest_main",
     ],
@@ -74,6 +98,7 @@ cc_test(
     srcs = [ "adjacency_multiset_test.cc", ],
     deps = [
         ":graph_mutation_test_suite",
+        ":graph_properties_test_suite",
         "//bagl",
         "@com_google_googletest//:gtest_main",
     ],
@@ -84,6 +109,7 @@ cc_test(
     srcs = [ "adjacency_unordered_set_test.cc", ],
     deps = [
         ":graph_mutation_test_suite",
+        ":graph_properties_test_suite",
         "//bagl",
         "@com_google_googletest//:gtest_main",
     ],
@@ -94,6 +120,7 @@ cc_test(
     srcs = [ "adjacency_unordered_multiset_test.cc", ],
     deps = [
         ":graph_mutation_test_suite",
+        ":graph_properties_test_suite",
         "//bagl",
         "@com_google_googletest//:gtest_main",
     ],
@@ -140,6 +167,7 @@ cc_test(
     srcs = [ "directed_graph_test.cc", ],
     deps = [
         ":graph_mutation_test_suite",
+        ":graph_properties_test_suite",
         "//bagl",
         "@com_google_googletest//:gtest_main",
     ],
@@ -150,6 +178,7 @@ cc_test(
     srcs = [ "undirected_graph_test.cc", ],
     deps = [
         ":graph_mutation_test_suite",
+        ":graph_properties_test_suite",
         "//bagl",
         "@com_google_googletest//:gtest_main",
     ],
@@ -254,6 +283,17 @@ cc_test(
     name = "betweenness_centrality_test",
     srcs = [ "betweenness_centrality_test.cc", ],
     deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "bfl_d_ary_tree_test",
+    srcs = [ "bfl_d_ary_tree_test.cc", ],
+    deps = [
+        ":graph_properties_test_suite",
+        ":tree_mutation_test_suite",
         "//bagl",
         "@com_google_googletest//:gtest_main",
     ],
@@ -577,6 +617,83 @@ cc_test(
 )
 
 cc_test(
+    name = "linked_tree_list_test",
+    srcs = [ "linked_tree_list_test.cc", ],
+    deps = [
+        ":tree_mutation_test_suite",
+        ":graph_properties_test_suite",
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "linked_tree_vec_test",
+    srcs = [ "linked_tree_vec_test.cc", ],
+    deps = [
+        ":tree_mutation_test_suite",
+        ":graph_properties_test_suite",
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "linked_tree_pool_test",
+    srcs = [ "linked_tree_pool_test.cc", ],
+    deps = [
+        ":tree_mutation_test_suite",
+        ":graph_properties_test_suite",
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "linked_tree_set_test",
+    srcs = [ "linked_tree_set_test.cc", ],
+    deps = [
+        ":tree_mutation_test_suite",
+        ":graph_properties_test_suite",
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "linked_tree_multiset_test",
+    srcs = [ "linked_tree_multiset_test.cc", ],
+    deps = [
+        ":tree_mutation_test_suite",
+        ":graph_properties_test_suite",
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "linked_tree_unordered_set_test",
+    srcs = [ "linked_tree_unordered_set_test.cc", ],
+    deps = [
+        ":tree_mutation_test_suite",
+        ":graph_properties_test_suite",
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "linked_tree_unordered_multiset_test",
+    srcs = [ "linked_tree_unordered_multiset_test.cc", ],
+    deps = [
+        ":tree_mutation_test_suite",
+        ":graph_properties_test_suite",
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "make_bicon_planar_test",
     srcs = [ "make_bicon_planar_test.cc", ],
     deps = [
@@ -820,6 +937,17 @@ cc_test(
     name = "undirected_dfs_test",
     srcs = [ "undirected_dfs_test.cc", ],
     deps = [
+        "//bagl",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "vebl_d_ary_tree_test",
+    srcs = [ "vebl_d_ary_tree_test.cc", ],
+    deps = [
+        ":graph_properties_test_suite",
+        ":tree_mutation_test_suite",
         "//bagl",
         "@com_google_googletest//:gtest_main",
     ],

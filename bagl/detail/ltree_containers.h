@@ -75,6 +75,9 @@ struct ltree_vertex_stored_type {
   edge_container& get_out_edges() { return out_edges; }
   const edge_container& get_out_edges() const { return out_edges; }
 
+  auto get_in_edges() { return std::ranges::subrange(&in_edge, &in_edge + 1); }
+  auto get_in_edges() const { return std::ranges::subrange(&in_edge, &in_edge + 1); }
+
   ltree_vertex_stored_type() : data(), out_edges(), in_edge() {}
   template <typename VProp>
   requires std::constructible_from<VertexProperties, VProp&&>
@@ -101,6 +104,9 @@ struct ltree_vertex_stored_type<VertexListS, OutEdgeListS, directed_s, VertexPro
 
   edge_container& get_out_edges() { return out_edges; }
   const edge_container& get_out_edges() const { return out_edges; }
+
+  auto get_in_edges() { return std::ranges::empty_view<edge_descriptor>{}; }
+  auto get_in_edges() const { return std::ranges::empty_view<edge_descriptor>{}; }
 
   ltree_vertex_stored_type() : data(), out_edges() {}
   template <typename VProp>
@@ -313,32 +319,27 @@ void ltree_erase_vertices(container_detail::pooled_vector<ValueType>& cont, std:
   }
 }
 
-// O(E)
+// O(1) for bidirectional_s
+// O(E) for directed_s
 template <typename DirectedS, typename Container, typename VertexValue, typename Vertex>
-typename std::enable_if_t<std::is_same_v<DirectedS, directed_s>, VertexValue>::edge_descriptor ltree_get_in_edge(
-    Container& vcont, VertexValue& /*vp*/, Vertex v) {
-  using EdgeDesc = typename VertexValue::edge_descriptor;
-
-  for (auto it = vcont.begin(); it != vcont.end(); ++it) {
-    if (container_detail::is_elem_valid(*it)) {
-      VertexValue& up = container_detail::get_value(*it);
-      for (auto ei = up.get_out_edges().begin(); ei != up.get_out_edges().end(); ++ei) {
-        if (container_detail::is_elem_valid(*ei) && (container_detail::get_value(*ei).first == v)) {
-          return EdgeDesc(container_detail::iterator_to_desc(vcont, it),
-                          container_detail::iterator_to_desc(up.get_out_edges(), ei));
+auto ltree_get_in_edge(Container& vcont, VertexValue& vp, Vertex v) {
+  if constexpr (std::is_same_v<DirectedS, directed_s>) {
+    using EdgeDesc = typename VertexValue::edge_descriptor;
+    for (auto it = vcont.begin(); it != vcont.end(); ++it) {
+      if (container_detail::is_elem_valid(*it)) {
+        VertexValue& up = container_detail::get_value(*it);
+        for (auto ei = up.get_out_edges().begin(); ei != up.get_out_edges().end(); ++ei) {
+          if (container_detail::is_elem_valid(*ei) && (container_detail::get_value(*ei).first == v)) {
+            return EdgeDesc(container_detail::iterator_to_desc(vcont, it),
+                            container_detail::iterator_to_desc(up.get_out_edges(), ei));
+          }
         }
       }
     }
+    return EdgeDesc::null_value();
+  } else {
+    return vp.in_edge;
   }
-
-  return EdgeDesc::null_value();
-}
-
-// O(1)
-template <typename DirectedS, typename Container, typename VertexValue, typename Vertex>
-typename std::enable_if_t<!std::is_same_v<DirectedS, directed_s>, VertexValue>::edge_descriptor ltree_get_in_edge(
-    Container& /*vcont*/, VertexValue& vp, Vertex /*v*/) {
-  return vp.in_edge;
 }
 
 template <typename VertexListS, typename OutEdgeListS, typename DirectedS, typename VertexProperties,
@@ -495,13 +496,13 @@ struct ltree_vertex_container {
 
   // NOTE: This WORKS for ALL vertex container types.
   // NOTE: This WORKS for ALL edge container types.
-  template <typename VP>
-  vertex_descriptor add_new_vertex(VP&& vp) {
-    return adjlist_add_vertex(m_vertices, std::forward<VP>(vp));
+  template <typename... VP>
+  vertex_descriptor add_new_vertex(VP&&... vp) {
+    return adjlist_add_vertex(m_vertices, std::forward<VP>(vp)...);
   }
-  template <typename VP>
-  void add_root_vertex(VP&& vp) {
-    m_root = add_new_vertex(std::forward<VP>(vp));
+  template <typename... VP>
+  void add_root_vertex(VP&&... vp) {
+    m_root = add_new_vertex(std::forward<VP>(vp)...);
   }
 
   // NOTE: this operation does not invalidate anything.
@@ -549,7 +550,7 @@ struct ltree_vertex_container {
         bft_queue.push(container_detail::get_value(e).first);
         vertex_stored_type& u_value = get_stored_vertex(container_detail::get_value(e).first);
         *(vit_out++) = std::move(u_value.data);
-        *(eit_out++) = std::move(container_detail::get_value(e).data);
+        *(eit_out++) = std::move(container_detail::get_value(e).second);
       }
     }
 
@@ -595,13 +596,13 @@ struct ltree_vertex_container {
       vertex_stored_type& v_value = get_stored_vertex(bft_queue.front());
       *(vit_out++) = std::move(v_value.data);
       bft_queue.pop();
-      for (auto e : v_value.get_out_edges()) {
+      for (auto& e : v_value.get_out_edges()) {
         if (!container_detail::is_elem_valid(e)) {
           continue;
         }
         death_row.push_back(container_detail::get_value(e).first);
         bft_queue.push(container_detail::get_value(e).first);
-        *(eit_out++) = std::move(container_detail::get_value(e).data);
+        *(eit_out++) = std::move(container_detail::get_value(e).second);
       }
     }
 

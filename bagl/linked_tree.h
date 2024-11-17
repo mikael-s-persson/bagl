@@ -184,7 +184,7 @@ class linked_tree {
    * Assigns a linked-tree by moving the given tree into it.
    */
   linked_tree& operator=(self&& rhs) noexcept {
-    if (this != rhs) {
+    if (this != &rhs) {
       m_graph_prop = std::move(rhs.m_graph_prop);
       m_pack = std::move(rhs.m_pack);
     }
@@ -579,12 +579,12 @@ void remove_branch(typename BAGL_LINKED_TREE::vertex_descriptor v, BAGL_LINKED_T
  * \param g The graph.
  * \return The vertex-descriptor of the root of the tree.
  */
-template <BAGL_LINKED_TREE_ARGS, typename VProp>
-auto create_root(VProp&& vp, BAGL_LINKED_TREE& g) {
+template <BAGL_LINKED_TREE_ARGS, typename... VProp>
+auto create_root(BAGL_LINKED_TREE& g, VProp&&... vp_args) {
   if (g.m_pack.size()) {
     g.m_pack.clear();
   }
-  g.m_pack.add_root_vertex(std::forward<VProp>(vp));
+  g.m_pack.add_root_vertex(std::forward<VProp>(vp_args)...);
   return g.m_pack.m_root;
 };
 
@@ -597,7 +597,7 @@ auto create_root(VProp&& vp, BAGL_LINKED_TREE& g) {
  * \return A pair consisting of the newly created vertex and edge (descriptors).
  */
 template <BAGL_LINKED_TREE_ARGS, typename VProp>
-auto add_child(typename BAGL_LINKED_TREE::vertex_descriptor v, VProp&& vp, BAGL_LINKED_TREE& g) {
+auto add_child(typename BAGL_LINKED_TREE::vertex_descriptor v, BAGL_LINKED_TREE& g, VProp&& vp) {
   using EProp = typename BAGL_LINKED_TREE::edge_property_type;
   return g.m_pack.add_child(v, std::forward<VProp>(vp), EProp());
 };
@@ -612,7 +612,7 @@ auto add_child(typename BAGL_LINKED_TREE::vertex_descriptor v, VProp&& vp, BAGL_
  * \return A pair consisting of the newly created vertex and edge (descriptors).
  */
 template <BAGL_LINKED_TREE_ARGS, typename VProp, typename EProp>
-auto add_child(typename BAGL_LINKED_TREE::vertex_descriptor v, VProp&& vp, EProp&& ep, BAGL_LINKED_TREE& g) {
+auto add_child(typename BAGL_LINKED_TREE::vertex_descriptor v, BAGL_LINKED_TREE& g, VProp&& vp, EProp&& ep) {
   return g.m_pack.add_child(v, std::forward<VProp>(vp), std::forward<EProp>(ep));
 };
 
@@ -625,7 +625,7 @@ auto add_child(typename BAGL_LINKED_TREE::vertex_descriptor v, VProp&& vp, EProp
  * \return The output-iterator after the collection of all the removed vertices.
  */
 template <BAGL_LINKED_TREE_ARGS, typename OutputIter>
-OutputIter clear_children(typename BAGL_LINKED_TREE::vertex_descriptor v, OutputIter it_out, BAGL_LINKED_TREE& g) {
+OutputIter clear_children(typename BAGL_LINKED_TREE::vertex_descriptor v, BAGL_LINKED_TREE& g, OutputIter it_out) {
   return g.m_pack.clear_children_impl(v, it_out);
 };
 
@@ -639,8 +639,8 @@ OutputIter clear_children(typename BAGL_LINKED_TREE::vertex_descriptor v, Output
  * \return The output-iterator after the collection of all the removed vertices.
  */
 template <BAGL_LINKED_TREE_ARGS, typename VertexOIter, typename EdgeOIter>
-std::pair<VertexOIter, EdgeOIter> clear_children(typename BAGL_LINKED_TREE::vertex_descriptor v, VertexOIter vit_out,
-                                                 EdgeOIter eit_out, BAGL_LINKED_TREE& g) {
+std::pair<VertexOIter, EdgeOIter> clear_children(typename BAGL_LINKED_TREE::vertex_descriptor v, BAGL_LINKED_TREE& g,
+                                                 VertexOIter vit_out, EdgeOIter eit_out) {
   return g.m_pack.clear_children_impl(v, vit_out, eit_out);
 };
 
@@ -654,7 +654,7 @@ std::pair<VertexOIter, EdgeOIter> clear_children(typename BAGL_LINKED_TREE::vert
  * \note The first vertex-property to figure in the output range is that of the vertex v.
  */
 template <BAGL_LINKED_TREE_ARGS, typename OutputIter>
-OutputIter remove_branch(typename BAGL_LINKED_TREE::vertex_descriptor v, OutputIter it_out, BAGL_LINKED_TREE& g) {
+OutputIter remove_branch(typename BAGL_LINKED_TREE::vertex_descriptor v, BAGL_LINKED_TREE& g, OutputIter it_out) {
   return g.m_pack.remove_branch_impl(v, it_out);
 };
 
@@ -669,8 +669,8 @@ OutputIter remove_branch(typename BAGL_LINKED_TREE::vertex_descriptor v, OutputI
  * \note The first vertex-property to figure in the output range is that of the vertex v.
  */
 template <BAGL_LINKED_TREE_ARGS, typename VertexOIter, typename EdgeOIter>
-std::pair<VertexOIter, EdgeOIter> remove_branch(typename BAGL_LINKED_TREE::vertex_descriptor v, VertexOIter vit_out,
-                                                EdgeOIter eit_out, BAGL_LINKED_TREE& g) {
+std::pair<VertexOIter, EdgeOIter> remove_branch(typename BAGL_LINKED_TREE::vertex_descriptor v, BAGL_LINKED_TREE& g,
+                                                VertexOIter vit_out, EdgeOIter eit_out) {
   return g.m_pack.remove_branch_impl(v, vit_out, eit_out);
 };
 
@@ -874,14 +874,15 @@ void BAGL_LINKED_TREE::do_deep_copy_from(const BAGL_LINKED_TREE& rhs) {
   std::queue<TaskType> bft_queue;
   TaskType cur;
   cur.first = tree_root(rhs);
-  cur.second = create_root(rhs[cur.first], *this);
+  cur.second = create_root(*this, get(vertex_all, rhs, cur.first));
   bft_queue.push(cur);
 
   while (!bft_queue.empty()) {
     cur = bft_queue.front();
     bft_queue.pop();
     for (auto e : out_edges(cur.first, rhs)) {
-      auto [new_u, new_e, suc] = add_child(cur.second, rhs[target(e, rhs)], rhs[e], *this);
+      auto [new_u, new_e, suc] =
+          add_child(cur.second, *this, get(vertex_all, rhs, target(e, rhs)), get(edge_all, rhs, e));
       bft_queue.push(TaskType(target(e, rhs), new_u));
     };
   };

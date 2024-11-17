@@ -53,6 +53,12 @@ struct bfltree_edge_desc {
   std::size_t target_vertex;
   explicit bfltree_edge_desc(std::size_t aTarget = (std::numeric_limits<std::size_t>::max)())
       : target_vertex(aTarget) {}
+  [[nodiscard]] constexpr bool operator==(const bfltree_edge_desc& rhs) const {
+    return target_vertex == rhs.target_vertex;
+  }
+  [[nodiscard]] constexpr bool operator!=(const bfltree_edge_desc& rhs) const {
+    return target_vertex != rhs.target_vertex;
+  }
   [[nodiscard]] constexpr auto operator<=>(const bfltree_edge_desc& rhs) const {
     return target_vertex <=> rhs.target_vertex;
   }

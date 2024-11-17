@@ -240,8 +240,8 @@ class vebl_d_ary_tree {
 
     value_type& result_prop = get_vertex_value_impl(result);
     result_prop.out_degree = 0;
-    result_prop.vertex() = std::forward<VP>(vp);
-    result_prop.edge() = std::forward<EP>(ep);
+    result_prop.vertex() = vertex_property_type{std::forward<VP>(vp)};
+    result_prop.edge() = edge_property_type{std::forward<EP>(ep)};
     ++(get_vertex_value_impl(v).out_degree);
     ++m_vertex_count;
     return {result, edge_descriptor(result), true};
@@ -587,6 +587,21 @@ std::pair<typename BAGL_VEBL_D_ARY_TREE::edge_descriptor, bool> edge(typename BA
 }
 
 /***********************************************************************************************
+ *                             AdjacencyGraphConcept
+ * ********************************************************************************************/
+
+/**
+ * Returns the vertex iterator range for all the child-vertices of a given vertex of the tree.
+ * \param v The vertex descriptor whose children are sought.
+ * \param g The graph.
+ * \return The vertex iterator range for all the child-vertices of a given vertex of the tree.
+ */
+template <BAGL_VEBL_D_ARY_TREE_ARGS>
+auto adjacent_vertices(const typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor& v, const BAGL_VEBL_D_ARY_TREE& g) {
+  return g.make_valid_vertex_range(Arity * v + 1, Arity * (v + 1) + 1);
+}
+
+/***********************************************************************************************
  *                             TreeConcept
  * ********************************************************************************************/
 
@@ -608,22 +623,7 @@ typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor tree_root(const BAGL_VEBL_D_ARY
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
 auto children(const typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor& v, const BAGL_VEBL_D_ARY_TREE& g) {
-  return g.make_valid_vertex_range(Arity * v + 1, Arity * (v + 1) + 1);
-}
-
-/***********************************************************************************************
- *                             AdjacencyGraphConcept
- * ********************************************************************************************/
-
-/**
- * Returns the vertex iterator range for all the child-vertices of a given vertex of the tree.
- * \param v The vertex descriptor whose children are sought.
- * \param g The graph.
- * \return The vertex iterator range for all the child-vertices of a given vertex of the tree.
- */
-template <BAGL_VEBL_D_ARY_TREE_ARGS>
-auto adjacent_vertices(const typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor& v, const BAGL_VEBL_D_ARY_TREE& g) {
-  return children(v, g);
+  return adjacent_vertices(v, g);
 }
 
 /***********************************************************************************************
@@ -727,12 +727,13 @@ auto add_child(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, BAGL_VEBL_D_A
  * \return The vertex-descriptor of the root of the tree.
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename VProp>
-typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor create_root(VProp&& vp, BAGL_VEBL_D_ARY_TREE& g) {
+typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor create_root(BAGL_VEBL_D_ARY_TREE& g, VProp&& vp) {
   if (bfl_detail::bfltree_is_vertex_valid(g.m_vertices[0])) {
     remove_branch(0, g);
   }
   g.m_vertices[0].out_degree = 0;
-  g.m_vertices[0].vertex() = std::forward<VProp>(vp);
+  using VertexProp = typename BAGL_VEBL_D_ARY_TREE::vertex_property_type;
+  g.m_vertices[0].vertex() = VertexProp{std::forward<VProp>(vp)};
   ++g.m_vertex_count;
   return 0;
 }
@@ -746,7 +747,7 @@ typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor create_root(VProp&& vp, BAGL_VE
  * \return A pair consisting of the newly created vertex and edge (descriptors).
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename VProp>
-auto add_child(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, VProp&& vp, BAGL_VEBL_D_ARY_TREE& g) {
+auto add_child(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, BAGL_VEBL_D_ARY_TREE& g, VProp&& vp) {
   using EProp = typename BAGL_VEBL_D_ARY_TREE::edge_property_type;
   return g.add_child(v, std::forward<VProp>(vp), EProp());
 }
@@ -761,7 +762,7 @@ auto add_child(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, VProp&& vp, B
  * \return A pair consisting of the newly created vertex and edge (descriptors).
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename VProp, typename EProp>
-auto add_child(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, VProp&& vp, EProp&& ep, BAGL_VEBL_D_ARY_TREE& g) {
+auto add_child(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, BAGL_VEBL_D_ARY_TREE& g, VProp&& vp, EProp&& ep) {
   return g.add_child(v, std::forward<VProp>(vp), std::forward<EProp>(ep));
 }
 
@@ -775,8 +776,8 @@ auto add_child(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, VProp&& vp, E
  * \note The first vertex-property to figure in the output range is that of the vertex v.
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename OutputIter>
-OutputIter remove_branch(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, OutputIter it_out,
-                         BAGL_VEBL_D_ARY_TREE& g) {
+OutputIter remove_branch(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, BAGL_VEBL_D_ARY_TREE& g,
+                         OutputIter it_out) {
   return g.remove_branch(v, it_out);
 }
 
@@ -791,8 +792,8 @@ OutputIter remove_branch(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, Out
  * \note The first vertex-property to figure in the output range is that of the vertex v.
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename VertexOIter, typename EdgeOIter>
-std::pair<VertexOIter, EdgeOIter> remove_branch(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, VertexOIter vit_out,
-                                                EdgeOIter eit_out, BAGL_VEBL_D_ARY_TREE& g) {
+std::pair<VertexOIter, EdgeOIter> remove_branch(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
+                                                BAGL_VEBL_D_ARY_TREE& g, VertexOIter vit_out, EdgeOIter eit_out) {
   return g.remove_branch(v, vit_out, eit_out);
 }
 
@@ -805,8 +806,8 @@ std::pair<VertexOIter, EdgeOIter> remove_branch(typename BAGL_VEBL_D_ARY_TREE::v
  * \return The output-iterator after the collection of all the removed vertices.
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename OutputIter>
-OutputIter clear_children(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, OutputIter it_out,
-                          BAGL_VEBL_D_ARY_TREE& g) {
+OutputIter clear_children(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, BAGL_VEBL_D_ARY_TREE& g,
+                          OutputIter it_out) {
   return g.clear_children(v, it_out);
 }
 
@@ -821,7 +822,7 @@ OutputIter clear_children(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, Ou
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS, typename VertexOIter, typename EdgeOIter>
 std::pair<VertexOIter, EdgeOIter> clear_children(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v,
-                                                 VertexOIter vit_out, EdgeOIter eit_out, BAGL_VEBL_D_ARY_TREE& g) {
+                                                 BAGL_VEBL_D_ARY_TREE& g, VertexOIter vit_out, EdgeOIter eit_out) {
   return g.clear_children(v, vit_out, eit_out);
 }
 

@@ -6,6 +6,7 @@
 #include "bagl/graph_traits.h"
 #include "gtest/gtest.h"
 #include "test/graph_mutation_test_suite.h"
+#include "test/graph_properties_test_suite.h"
 
 namespace bagl {
 namespace {
@@ -28,6 +29,13 @@ TEST(DirectedGraph, ConceptChecks) {
 }
 
 INSTANTIATE_TYPED_TEST_SUITE_P(DirectedGraphMutation, GraphMutationTest, Graph);
+INSTANTIATE_TYPED_TEST_SUITE_P(DirectedGraphTreeMutation, GraphTreeMutationTest, Graph);
+
+using DirPType = std::tuple<directed_graph<VertexPropTest, EdgePropTest, GraphPropTest>, PropMapMaps>;
+using DirBType = std::tuple<directed_graph<VertexBundleTest, EdgeBundleTest, GraphBundleTest>, BundleMaps>;
+
+INSTANTIATE_TYPED_TEST_SUITE_P(DirectedGraphProps, GraphPropertiesTest, DirPType);
+INSTANTIATE_TYPED_TEST_SUITE_P(DirectedGraphBundles, GraphPropertiesTest, DirBType);
 
 }  // namespace
 }  // namespace bagl

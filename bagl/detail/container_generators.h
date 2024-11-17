@@ -170,12 +170,12 @@ struct indexable_desc {
   operator RawDesc&() { return value; }
   operator const RawDesc&() const { return value; }
 
-  bool operator==(const indexable_desc& rhs) const { return value == rhs.value; }
-  bool operator!=(const indexable_desc& rhs) const { return value != rhs.value; }
-  bool operator<(const indexable_desc& rhs) const { return desc_less_than(value, rhs.value); }
-  bool operator>(const indexable_desc& rhs) const { return desc_less_than(rhs.value, value); }
-  bool operator<=(const indexable_desc& rhs) const { return !desc_less_than(rhs.value, value); }
-  bool operator>=(const indexable_desc& rhs) const { return !desc_less_than(value, rhs.value); }
+  bool operator==(const RawDesc& rhs) const { return value == rhs; }
+  bool operator!=(const RawDesc& rhs) const { return value != rhs; }
+  bool operator<(const RawDesc& rhs) const { return desc_less_than(value, rhs); }
+  bool operator>(const RawDesc& rhs) const { return desc_less_than(rhs, value); }
+  bool operator<=(const RawDesc& rhs) const { return !desc_less_than(rhs, value); }
+  bool operator>=(const RawDesc& rhs) const { return !desc_less_than(value, rhs); }
 };
 
 template <typename RawDesc>

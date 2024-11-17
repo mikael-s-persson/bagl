@@ -74,6 +74,9 @@ struct adjlist_vertex_stored_type {
   edge_container& get_out_edges() { return out_edges; }
   const edge_container& get_out_edges() const { return out_edges; }
 
+  in_edge_container& get_in_edges() { return in_edges; }
+  const in_edge_container& get_in_edges() const { return in_edges; }
+
   template <typename... VPArgs>
   requires std::constructible_from<VertexProperties, VPArgs&&...>
   explicit adjlist_vertex_stored_type(VPArgs&&... vp_args)
@@ -100,6 +103,9 @@ struct adjlist_vertex_stored_type<VertexListS, OutEdgeListS, directed_s, VertexP
 
   edge_container& get_out_edges() { return out_edges; }
   const edge_container& get_out_edges() const { return out_edges; }
+
+  auto get_in_edges() { return std::ranges::empty_view<edge_descriptor>{}; }
+  auto get_in_edges() const { return std::ranges::empty_view<edge_descriptor>{}; }
 
   template <typename... VPArgs>
   requires std::constructible_from<VertexProperties, VPArgs&&...>
@@ -398,7 +404,7 @@ template <typename VertexListS, typename OutEdgeListS, typename DirectedS, typen
 void adjlist_update_in_edge_id(
     adjlist_vertex_stored_type<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>& vp,
     VertexDesc v, std::size_t old_id, std::size_t new_id) {
-  for (auto& e : vp.in_edges) {
+  for (auto& e : vp.get_in_edges()) {
     if ((e.source == v) && (e.edge_id == old_id)) {
       e.edge_id = new_id;
       break;
@@ -649,9 +655,9 @@ std::enable_if_t<!std::is_same_v<DirectedS, directed_s>> adjlist_update_out_edge
                                                                                   std::size_t old_v_id,
                                                                                   std::size_t new_v_id) {
   // first, update in-edge vertices
-  for (auto iei = cont[new_v_id].in_edges.begin(); iei != cont[new_v_id].in_edges.end(); ++iei) {
-    ValueType& up = cont[iei->source];
-    adjlist_update_out_edges_impl(up.get_out_edges(), old_v_id, new_v_id, iei->edge_id);
+  for (auto& e : cont[new_v_id].get_in_edges()) {
+    ValueType& up = cont[e.source];
+    adjlist_update_out_edges_impl(up.get_out_edges(), old_v_id, new_v_id, e.edge_id);
   }
 
   // second, update out-edge vertices
@@ -661,10 +667,10 @@ std::enable_if_t<!std::is_same_v<DirectedS, directed_s>> adjlist_update_out_edge
     }
     auto& [e_target, e_prop] = container_detail::get_value(*ei);
     ValueType& wp = cont[e_target];
-    for (auto iei = wp.in_edges.begin(); iei != wp.in_edges.end(); ++iei) {
-      if ((iei->source == old_v_id) &&
-          (iei->edge_id == container_detail::iterator_to_desc(cont[new_v_id].get_out_edges(), ei))) {
-        iei->source = new_v_id;
+    for (auto& e : wp.get_in_edges()) {
+      if ((e.source == old_v_id) &&
+          (e.edge_id == container_detail::iterator_to_desc(cont[new_v_id].get_out_edges(), ei))) {
+        e.source = new_v_id;
         break;
       }
     }
@@ -929,7 +935,7 @@ struct adjlist_vertex_container {
   // NOTE: This WORKS for ALL vertex container types.
   auto in_edges(vertex_descriptor v) const {
     if constexpr (!std::is_same_v<DirectedS, directed_s>) {
-      return std::ranges::subrange(get_stored_vertex(v).in_edges.begin(), get_stored_vertex(v).in_edges.end());
+      return get_stored_vertex(v).get_in_edges();
     } else {
       return int{};
     }

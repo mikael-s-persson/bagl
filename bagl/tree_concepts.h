@@ -73,25 +73,18 @@ concept MutableTree = Tree<T> && requires(T& t, graph_vertex_descriptor_t<T> v) 
 template <typename T>
 concept MutablePropertyTree = Tree<T> &&
     requires(T& t, graph_vertex_descriptor_t<T> v, vertex_property_type<T> vp, edge_property_type<T> ep) {
-  { create_root(vp, t) } -> std::convertible_to<graph_vertex_descriptor_t<T>>;
-  { create_root(std::move(vp), t) } -> std::convertible_to<graph_vertex_descriptor_t<T>>;
+  { create_root(t, vp) } -> std::convertible_to<graph_vertex_descriptor_t<T>>;
   {
-    add_child(v, vp, t)
+    add_child(v, t, vp)
     } -> std::convertible_to<std::tuple<graph_vertex_descriptor_t<T>, graph_edge_descriptor_t<T>, bool>>;
   {
-    add_child(v, vp, ep, t)
+    add_child(v, t, vp, ep)
     } -> std::convertible_to<std::tuple<graph_vertex_descriptor_t<T>, graph_edge_descriptor_t<T>, bool>>;
+  { remove_branch(v, t, &vp) } -> std::convertible_to<vertex_property_type<T>*>;
+  { remove_branch(v, t, &vp, &ep) } -> std::convertible_to<std::pair<vertex_property_type<T>*, edge_property_type<T>*>>;
+  { clear_children(v, t, &vp) } -> std::convertible_to<vertex_property_type<T>*>;
   {
-    add_child(v, std::move(vp), t)
-    } -> std::convertible_to<std::tuple<graph_vertex_descriptor_t<T>, graph_edge_descriptor_t<T>, bool>>;
-  {
-    add_child(v, std::move(vp), std::move(ep), t)
-    } -> std::convertible_to<std::tuple<graph_vertex_descriptor_t<T>, graph_edge_descriptor_t<T>, bool>>;
-  { remove_branch(v, &vp, t) } -> std::convertible_to<vertex_property_type<T>*>;
-  { remove_branch(v, &vp, &ep, t) } -> std::convertible_to<std::pair<vertex_property_type<T>*, edge_property_type<T>*>>;
-  { clear_children(v, &vp, t) } -> std::convertible_to<vertex_property_type<T>*>;
-  {
-    clear_children(v, &vp, &ep, t)
+    clear_children(v, t, &vp, &ep)
     } -> std::convertible_to<std::pair<vertex_property_type<T>*, edge_property_type<T>*>>;
 };
 

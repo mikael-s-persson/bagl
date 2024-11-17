@@ -186,28 +186,6 @@ class iterator_property_map : public put_get_helper<iterator_property_map<RAIter
   IndexMap index_;
 };
 
-template <std::random_access_iterator RAIter, typename IndexMap>
-class safe_iterator_property_map : public put_get_helper<safe_iterator_property_map<RAIter, IndexMap>> {
- public:
-  using value_type = std::decay_t<decltype(*std::declval<RAIter>())>;
-
-  explicit safe_iterator_property_map(RAIter first = RAIter(), std::size_t n = 0, IndexMap index = IndexMap())
-      : iter_(std::move(first)), n_(n), index_(std::move(index)) {}
-
-  template <typename Key>
-  requires concepts::ReadablePropertyMap<IndexMap, Key&&>
-  decltype(auto) operator[](Key&& k) const {
-    assert(get(index_, k) < n_);
-    return *(iter_ + get(index_, std::forward<Key>(k)));
-  }
-  auto size() const { return n_; }
-
- protected:
-  RAIter iter_;
-  std::size_t n_ = 0;
-  IndexMap index_;
-};
-
 //=========================================================================
 // An adaptor to turn a Unique Pair Associative Container like std::map or
 // std::unordered_map into an Lvalue Property Map.
