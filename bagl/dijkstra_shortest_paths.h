@@ -18,7 +18,6 @@
 #include "bagl/exception.h"
 #include "bagl/graph_traits.h"
 #include "bagl/graph_utility.h"
-#include "bagl/mutable_queue.h"
 #include "bagl/numeric_values.h"
 #include "bagl/property_map.h"
 #include "bagl/relax.h"

@@ -13,7 +13,6 @@
 #include "bagl/graph_concepts.h"
 #include "bagl/graph_traits.h"
 #include "bagl/graph_utility.h"
-#include "bagl/indirect_cmp.h"
 #include "bagl/property_map.h"
 
 namespace bagl {
@@ -45,8 +44,8 @@ void kruskal_minimum_spanning_tree(const Graph& g, OutputIterator spanning_tree_
     dset.make_set(u);
   }
 
-  using weight_greater = indirect_cmp<Weight, std::greater<>>;
-  std::priority_queue<Edge, std::vector<Edge>, weight_greater> q(weight_greater{weight});
+  auto weight_greater = [weight](const Edge& u, const Edge& v) { return get(weight, u) > get(weight, v); };
+  std::priority_queue<Edge, std::vector<Edge>, decltype(weight_greater)> q(weight_greater);
   /*push all edge into Q*/
   for (auto e : edges(g)) {
     q.push(e);

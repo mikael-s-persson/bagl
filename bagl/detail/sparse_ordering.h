@@ -13,7 +13,6 @@
 #include "bagl/breadth_first_search.h"
 #include "bagl/depth_first_search.h"
 #include "bagl/graph_traits.h"
-#include "bagl/mutable_queue.h"
 #include "bagl/properties.h"
 #include "bagl/property_map.h"
 

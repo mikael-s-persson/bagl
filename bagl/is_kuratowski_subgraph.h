@@ -19,7 +19,7 @@
 
 namespace bagl {
 
-namespace detail {
+namespace subgraph_detail {
 
 template <typename Graph>
 Graph make_k_5() {
@@ -68,7 +68,7 @@ void contract_edge(AdjacencyList& neighbors, Vertex u, Vertex v) {
 
 enum target_graph_t { tg_k_3_3, tg_k_5 };
 
-}  // namespace detail
+}  // namespace subgraph_detail
 
 template <typename Graph, std::ranges::input_range ERange, typename VertexIndexMap>
 bool is_kuratowski_subgraph(const Graph& g, ERange e_rg, VertexIndexMap vm) {
@@ -76,11 +76,11 @@ bool is_kuratowski_subgraph(const Graph& g, ERange e_rg, VertexIndexMap vm) {
 
   using small_graph_t = adjacency_list<vec_s, vec_s, undirected_s>;
 
-  detail::target_graph_t target_graph = detail::tg_k_3_3;  // unless we decide otherwise later
+  subgraph_detail::target_graph_t target_graph = subgraph_detail::tg_k_3_3;  // unless we decide otherwise later
 
-  static auto k_5 = detail::make_k_5<small_graph_t>();
+  static auto k_5 = subgraph_detail::make_k_5<small_graph_t>();
 
-  static auto k_3_3 = detail::make_k_3_3<small_graph_t>();
+  static auto k_3_3 = subgraph_detail::make_k_3_3<small_graph_t>();
 
   std::size_t n_vertices(num_vertices(g));
   std::size_t max_num_edges(3 * n_vertices - 5);
@@ -148,7 +148,7 @@ bool is_kuratowski_subgraph(const Graph& g, ERange e_rg, VertexIndexMap vm) {
           break;
         }
 
-        detail::contract_edge(neighbors, min_u, v);
+        subgraph_detail::contract_edge(neighbors, min_u, v);
       }  // end iteration over v's neighbors
 
     }  // end iteration through vertices v
@@ -157,12 +157,12 @@ bool is_kuratowski_subgraph(const Graph& g, ERange e_rg, VertexIndexMap vm) {
       // check to see whether we should go on to find a k_5
       for (auto v : vertices(g)) {
         if (neighbors[v].size() == 4) {
-          target_graph = detail::tg_k_5;
+          target_graph = subgraph_detail::tg_k_5;
           break;
         }
       }
 
-      if (target_graph == detail::tg_k_3_3) {
+      if (target_graph == subgraph_detail::tg_k_3_3) {
         break;
       }
     }
@@ -197,7 +197,7 @@ bool is_kuratowski_subgraph(const Graph& g, ERange e_rg, VertexIndexMap vm) {
     }
   }
 
-  if (target_graph == detail::tg_k_5) {
+  if (target_graph == subgraph_detail::tg_k_5) {
     auto vm_ident = identity_property_map{};
     return isomorphism(
         k_5, contracted_graph,

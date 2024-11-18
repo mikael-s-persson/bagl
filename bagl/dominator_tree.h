@@ -15,7 +15,7 @@
 // Dominator tree computation
 
 namespace bagl {
-namespace detail {
+namespace dominator_tree_detail {
 // An extended time_stamper which also records vertices for each dfs number
 template <class TimeMap, class VertexVector, class TimeT>
 class time_stamper_with_vertex_on_discover_vertex {
@@ -158,7 +158,7 @@ class dominator_visitor {
   vector_property_map<Vertex, IndexMap> samedom_map;
 };
 
-}  // namespace detail
+}  // namespace dominator_tree_detail
 
 // Build dominator tree using Lengauer-Tarjan algorithm.
 // It takes O((V+E)log(V+E)) time.
@@ -190,7 +190,7 @@ void lengauer_tarjan_dominator_tree_without_dfs(const Graph& g, const graph_vert
   }
 
   // 1. Visit each vertex in reverse post order and calculate sdom.
-  detail::dominator_visitor visitor(g, entry, index_map, dom_tree_pred_map);
+  dominator_tree_detail::dominator_visitor visitor(g, entry, index_map, dom_tree_pred_map);
 
   for (std::size_t i = 0; i < num_of_vertices; ++i) {
     const Vertex u(vertices_by_df_num[num_of_vertices - 1 - i]);
@@ -232,11 +232,11 @@ void lengauer_tarjan_dominator_tree(const Graph& g, const graph_vertex_descripto
   }
 
   auto time = std::numeric_limits<std::size_t>::max();
-  depth_first_visit(
-      g, entry,
-      make_dfs_visitor(predecessor_recorder_on_tree_edge(parent_map),
-                       detail::time_stamper_with_vertex_on_discover_vertex(df_num_map, vertices_by_df_num, time)),
-      vector_property_map(num_of_vertices, index_map, color_traits<default_color_type>::white()).ref());
+  depth_first_visit(g, entry,
+                    make_dfs_visitor(predecessor_recorder_on_tree_edge(parent_map),
+                                     dominator_tree_detail::time_stamper_with_vertex_on_discover_vertex(
+                                         df_num_map, vertices_by_df_num, time)),
+                    vector_property_map(num_of_vertices, index_map, color_traits<default_color_type>::white()).ref());
 
   // 2. Run main algorithm.
   lengauer_tarjan_dominator_tree_without_dfs(g, entry, index_map, df_num_map, parent_map, vertices_by_df_num,

@@ -416,7 +416,7 @@ auto edge(graph_vertex_descriptor_t<G> u, graph_vertex_descriptor_t<G> v, const 
 //===========================================================================
 // Functions required by the MutableGraph concept
 
-namespace detail {
+namespace subgraph_detail {
 
 template <typename Vertex, typename Edge, typename Graph>
 void add_edge_recur_down(Vertex u_global, Vertex v_global, Edge e_global, subgraph<Graph>& g, subgraph<Graph>* orig);
@@ -456,7 +456,7 @@ std::pair<graph_edge_descriptor_t<Graph>, bool> add_edge_recur_up(Vertex u_globa
   return add_edge_recur_up(u_global, v_global, *g.m_parent, orig, std::forward<EPArgs>(ep_args)...);
 }
 
-}  // namespace detail
+}  // namespace subgraph_detail
 
 // Add an edge to the subgraph g, specified by the local vertex descriptors u
 // and v. In addition, the edge will be added to any (all) other subgraphs that
@@ -467,11 +467,11 @@ std::pair<graph_edge_descriptor_t<G>, bool> add_edge(graph_vertex_descriptor_t<G
                                                      subgraph<G>& g, EPArgs&&... ep_args) {
   if (g.is_root()) {
     // u and v are really global
-    return detail::add_edge_recur_up(u, v, g, &g, std::forward<EPArgs>(ep_args)...);
+    return subgraph_detail::add_edge_recur_up(u, v, g, &g, std::forward<EPArgs>(ep_args)...);
   }
 
-  auto [e_global, inserted] =
-      detail::add_edge_recur_up(g.local_to_global(u), g.local_to_global(v), g, &g, std::forward<EPArgs>(ep_args)...);
+  auto [e_global, inserted] = subgraph_detail::add_edge_recur_up(g.local_to_global(u), g.local_to_global(v), g, &g,
+                                                                 std::forward<EPArgs>(ep_args)...);
   auto e_local = g.local_add_edge(u, v, e_global);
   return {e_local, inserted};
 }

@@ -33,7 +33,7 @@ struct mcr_float {
   static constexpr Float epsilon() { return Float{-0.005}; }
 };
 
-namespace detail {
+namespace cycle_ratio_detail {
 
 struct min_comparator_props {
   using comparator = std::greater<>;
@@ -373,7 +373,7 @@ auto optimum_cycle_ratio(const TG& g, TVIM vim, TEW1 ewm, TEW2 ew2m, EV* pcc) {
   }
   return ocr;
 }
-}  // namespace detail
+}  // namespace cycle_ratio_detail
 
 // Algorithms
 // Maximum Cycle Ratio
@@ -383,8 +383,8 @@ template <typename FloatTraits, typename Graph, typename VertexIndexMap, typenam
 auto maximum_cycle_ratio(const Graph& g, VertexIndexMap vim, EdgeWeight1Map ew1m, EdgeWeight2Map ew2m,
                          std::vector<graph_edge_descriptor_t<Graph>>* pcc = nullptr,
                          FloatTraits /*unused*/ = FloatTraits()) {
-  using Traits = detail::float_wrapper<FloatTraits, detail::max_comparator_props>;
-  return detail::optimum_cycle_ratio<Traits>(g, vim, ew1m, ew2m, pcc);
+  using Traits = cycle_ratio_detail::float_wrapper<FloatTraits, cycle_ratio_detail::max_comparator_props>;
+  return cycle_ratio_detail::optimum_cycle_ratio<Traits>(g, vim, ew1m, ew2m, pcc);
 }
 
 template <typename Graph, typename VertexIndexMap, typename EdgeWeight1Map, typename EdgeWeight2Map>
@@ -400,8 +400,8 @@ template <typename FloatTraits, typename Graph, typename VertexIndexMap, typenam
 auto minimum_cycle_ratio(const Graph& g, VertexIndexMap vim, EdgeWeight1Map ew1m, EdgeWeight2Map ew2m,
                          std::vector<graph_edge_descriptor_t<Graph>>* pcc = nullptr,
                          FloatTraits /*unused*/ = FloatTraits()) {
-  using Traits = detail::float_wrapper<FloatTraits, detail::min_comparator_props>;
-  return detail::optimum_cycle_ratio<Traits>(g, vim, ew1m, ew2m, pcc);
+  using Traits = cycle_ratio_detail::float_wrapper<FloatTraits, cycle_ratio_detail::min_comparator_props>;
+  return cycle_ratio_detail::optimum_cycle_ratio<Traits>(g, vim, ew1m, ew2m, pcc);
 }
 
 template <typename Graph, typename VertexIndexMap, typename EdgeWeight1Map, typename EdgeWeight2Map>

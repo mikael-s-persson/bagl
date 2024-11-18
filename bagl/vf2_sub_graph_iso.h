@@ -19,6 +19,7 @@
 #include <ranges>
 #include <tuple>
 #include <type_traits>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -52,7 +53,7 @@ struct vf2_print_callback {
   const Graph2& graph2_;
 };
 
-namespace detail {
+namespace vf2_subgraph_detail {
 
 // State associated with a single graph (graph_this)
 template <typename GraphThis, typename GraphOther, concepts::ReadableVertexIndexMap<GraphThis> IndexMapThis,
@@ -673,14 +674,14 @@ bool vf2_subgraph_morphism(const GraphSmall& graph_small, const GraphLarge& grap
     return false;
   }
 
-  detail::state<GraphSmall, GraphLarge, IndexMapSmall, IndexMapLarge, EdgeEquivalencePredicate,
-                VertexEquivalencePredicate, SubGraphIsoMapCallback, problem_selection>
+  state<GraphSmall, GraphLarge, IndexMapSmall, IndexMapLarge, EdgeEquivalencePredicate, VertexEquivalencePredicate,
+        SubGraphIsoMapCallback, problem_selection>
       s(graph_small, graph_large, index_map_small, index_map_large, edge_comp, vertex_comp);
 
-  return detail::match(graph_small, graph_large, user_callback, vertex_order_small, s);
+  return match(graph_small, graph_large, user_callback, vertex_order_small, s);
 }
 
-}  // namespace detail
+}  // namespace vf2_subgraph_detail
 
 // Returns vertex order (vertices sorted by multiplicity of in/out degrees)
 template <typename Graph>
@@ -688,7 +689,7 @@ auto vertex_order_by_mult(const Graph& graph) {
   std::vector<graph_vertex_descriptor_t<Graph>> vertex_order;
   std::ranges::copy(vertices(graph), std::back_inserter(vertex_order));
 
-  detail::sort_vertices(graph, get(vertex_index, graph), vertex_order);
+  vf2_subgraph_detail::sort_vertices(graph, get(vertex_index, graph), vertex_order);
   return vertex_order;
 }
 
@@ -702,7 +703,7 @@ bool vf2_subgraph_mono(const GraphSmall& graph_small, const GraphLarge& graph_la
                        SubGraphIsoMapCallback user_callback, IndexMapSmall index_map_small,
                        IndexMapLarge index_map_large, const VertexOrderSmall& vertex_order_small,
                        EdgeEquivalencePredicate edge_comp, VertexEquivalencePredicate vertex_comp) {
-  return detail::vf2_subgraph_morphism<detail::problem_selector::subgraph_mono>(
+  return vf2_subgraph_detail::vf2_subgraph_morphism<vf2_subgraph_detail::problem_selector::subgraph_mono>(
       graph_small, graph_large, user_callback, index_map_small, index_map_large, vertex_order_small, edge_comp,
       vertex_comp);
 }
@@ -726,7 +727,7 @@ bool vf2_subgraph_iso(const GraphSmall& graph_small, const GraphLarge& graph_lar
                       SubGraphIsoMapCallback user_callback, IndexMapSmall index_map_small,
                       IndexMapLarge index_map_large, const VertexOrderSmall& vertex_order_small,
                       EdgeEquivalencePredicate edge_comp, VertexEquivalencePredicate vertex_comp) {
-  return detail::vf2_subgraph_morphism<detail::problem_selector::subgraph_iso>(
+  return vf2_subgraph_detail::vf2_subgraph_morphism<vf2_subgraph_detail::problem_selector::subgraph_iso>(
       graph_small, graph_large, user_callback, index_map_small, index_map_large, vertex_order_small, edge_comp,
       vertex_comp);
 }
@@ -774,11 +775,11 @@ bool vf2_graph_iso(const Graph1& graph1, const Graph2& graph2, GraphIsoMapCallba
     return false;
   }
 
-  detail::state<Graph1, Graph2, IndexMap1, IndexMap2, EdgeEquivalencePredicate, VertexEquivalencePredicate,
-                GraphIsoMapCallback, detail::problem_selector::isomorphism>
+  vf2_subgraph_detail::state<Graph1, Graph2, IndexMap1, IndexMap2, EdgeEquivalencePredicate, VertexEquivalencePredicate,
+                             GraphIsoMapCallback, vf2_subgraph_detail::problem_selector::isomorphism>
       s(graph1, graph2, index_map1, index_map2, edge_comp, vertex_comp);
 
-  return detail::match(graph1, graph2, user_callback, vertex_order1, s);
+  return vf2_subgraph_detail::match(graph1, graph2, user_callback, vertex_order1, s);
 }
 
 // All default interface for vf2_graph_iso
@@ -794,7 +795,7 @@ template <concepts::EdgeListGraph Graph1, concepts::AdjacencyMatrix Graph2,
           typename VertexEquivalencePredicate>
 bool verify_vf2_subgraph_iso(const Graph1& graph1, const Graph2& graph2, const CorresponenceMap1To2 f,
                              EdgeEquivalencePredicate edge_comp, VertexEquivalencePredicate vertex_comp) {
-  detail::equivalent_edge_exists<Graph2> edge2_exists;
+  vf2_subgraph_detail::equivalent_edge_exists<Graph2> edge2_exists;
 
   for (auto e1 : edges(graph1)) {
     auto s1 = source(e1, graph1);

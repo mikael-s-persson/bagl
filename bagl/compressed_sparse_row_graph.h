@@ -19,7 +19,6 @@
 
 #include "bagl/detail/compressed_sparse_row_struct.h"
 #include "bagl/detail/container_generators.h"
-#include "bagl/detail/is_distributed_selector.h"
 #include "bagl/filtered_graph.h"  // For keep_all
 #include "bagl/graph_selectors.h"
 #include "bagl/graph_traits.h"

@@ -9,7 +9,6 @@
 
 #include "bagl/adjacency_range.h"
 #include "bagl/bfl_d_ary_tree.h"
-#include "bagl/detail/set_adaptor.h"
 #include "bagl/graph_concepts.h"
 #include "bagl/graph_traits.h"
 #include "bagl/properties.h"
@@ -44,7 +43,7 @@ struct is_in_subset {
 
   template <typename Elt>
   [[nodiscard]] bool operator()(const Elt& x) const {
-    return set_contains(*s_, x);
+    return s_->find(x) != s_->end();
   }
   const Set* s_ = nullptr;
 };
@@ -56,7 +55,7 @@ struct is_not_in_subset {
 
   template <typename Elt>
   [[nodiscard]] bool operator()(const Elt& x) const {
-    return !set_contains(*s_, x);
+    return s_->find(x) == s_->end();
   }
   const Set* s_ = nullptr;
 };
