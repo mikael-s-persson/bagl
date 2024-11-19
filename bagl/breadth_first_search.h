@@ -181,7 +181,7 @@ class bfs_stop_at_goal {
  public:
   explicit bfs_stop_at_goal(Vertex goal) : goal_(goal) {}
   template <typename Graph>
-  void examine_vertex(Vertex u, const Graph& g) {
+  void examine_vertex(Vertex u, const Graph& /*g*/) {
     if (u == goal_) {
       throw search_succeeded();
     }

@@ -257,7 +257,7 @@ class adjacency_list {
   /**
    * Swaps the adjacency-list with another.
    */
-  void swap(self& rhs) {
+  void swap(self& rhs) noexcept {
     using std::swap;
     swap(m_graph_prop, rhs.m_graph_prop);
     m_pack.swap(rhs.m_pack);
@@ -335,7 +335,7 @@ struct tree_traits<adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexPr
   adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperties, EdgeProperties, GraphProperties>
 
 template <BAGL_ADJACENCY_LIST_ARGS>
-void swap(BAGL_ADJACENCY_LIST& lhs, BAGL_ADJACENCY_LIST& rhs) {
+void swap(BAGL_ADJACENCY_LIST& lhs, BAGL_ADJACENCY_LIST& rhs) noexcept {
   lhs.swap(rhs);
 }
 
@@ -1105,7 +1105,7 @@ class adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, 
   /**
    * Swaps the adjacency-list with another.
    */
-  void swap(self& rhs) {
+  void swap(self& rhs) noexcept {
     using std::swap;
     m_pack.swap(rhs.m_pack);
     swap(m_graph_prop, rhs.m_graph_prop);

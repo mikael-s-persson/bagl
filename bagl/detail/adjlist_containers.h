@@ -779,7 +779,7 @@ struct adjlist_vertex_container {
   adjlist_vertex_container(const adjlist_vertex_container&) = delete;
   adjlist_vertex_container& operator=(const adjlist_vertex_container&) = delete;
 
-  void swap(adjlist_vertex_container& rhs) {
+  void swap(adjlist_vertex_container& rhs) noexcept {
     using std::swap;
     m_vertices.swap(rhs.m_vertices);
     // swap(m_vertices, rhs.m_vertices);
@@ -947,8 +947,9 @@ struct adjlist_vertex_container {
 
 template <typename VertexListS, typename OutEdgeListS, typename DirectedS, typename VertexProperties,
           typename EdgeProperties>
-void swap(adjlist_vertex_container<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>& lhs,
-          adjlist_vertex_container<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>& rhs) {
+void swap(
+    adjlist_vertex_container<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>& lhs,
+    adjlist_vertex_container<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>& rhs) noexcept {
   lhs.swap(rhs);
 }
 

@@ -59,8 +59,8 @@ class bfl_d_ary_tree {
   using edge_descriptor = bfl_detail::bfltree_edge_desc;
 
   using vertices_size_type = std::size_t;
-  using edges_size_type = vertices_size_type;
-  using degree_size_type = vertices_size_type;
+  using edges_size_type = std::size_t;
+  using degree_size_type = std::size_t;
 
   /**
    * This static member function outputs the null-vertex (invalid vertex descriptor).
@@ -94,18 +94,18 @@ class bfl_d_ary_tree {
   using graph_tag = bfl_d_ary_tree_tag;
 
   // private:
-  container_type m_vertices;
-  vertices_size_type m_vertex_count{0};
+  container_type m_vertices{};
+  std::size_t m_vertex_count{0};
   graph_property_type m_graph_prop;
 
   /**
    * Construct the D-ary BF-tree with a given reserved depth.
    * \param aDepth The depth of the graph to reserve space for.
    */
-  explicit bfl_d_ary_tree(vertices_size_type aDepth = 0) : m_graph_prop() {
-    vertices_size_type vert_count = 1;
-    vertices_size_type accum = 1;
-    for (vertices_size_type i = 0; i < aDepth; ++i) {
+  explicit bfl_d_ary_tree(std::size_t aDepth = 0) : m_graph_prop() {
+    std::size_t vert_count = 1;
+    std::size_t accum = 1;
+    for (std::size_t i = 0; i < aDepth; ++i) {
       accum *= Arity;
       vert_count += accum;
     }
@@ -135,9 +135,9 @@ class bfl_d_ary_tree {
    * \return The depth of the tree.
    */
   [[nodiscard]] std::size_t depth() const {
-    vertices_size_type vert_count = 1;
-    vertices_size_type accum = 1;
-    vertices_size_type depth_count = 0;
+    std::size_t vert_count = 1;
+    std::size_t accum = 1;
+    std::size_t depth_count = 0;
     for (; vert_count < m_vertices.size(); ++depth_count) {
       accum *= Arity;
       vert_count += accum;
@@ -148,7 +148,7 @@ class bfl_d_ary_tree {
   /**
    * Standard swap function.
    */
-  void swap(self& rhs) {
+  void swap(self& rhs) noexcept {
     using std::swap;
     m_vertices.swap(rhs.m_vertices);
     swap(m_vertex_count, rhs.m_vertex_count);
@@ -387,7 +387,7 @@ struct tree_storage_traits<bfl_d_ary_tree_storage<Arity>> {
  * \param rhs The right-hand-side of the swap.
  */
 template <BAGL_BFL_D_ARY_TREE_ARGS>
-void swap(BAGL_BFL_D_ARY_TREE& lhs, BAGL_BFL_D_ARY_TREE& rhs) {
+void swap(BAGL_BFL_D_ARY_TREE& lhs, BAGL_BFL_D_ARY_TREE& rhs) noexcept {
   lhs.swap(rhs);
 }
 
