@@ -245,12 +245,22 @@ class data_member_property_map : public put_get_helper<data_member_property_map<
  public:
   using value_type = T;
 
-  explicit data_member_property_map(member_ptr_type aMemPtr) : mem_ptr_(aMemPtr) {}
+  explicit data_member_property_map(member_ptr_type mem_ptr) : mem_ptr_(mem_ptr) {}
   data_member_property_map() = default;
   template <typename OtherProp>
   requires std::convertible_to < std::remove_cv_t<OtherProp>
   &, std::remove_cv_t<PropertyType>& > decltype(auto) operator[](OtherProp& p) const { return p.*mem_ptr_; }
 };
+
+template <typename T, typename PropertyType>
+auto make_data_member_property_map(T PropertyType::*mem_ptr) {
+  return data_member_property_map<T, PropertyType>(mem_ptr);
+}
+
+template <typename T, typename PropertyType>
+auto make_const_data_member_property_map(T PropertyType::*mem_ptr) {
+  return data_member_property_map<const T, const PropertyType>(mem_ptr);
+}
 
 //======== Composite property-map ==========
 

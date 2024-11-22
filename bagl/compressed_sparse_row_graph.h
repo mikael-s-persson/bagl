@@ -1161,25 +1161,25 @@ void put(BAGL_CSR_GRAPH_TYPE& g, graph_bundle_t /*unused*/, GProp&& value) {
 
 // Returns a reference to the vertex-property associated to the given vertex descriptor.
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-auto& get_property(typename BAGL_CSR_GRAPH_TYPE::vertex_descriptor v, BAGL_CSR_GRAPH_TYPE& g) {
+auto& get_property(BAGL_CSR_GRAPH_TYPE& g, typename BAGL_CSR_GRAPH_TYPE::vertex_descriptor v) {
   return g.get_property(v);
 }
 
 // Returns a const-reference to the vertex-property associated to the given vertex descriptor.
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-const auto& get_property(typename BAGL_CSR_GRAPH_TYPE::vertex_descriptor v, const BAGL_CSR_GRAPH_TYPE& g) {
+const auto& get_property(const BAGL_CSR_GRAPH_TYPE& g, typename BAGL_CSR_GRAPH_TYPE::vertex_descriptor v) {
   return g.get_property(v);
 }
 
 // Returns a reference to the edge-property associated to the given edge descriptor.
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-auto& get_property(const typename BAGL_CSR_GRAPH_TYPE::edge_descriptor& e, BAGL_CSR_GRAPH_TYPE& g) {
+auto& get_property(BAGL_CSR_GRAPH_TYPE& g, const typename BAGL_CSR_GRAPH_TYPE::edge_descriptor& e) {
   return g.get_property(e);
 }
 
 // Returns a const-reference to the edge-property associated to the given edge descriptor.
 template <BAGL_CSR_GRAPH_TEMPLATE_PARMS>
-const auto& get_property(const typename BAGL_CSR_GRAPH_TYPE::edge_descriptor& e, const BAGL_CSR_GRAPH_TYPE& g) {
+const auto& get_property(const BAGL_CSR_GRAPH_TYPE& g, const typename BAGL_CSR_GRAPH_TYPE::edge_descriptor& e) {
   return g.get_property(e);
 }
 

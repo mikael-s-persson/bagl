@@ -352,28 +352,6 @@ graph_vertex_descriptor_t<G> create_root(G& g, VProp&&... vp_args) {
   return add_vertex(g, std::forward<VProp>(vp_args)...);
 }
 
-//================= PropertyGraph =================
-
-template <typename Graph>
-vertex_bundle_type<Graph>& get_property(graph_vertex_descriptor_t<Graph> v, Graph& g) {
-  return g[v];
-}
-
-template <typename Graph>
-const vertex_bundle_type<Graph>& get_property(graph_vertex_descriptor_t<Graph> v, const Graph& g) {
-  return g[v];
-}
-
-template <typename Graph>
-edge_bundle_type<Graph>& get_property(graph_edge_descriptor_t<Graph> e, Graph& g) {
-  return g[e];
-}
-
-template <typename Graph>
-const edge_bundle_type<Graph>& get_property(graph_edge_descriptor_t<Graph> e, const Graph& g) {
-  return g[e];
-}
-
 }  // namespace bagl
 
 #endif  // BAGL_BAGL_TREE_ADAPTOR_H_

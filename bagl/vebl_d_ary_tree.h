@@ -880,25 +880,25 @@ void put(BAGL_VEBL_D_ARY_TREE& g, graph_bundle_t /*unused*/, GProp&& value) {
 
 // Returns a reference to the vertex-property associated to the given vertex descriptor.
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-auto& get_property(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, BAGL_VEBL_D_ARY_TREE& g) {
+auto& get_property(BAGL_VEBL_D_ARY_TREE& g, typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v) {
   return g.get_property(v);
 }
 
 // Returns a const-reference to the vertex-property associated to the given vertex descriptor.
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-const auto& get_property(typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v, const BAGL_VEBL_D_ARY_TREE& g) {
+const auto& get_property(const BAGL_VEBL_D_ARY_TREE& g, typename BAGL_VEBL_D_ARY_TREE::vertex_descriptor v) {
   return g.get_property(v);
 }
 
 // Returns a reference to the edge-property associated to the given edge descriptor.
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-auto& get_property(typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e, BAGL_VEBL_D_ARY_TREE& g) {
+auto& get_property(BAGL_VEBL_D_ARY_TREE& g, typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e) {
   return g.get_property(e);
 }
 
 // Returns a const-reference to the edge-property associated to the given edge descriptor.
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-const auto& get_property(typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e, const BAGL_VEBL_D_ARY_TREE& g) {
+const auto& get_property(const BAGL_VEBL_D_ARY_TREE& g, typename BAGL_VEBL_D_ARY_TREE::edge_descriptor e) {
   return g.get_property(e);
 }
 

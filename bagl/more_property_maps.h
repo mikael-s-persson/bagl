@@ -66,9 +66,9 @@ struct tagged_in_property_property_map
     if constexpr (std::is_same_v<std::remove_cv_t<value_type>, no_property>) {
       return no_property{};
     } else if constexpr (is_vertex_property_kind_v<PropertyMapTag> || is_edge_property_kind_v<PropertyMapTag>) {
-      return get_property_value(pg_->get_property(std::forward<Key>(k)), PropertyMapTag{});
+      return get_property_value(get_property(*pg_, std::forward<Key>(k)), PropertyMapTag{});
     } else {
-      return get_property_value(std::forward<Key>(k).get_property(graph_all), PropertyMapTag{});
+      return get_property_value(get_property(std::forward<Key>(k), graph_all), PropertyMapTag{});
     }
   }
 };

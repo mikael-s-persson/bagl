@@ -580,25 +580,25 @@ void put(BAGL_ADJACENCY_MATRIX& g, graph_bundle_t /*unused*/, GProp&& value) {
 
 // Returns a reference to the vertex-property associated to the given vertex descriptor.
 template <BAGL_ADJACENCY_MATRIX_PARAMS>
-auto& get_property(typename BAGL_ADJACENCY_MATRIX::vertex_descriptor v, BAGL_ADJACENCY_MATRIX& g) {
+auto& get_property(BAGL_ADJACENCY_MATRIX& g, typename BAGL_ADJACENCY_MATRIX::vertex_descriptor v) {
   return g.get_property(v);
 }
 
 // Returns a const-reference to the vertex-property associated to the given vertex descriptor.
 template <BAGL_ADJACENCY_MATRIX_PARAMS>
-const auto& get_property(typename BAGL_ADJACENCY_MATRIX::vertex_descriptor v, const BAGL_ADJACENCY_MATRIX& g) {
+const auto& get_property(const BAGL_ADJACENCY_MATRIX& g, typename BAGL_ADJACENCY_MATRIX::vertex_descriptor v) {
   return g.get_property(v);
 }
 
 // Returns a reference to the edge-property associated to the given edge descriptor.
 template <BAGL_ADJACENCY_MATRIX_PARAMS>
-auto& get_property(const typename BAGL_ADJACENCY_MATRIX::edge_descriptor& e, BAGL_ADJACENCY_MATRIX& g) {
+auto& get_property(BAGL_ADJACENCY_MATRIX& g, const typename BAGL_ADJACENCY_MATRIX::edge_descriptor& e) {
   return g.get_property(e);
 }
 
 // Returns a const-reference to the edge-property associated to the given edge descriptor.
 template <BAGL_ADJACENCY_MATRIX_PARAMS>
-const auto& get_property(const typename BAGL_ADJACENCY_MATRIX::edge_descriptor& e, const BAGL_ADJACENCY_MATRIX& g) {
+const auto& get_property(const BAGL_ADJACENCY_MATRIX& g, const typename BAGL_ADJACENCY_MATRIX::edge_descriptor& e) {
   return g.get_property(e);
 }
 
