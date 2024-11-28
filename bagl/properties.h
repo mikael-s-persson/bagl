@@ -17,6 +17,8 @@ namespace bagl {
 
 namespace concepts {
 
+// Graph property maps based on descriptor keys.
+
 template <typename PMap, typename G>
 concept ReadableVertexPropertyMap = ReadablePropertyMap<PMap, graph_vertex_descriptor_t<G>>;
 template <typename PMap, typename G>
@@ -41,6 +43,33 @@ template <typename PMap, typename G>
 concept MutableLvalueVertexPropertyMap = MutableLvaluePropertyMap<PMap, graph_vertex_descriptor_t<G>>;
 template <typename PMap, typename G>
 concept MutableLvalueEdgePropertyMap = MutableLvaluePropertyMap<PMap, graph_edge_descriptor_t<G>>;
+
+// Graph property maps based on property keys.
+
+template <typename PMap, typename G>
+concept ReadableVPropMemberMap = ReadablePropertyMap<PMap, vertex_property_type<G>>;
+template <typename PMap, typename G>
+concept ReadableEPropMemberMap = ReadablePropertyMap<PMap, edge_property_type<G>>;
+
+template <typename PMap, typename G>
+concept WritableVPropMemberMap = WritablePropertyMap<PMap, vertex_property_type<G>>;
+template <typename PMap, typename G>
+concept WritableEPropMemberMap = WritablePropertyMap<PMap, edge_property_type<G>>;
+
+template <typename PMap, typename G>
+concept ReadWriteVPropMemberMap = ReadWritePropertyMap<PMap, vertex_property_type<G>>;
+template <typename PMap, typename G>
+concept ReadWriteEPropMemberMap = ReadWritePropertyMap<PMap, edge_property_type<G>>;
+
+template <typename PMap, typename G>
+concept LvalueVPropMemberMap = LvaluePropertyMap<PMap, vertex_property_type<G>>;
+template <typename PMap, typename G>
+concept LvalueEPropMemberMap = LvaluePropertyMap<PMap, edge_property_type<G>>;
+
+template <typename PMap, typename G>
+concept MutableLvalueVPropMemberMap = MutableLvaluePropertyMap<PMap, vertex_property_type<G>>;
+template <typename PMap, typename G>
+concept MutableLvalueEPropMemberMap = MutableLvaluePropertyMap<PMap, edge_property_type<G>>;
 
 // Special graph property maps that are very common.
 
