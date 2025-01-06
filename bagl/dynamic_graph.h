@@ -11,6 +11,7 @@
 #include <typeinfo>
 #include <unordered_map>
 
+#include "bagl/adjacency_range.h"
 #include "bagl/any_iterator.h"
 #include "bagl/dynamic_property_map.h"
 #include "bagl/graph_concepts.h"
@@ -155,6 +156,8 @@ class dynamic_graph_mutator : public dynamic_graph_observer {
 
   dynamic_graph_mutator() = default;
   ~dynamic_graph_mutator() override = default;
+
+  [[nodiscard]] virtual dynamic_properties& get_mutable_properties() = 0;
 
   virtual vertex_descriptor do_add_vertex() = 0;
   virtual void do_clear_vertex(const vertex_descriptor& u) = 0;
@@ -607,6 +610,10 @@ class dynamic_graph_mutator_wrapper : public dynamic_graph_observer_wrapper<Grap
   using edge_descriptor = typename Base::edge_descriptor;
 
   dynamic_graph_mutator_wrapper(Graph& g, dynamic_properties& dp) : Base(g, dp) {}
+
+  [[nodiscard]] dynamic_properties& get_mutable_properties() override {
+    return this->dp_;
+  }
 
   vertex_descriptor do_add_vertex() override { return vertex_descriptor{add_vertex(this->g_)}; }
 
