@@ -76,6 +76,8 @@ class dynamic_property_map {  // NOLINT
   virtual ~dynamic_property_map() = default;
 
   [[nodiscard]] virtual std::any get_value(const std::any& key) = 0;
+  [[nodiscard]] virtual void* get_pointer(const std::any& key) = 0;
+  [[nodiscard]] virtual const void* get_const_pointer(const std::any& key) = 0;
   [[nodiscard]] virtual std::string get_string(const std::any& key) = 0;
   virtual void put_value(const std::any& key, const std::any& value) = 0;
   virtual void put_value(const std::any& key, const std::string& value) = 0;
@@ -83,6 +85,34 @@ class dynamic_property_map {  // NOLINT
   [[nodiscard]] virtual bool is_key_of_type(const std::type_info& info) const = 0;
   [[nodiscard]] virtual const std::type_info& value() const = 0;
   [[nodiscard]] virtual bool is_value_of_type(const std::type_info& info) const = 0;
+};
+
+template <typename ValueType>
+struct dynamic_property_map_by_ptr : public bagl::put_get_helper<dynamic_property_map_by_ptr<ValueType>> {
+  using self = dynamic_property_map_by_ptr<ValueType>;
+  using value_type = ValueType;
+
+  std::shared_ptr<dynamic_property_map> p_parent;
+
+  explicit dynamic_property_map_by_ptr(std::shared_ptr<dynamic_property_map> p_ptr) : p_parent(std::move(p_ptr)) {}
+  value_type operator[](const std::any& k) const {
+    if constexpr (std::is_const_v<value_type>) {
+      return *(static_cast<std::remove_reference_t<value_type>*>(p_parent->get_const_pointer(k)));
+    } else {
+      return *(static_cast<std::remove_reference_t<value_type>*>(p_parent->get_pointer(k)));
+    }
+  }
+};
+
+template <typename ValueType>
+struct dynamic_property_map_by_any : public bagl::put_get_helper<dynamic_property_map_by_any<ValueType>> {
+  using self = dynamic_property_map_by_any<ValueType>;
+  using value_type = ValueType;
+
+  std::shared_ptr<dynamic_property_map> p_parent;
+
+  explicit dynamic_property_map_by_any(std::shared_ptr<dynamic_property_map> p_ptr) : p_parent(std::move(p_ptr)) {}
+  value_type operator[](const std::any& k) const { return std::any_cast<value_type>(p_parent->get_value(k)); }
 };
 
 // Property map exceptions
@@ -190,6 +220,28 @@ class dynamic_property_map_adaptor : public dynamic_property_map {
   }
 
   [[nodiscard]] std::any get_value(const std::any& in_key) override { return get_value_impl(in_key); }
+
+  [[nodiscard]] void* get_pointer(const std::any& in_key) override {
+    using ref_type = decltype(get_value_impl(in_key));
+    if constexpr (std::is_reference_v<ref_type>) {
+      if constexpr (!std::is_const_v<std::remove_reference_t<ref_type>>) {
+        return static_cast<void*>(&get_value_impl(in_key));
+      } else {
+        throw dynamic_const_put_error();
+      }
+    } else {
+      throw dynamic_const_put_error();
+    }
+  }
+
+  [[nodiscard]] const void* get_const_pointer(const std::any& in_key) override {
+    using ref_type = decltype(get_value_impl(in_key));
+    if constexpr (std::is_reference_v<ref_type>) {
+      return static_cast<const void*>(&get_value_impl(in_key));
+    } else {
+      throw dynamic_const_put_error();
+    }
+  }
 
   [[nodiscard]] std::string get_string(const std::any& in_key) override {
     std::ostringstream out;
@@ -341,6 +393,20 @@ struct dynamic_properties {
   property_maps_type property_maps_;
   generate_fn_type generate_fn_;
 };
+
+template <typename Value>
+auto get_dynamic_property_map(const std::string& name, const dynamic_properties& dp) {
+  for (auto [i, i_end] = dp.equal_range(name); i != i_end; ++i) {
+    if (i->second->is_value_of_type(typeid(std::decay_t<Value>))) {
+      if constexpr (std::is_reference_v<Value>) {
+        return dynamic_property_map_by_ptr<Value>(i->second);
+      } else {
+        return dynamic_property_map_by_any<Value>(i->second);
+      }
+    }
+  }
+  throw dynamic_get_failure(name);
+}
 
 template <typename Key, typename Value>
 bool put(const std::string& name, dynamic_properties& dp, const Key& key, const Value& value) {

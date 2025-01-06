@@ -15,6 +15,7 @@
 
 #include "bagl/graph_traits.h"
 #include "bagl/properties.h"
+#include "bagl/property.h"
 #include "bagl/property_map.h"
 
 namespace bagl {
@@ -29,11 +30,6 @@ class grid_graph {
 
  public:
   using self = grid_graph<Dimensions>;
-
-  // sizes
-  using vertices_size_type = std::size_t;
-  using edges_size_type = std::size_t;
-  using degree_size_type = std::size_t;
 
   // descriptors
   using vertex_descriptor = std::array<std::size_t, Dimensions>;
@@ -61,7 +57,7 @@ class grid_graph {
 
   static vertex_descriptor null_vertex() {
     vertex_descriptor maxed_out_vertex;
-    std::ranges::fill(maxed_out_vertex, std::numeric_limits<vertices_size_type>::max());
+    std::ranges::fill(maxed_out_vertex, std::numeric_limits<std::size_t>::max());
     return maxed_out_vertex;
   }
 
@@ -116,8 +112,7 @@ class grid_graph {
   // Gets the vertex that is [distance] units behind [vertex] in
   // dimension [dimension_index].
   vertex_descriptor previous(vertex_descriptor vertex, std::size_t dimension_index, std::size_t distance = 1) const {
-    // We're assuming that vertices_size_type is unsigned, so we
-    // need to be careful about the math.
+    // std::size_t is unsigned, so we need to be careful about the math.
     vertex[dimension_index] =
         (distance > vertex[dimension_index])
             ? (wrapped(dimension_index) ? (length(dimension_index) - (distance % length(dimension_index))) : 0)
@@ -510,6 +505,54 @@ class grid_graph {
 
 };  // grid_graph
 
+/***********************************************************************************************
+ *                             Property Maps (from bundles)
+ * ********************************************************************************************/
+
+// Returns a vertex-bundle associated to the given vertex descriptor.
+template <std::size_t Dimensions>
+auto get(const grid_graph<Dimensions>& /*g*/, typename grid_graph<Dimensions>::vertex_descriptor /*v*/) {
+  return no_property{};
+}
+template <std::size_t Dimensions>
+auto get(vertex_bundle_t /*unused*/, const grid_graph<Dimensions>& /*g*/,
+         typename grid_graph<Dimensions>::vertex_descriptor /*v*/) {
+  return no_property{};
+}
+
+// Returns a edge-bundle associated to the given edge descriptor.
+template <std::size_t Dimensions>
+auto get(const grid_graph<Dimensions>& /*g*/, const typename grid_graph<Dimensions>::edge_descriptor& /*e*/) {
+  return no_property{};
+}
+template <std::size_t Dimensions>
+auto get(edge_bundle_t /*unused*/, const grid_graph<Dimensions>& /*g*/,
+         const typename grid_graph<Dimensions>::edge_descriptor& /*e*/) {
+  return no_property{};
+}
+
+// Returns a graph-bundle associated to the graph.
+template <std::size_t Dimensions>
+auto get(const grid_graph<Dimensions>& /*g*/, graph_bundle_t /*unused*/) {
+  return no_property{};
+}
+
+// Returns a vertex-property associated to the given vertex descriptor.
+template <std::size_t Dimensions>
+auto get_property(const grid_graph<Dimensions>& /*g*/, typename grid_graph<Dimensions>::vertex_descriptor /*v*/) {
+  return no_property{};
+}
+
+// Returns a edge-property associated to the given edge descriptor.
+template <std::size_t Dimensions>
+auto get_property(const grid_graph<Dimensions>& /*g*/, const typename grid_graph<Dimensions>::edge_descriptor& /*e*/) {
+  return no_property{};
+}
+
+template <std::size_t Dimensions>
+auto get_property(const grid_graph<Dimensions>& /*g*/, graph_all_t /*unused*/) {
+  return no_property{};
+}
 
 // Index Property Map
 

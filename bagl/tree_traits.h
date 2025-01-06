@@ -82,9 +82,7 @@ struct tree_storage_traits {
 
   using edge_parallel_category = disallow_parallel_edge_tag;
 
-  using vertices_size_type = std::size_t;
   using vertex_descriptor = typename StorageTag::vertex_descriptor;
-  using edges_size_type = std::size_t;
   using edge_descriptor = typename StorageTag::edge_descriptor;
 };
 

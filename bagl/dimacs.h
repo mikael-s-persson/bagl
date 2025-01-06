@@ -23,11 +23,9 @@ class dimacs_exception : public std::exception {};
 
 class dimacs_basic_reader {
  public:
-  using vertices_size_type = std::size_t;
-  using edges_size_type = std::size_t;
   using vertex_weight_type = double;
   using edge_weight_type = double;
-  using edge_type = std::pair<vertices_size_type, vertices_size_type>;
+  using edge_type = std::pair<std::size_t, std::size_t>;
   enum class incr_mode { edge, edge_weight };
 
   explicit dimacs_basic_reader(std::istream& in, bool want_weights = true) : inpt_(in), want_weights_(want_weights) {
@@ -115,13 +113,13 @@ class dimacs_basic_reader {
 
   [[nodiscard]] bool done_edge_weights() const { return inpt_.eof() && read_edge_weights_.empty(); }
 
-  [[nodiscard]] vertices_size_type n_vertices() const { return num_vertices_; }
+  [[nodiscard]] std::size_t n_vertices() const { return num_vertices_; }
 
-  [[nodiscard]] vertices_size_type processed_edges() const { return seen_edges_ - read_edges_.size(); }
+  [[nodiscard]] std::size_t processed_edges() const { return seen_edges_ - read_edges_.size(); }
 
-  [[nodiscard]] vertices_size_type processed_edge_weights() const { return seen_edges_ - read_edge_weights_.size(); }
+  [[nodiscard]] std::size_t processed_edge_weights() const { return seen_edges_ - read_edge_weights_.size(); }
 
-  [[nodiscard]] vertices_size_type n_edges() const { return num_edges_; }
+  [[nodiscard]] std::size_t n_edges() const { return num_edges_; }
 
  protected:
   static bool read_edge_line(std::string_view line, int& from, int& to, int& weight) {
@@ -170,9 +168,9 @@ class dimacs_basic_reader {
 
   std::istream& inpt_;
   std::string buf_;
-  vertices_size_type num_vertices_ = 0;
-  vertices_size_type num_edges_ = 0;
-  vertices_size_type seen_edges_ = 0;
+  std::size_t num_vertices_ = 0;
+  std::size_t num_edges_ = 0;
+  std::size_t seen_edges_ = 0;
   bool want_weights_ = true;
 };
 

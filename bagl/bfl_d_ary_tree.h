@@ -58,10 +58,6 @@ class bfl_d_ary_tree {
   using vertex_descriptor = std::size_t;
   using edge_descriptor = bfl_detail::bfltree_edge_desc;
 
-  using vertices_size_type = std::size_t;
-  using edges_size_type = std::size_t;
-  using degree_size_type = std::size_t;
-
   /**
    * This static member function outputs the null-vertex (invalid vertex descriptor).
    * \return A null-vertex descriptor (invalid vertex descriptor).
@@ -371,9 +367,7 @@ struct tree_storage_traits<bfl_d_ary_tree_storage<Arity>> {
 
   using edge_parallel_category = disallow_parallel_edge_tag;
 
-  using vertices_size_type = std::size_t;
   using vertex_descriptor = std::size_t;
-  using edges_size_type = std::size_t;
   using edge_descriptor = bfl_detail::bfltree_edge_desc;
 };
 

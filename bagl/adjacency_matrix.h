@@ -187,15 +187,11 @@ class adjacency_matrix {
 
   static vertex_descriptor null_vertex() { return (std::numeric_limits<vertex_descriptor>::max)(); }
 
-  using degree_size_type = size_type;
-  using vertices_size_type = size_type;
-  using edges_size_type = size_type;
-
   // PropertyGraph required types
   using graph_tag = adjacency_matrix_class_tag;
 
   // Constructor required by MutableGraph
-  explicit adjacency_matrix(vertices_size_type n_vertices, const GraphProperty& p = GraphProperty())
+  explicit adjacency_matrix(std::size_t n_vertices, const GraphProperty& p = GraphProperty())
       : matrix_(edge_descriptor{n_vertices, 0, n_vertices}.edge_index, std::nullopt),
         vertex_properties_(n_vertices),
         property_(p) {}
@@ -204,7 +200,7 @@ class adjacency_matrix {
   // Edges should be represented as pairs of vertex indices.
   template <std::ranges::input_range EdgeRange>
   requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::pair<std::size_t, std::size_t>>
-  adjacency_matrix(vertices_size_type num_vertices, const EdgeRange& e_range, graph_property_type graph_prop = {})
+  adjacency_matrix(std::size_t num_vertices, const EdgeRange& e_range, graph_property_type graph_prop = {})
       : matrix_(edge_descriptor{num_vertices, 0, num_vertices}.edge_index, std::nullopt),
         vertex_properties_(num_vertices),
         property_(std::move(graph_prop)) {
@@ -218,7 +214,7 @@ class adjacency_matrix {
   template <std::ranges::input_range EdgeRange, std::ranges::input_range EdgePropRange>
   requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::pair<std::size_t, std::size_t>> &&
       std::convertible_to<std::ranges::range_reference_t<EdgePropRange>, edge_property_type>
-      adjacency_matrix(vertices_size_type num_vertices, const EdgeRange& e_range, const EdgePropRange& ep_range,
+      adjacency_matrix(std::size_t num_vertices, const EdgeRange& e_range, const EdgePropRange& ep_range,
                        graph_property_type graph_prop = {})
       : matrix_(edge_descriptor{num_vertices, 0, num_vertices}.edge_index, std::nullopt),
         vertex_properties_(num_vertices),
@@ -234,7 +230,7 @@ class adjacency_matrix {
   template <std::ranges::input_range VertexPropRange, std::ranges::input_range EdgeRange>
   requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::pair<std::size_t, std::size_t>> &&
       std::convertible_to<std::ranges::range_reference_t<VertexPropRange>, vertex_property_type>
-      adjacency_matrix(vertices_size_type num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
+      adjacency_matrix(std::size_t num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
                        graph_property_type graph_prop = {})
       : matrix_(edge_descriptor{num_vertices, 0, num_vertices}.edge_index, std::nullopt),
         vertex_properties_(num_vertices),
@@ -255,7 +251,7 @@ class adjacency_matrix {
   requires std::convertible_to<std::ranges::range_value_t<EdgeRange>, std::pair<std::size_t, std::size_t>> &&
       std::convertible_to<std::ranges::range_reference_t<VertexPropRange>, vertex_property_type> &&
       std::convertible_to<std::ranges::range_reference_t<EdgePropRange>, edge_property_type>
-      adjacency_matrix(vertices_size_type num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
+      adjacency_matrix(std::size_t num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
                        const EdgePropRange& ep_range, graph_property_type graph_prop = {})
       : matrix_(edge_descriptor{num_vertices, 0, num_vertices}.edge_index, std::nullopt),
         vertex_properties_(num_vertices),

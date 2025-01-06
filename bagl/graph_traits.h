@@ -17,10 +17,6 @@ namespace bagl {
 
 namespace graph_traits_detail {
 
-BAGL_GRAPH_HAS_TRAIT_MEMBER(vertices_size_type, std::size_t)
-BAGL_GRAPH_HAS_TRAIT_MEMBER(edges_size_type, std::size_t)
-BAGL_GRAPH_HAS_TRAIT_MEMBER(degree_size_type, std::size_t)
-
 BAGL_GRAPH_HAS_TRAIT_MEMBER(graph_property_type, no_property)
 BAGL_GRAPH_HAS_TRAIT_MEMBER(edge_property_type, no_property)
 BAGL_GRAPH_HAS_TRAIT_MEMBER(vertex_property_type, no_property)
@@ -35,10 +31,6 @@ struct graph_traits {
   using directed_category = typename G::directed_category;
   using edge_parallel_category = typename G::edge_parallel_category;
   using traversal_category = typename G::traversal_category;
-
-  using vertices_size_type = graph_traits_detail::get_vertices_size_type_or_not<G>;
-  using edges_size_type = graph_traits_detail::get_edges_size_type_or_not<G>;
-  using degree_size_type = graph_traits_detail::get_degree_size_type_or_not<G>;
 
   static vertex_descriptor null_vertex() { return G::null_vertex(); }
 };
@@ -60,12 +52,6 @@ template <typename G>
 using graph_edge_parallel_category_t = typename graph_traits<G>::edge_parallel_category;
 template <typename G>
 using graph_traversal_category_t = typename graph_traits<G>::traversal_category;
-template <typename G>
-using graph_vertices_size_type_t = typename graph_traits<G>::vertices_size_type;
-template <typename G>
-using graph_edges_size_type_t = typename graph_traits<G>::edges_size_type;
-template <typename G>
-using graph_degree_size_type_t = typename graph_traits<G>::degree_size_type;
 
 template <typename G>
 using graph_vertex_range_t = decltype(vertices(std::declval<G>()));

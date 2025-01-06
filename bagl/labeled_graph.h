@@ -262,11 +262,6 @@ class labeled_graph : protected labeled_graph_types<Graph, Label, Selector> {
   using edge_parallel_category = typename traits_type::edge_parallel_category;
   using traversal_category = typename traits_type::traversal_category;
 
-  using degree_size_type = typename traits_type::degree_size_type;
-
-  using vertices_size_type = typename traits_type::vertices_size_type;
-  using edges_size_type = typename traits_type::edges_size_type;
-
   using graph_property_type = typename graph_type::graph_property_type;
   using graph_bundled = typename graph_type::graph_bundled;
 
@@ -287,7 +282,7 @@ class labeled_graph : protected labeled_graph_types<Graph, Label, Selector> {
   // This constructor can only be used if map_type supports positional
   // range insertion (i.e. its a vector). This is the only case where we can
   // try to guess the intended labels for graph.
-  labeled_graph(vertices_size_type n, graph_property_type const& gp = graph_property_type()) : graph_(n, gp), map_() {
+  labeled_graph(std::size_t n, graph_property_type const& gp = graph_property_type()) : graph_(n, gp), map_() {
     auto rng = vertices(graph_);
     map_.insert(map_.end(), rng.begin(), rng.end());
   }
@@ -297,7 +292,7 @@ class labeled_graph : protected labeled_graph_types<Graph, Label, Selector> {
   // over the n vertices, but added sequentially. This constructor is
   // necessarily slower than the underlying counterpart.
   template <typename LabelIter>
-  labeled_graph(vertices_size_type n, LabelIter l, graph_property_type const& gp = graph_property_type()) : graph_(gp) {
+  labeled_graph(std::size_t n, LabelIter l, graph_property_type const& gp = graph_property_type()) : graph_(gp) {
     while (n-- > 0) {
       add_vertex(*l++);
     }
@@ -306,7 +301,7 @@ class labeled_graph : protected labeled_graph_types<Graph, Label, Selector> {
   // Construct the graph over n vertices each of which has a label in the
   // range [l, l + n) and a property in the range [p, p + n).
   template <typename LabelIter, typename PropIter>
-  labeled_graph(vertices_size_type n, LabelIter l, PropIter p, graph_property_type const& gp = graph_property_type())
+  labeled_graph(std::size_t n, LabelIter l, PropIter p, graph_property_type const& gp = graph_property_type())
       : graph_(gp) {
     while (n-- > 0) {
       add_vertex(*l++, *p++);
@@ -394,10 +389,6 @@ class labeled_graph<Graph*, Label, Selector> : protected labeled_graph_types<Gra
   using directed_category = typename traits_type::directed_category;
   using edge_parallel_category = typename traits_type::edge_parallel_category;
   using traversal_category = typename traits_type::traversal_category;
-
-  using degree_size_type = typename traits_type::degree_size_type;
-  using vertices_size_type = typename traits_type::vertices_size_type;
-  using edges_size_type = typename traits_type::edges_size_type;
 
   using vertex_property_type = typename graph_type::vertex_property_type;
   using edge_property_type = typename graph_type::edge_property_type;

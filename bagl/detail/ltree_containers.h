@@ -349,14 +349,12 @@ struct ltree_vertex_container {
 
   using VConfig = ltree_vertex_config<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>;
   using vertex_container = typename VConfig::container;
-  using vertices_size_type = typename vertex_container::size_type;
   using vertex_descriptor = typename VConfig::descriptor;
   using vertex_stored_type = typename VConfig::stored_type;
   using vertex_value_type = typename VConfig::value_type;
 
   using EConfig = ltree_edge_config<VertexListS, OutEdgeListS, DirectedS, VertexProperties, EdgeProperties>;
   using edge_container = typename EConfig::container;
-  using edges_size_type = typename edge_container::size_type;
   using edge_descriptor = typename EConfig::descriptor;
   using edge_stored_type = typename EConfig::stored_type;
   using edge_value_type = typename EConfig::value_type;

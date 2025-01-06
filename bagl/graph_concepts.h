@@ -30,15 +30,12 @@ template <typename R, typename G>
 concept VertexRange = std::ranges::input_range<R> && std::convertible_to<std::ranges::range_value_t<R>, graph_vertex_descriptor_t<G>>;
 
 template <typename G>
-concept IncidenceGraph =
-    Graph<G> && std::regular<graph_edge_descriptor_t<G>> &&
-    !std::is_same_v<graph_degree_size_type_t<G>, void> &&
+concept IncidenceGraph = Graph<G> && std::regular<graph_edge_descriptor_t<G>> &&
     std::convertible_to<graph_traversal_category_t<G>, incidence_graph_tag> &&
     requires(const G& g, graph_vertex_descriptor_t<G> u) {
   { out_edges(u, g) } -> EdgeRange<G>;
   { out_degree(u, g) } -> std::integral;
-}
-&&requires(const G& g, graph_edge_descriptor_t<G> e) {
+} && requires(const G& g, graph_edge_descriptor_t<G> e) {
   { source(e, g) } -> std::convertible_to<graph_vertex_descriptor_t<G>>;
   { target(e, g) } -> std::convertible_to<graph_vertex_descriptor_t<G>>;
 };
@@ -60,18 +57,14 @@ concept AdjacencyGraph = Graph<G> &&
 };
 
 template <typename G>
-concept VertexListGraph = Graph<G> &&
-    std::integral<graph_vertices_size_type_t<G>> &&
-    std::convertible_to<graph_traversal_category_t<G>, vertex_list_graph_tag> &&
+concept VertexListGraph = Graph<G> && std::convertible_to<graph_traversal_category_t<G>, vertex_list_graph_tag> &&
     requires(const G& g) {
   { vertices(g) } -> VertexRange<G>;
 };
 
 template <typename G>
 concept EdgeListGraph = Graph<G> && std::regular<graph_edge_descriptor_t<G>> &&
-    std::integral<graph_edges_size_type_t<G>> &&
-    std::convertible_to<graph_traversal_category_t<G>, edge_list_graph_tag> &&
-    requires(const G& g) {
+    std::convertible_to<graph_traversal_category_t<G>, edge_list_graph_tag> && requires(const G& g) {
   { edges(g) } -> EdgeRange<G>;
   { num_edges(g) } -> std::integral;
 } && requires(const G& g, graph_edge_descriptor_t<G> e) {

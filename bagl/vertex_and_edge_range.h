@@ -25,13 +25,9 @@ class vertex_and_edge_range {
   using vertex_descriptor = std::ranges::range_value_t<VertexRange>;
   using edge_descriptor = std::ranges::range_value_t<EdgeRange>;
 
-  using vertices_size_type = std::size_t;
-  using edges_size_type = std::size_t;
-  using degree_size_type = std::size_t;
-
   static vertex_descriptor null_vertex() { return traits_type::null_vertex(); }
 
-  vertex_and_edge_range(const Graph& g, VertexRange v_range, std::size_t n, EdgeRange e_range, edges_size_type m)
+  vertex_and_edge_range(const Graph& g, VertexRange v_range, std::size_t n, EdgeRange e_range, std::size_t m)
       : g_(&g), v_range_(std::move(v_range)), m_num_vertices_(n), e_range_(std::move(e_range)), m_num_edges_(m) {}
 
   vertex_and_edge_range(const Graph& g, VertexRange v_range, EdgeRange e_range)
@@ -43,9 +39,9 @@ class vertex_and_edge_range {
 
   const Graph* g_ = nullptr;
   VertexRange v_range_;
-  vertices_size_type m_num_vertices_ = 0;
+  std::size_t m_num_vertices_ = 0;
   EdgeRange e_range_;
-  edges_size_type m_num_edges_ = 0;
+  std::size_t m_num_edges_ = 0;
 };
 
 template <typename Graph, typename VertexRange, typename EdgeRange>

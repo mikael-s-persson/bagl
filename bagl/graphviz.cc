@@ -91,7 +91,7 @@ void write_graphviz_impl(std::ostream& out, const dynamic_graph_observer& g, con
 
   // Print out vertices and edges not in the subgraphs.
   for (auto v : g.get_vertices()) {
-    std::size_t v_id = g.get_index_of(v);
+    std::size_t v_id = g.get_index_of_vertex(v);
     if (!vertex_printed.contains(v_id)) {
       vertex_printed.insert(v_id);
       out << escape_dot_string(get(node_id_pmap, g.get_properties(), v));
@@ -102,7 +102,7 @@ void write_graphviz_impl(std::ostream& out, const dynamic_graph_observer& g, con
 
   const std::string_view edge_delimiter = (g.is_directed() ? " -> " : " -- ");
   for (auto e : g.get_edges()) {
-    std::size_t e_id = g.get_index_of(e);
+    std::size_t e_id = g.get_index_of_edge(e);
     if (!edge_printed.contains(e_id)) {
       edge_printed.insert(e_id);
       out << escape_dot_string(get(node_id_pmap, g.get_properties(), g.get_source(e))) << edge_delimiter
@@ -1032,7 +1032,8 @@ std::string props_to_string(const properties& props) {
 #endif
 
 void translate_results_to_graph(const parser_result& r, dynamic_graph_mutator& mg, const std::string& node_id) {
-  std::unordered_map<std::string, std::any> v_by_name;
+  using any_vertex_desc = dynamic_graph_mutator::vertex_descriptor;
+  std::unordered_map<std::string, any_vertex_desc> v_by_name;
   for (const auto& [n_name, n_props] : r.nodes) {
     auto v = mg.do_add_vertex();
     mg.set_vertex_property(node_id, v, n_name, "string");

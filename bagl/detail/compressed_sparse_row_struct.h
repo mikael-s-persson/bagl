@@ -54,9 +54,7 @@ inline std::size_t get(const csr_edge_index_map&, const csr_edge_descriptor& key
 template <typename EdgeProperty>
 class compressed_sparse_row_structure {
  public:
-  using vertices_size_type = std::size_t;
   using vertex_descriptor = std::size_t;
-  using edges_size_type = std::size_t;
 
   static vertex_descriptor null_vertex() { return std::numeric_limits<vertex_descriptor>::max(); }
 

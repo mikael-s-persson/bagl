@@ -41,9 +41,6 @@ struct adjacency_list_traits {
 
   using traversal_category = adjlist_detail::adjlist_traversal_tag<DirectedS>;
 
-  using vertices_size_type = std::size_t;
-  using edges_size_type = std::size_t;
-
   // Best effort attempt at producing descriptors without knowing properties types.
   // Do not use this unless you absolutely need to.
   using vertex_descriptor_or_void =
@@ -116,11 +113,7 @@ class adjacency_list {
                                                                          VertexProperties, EdgeProperties>;
 
   using vertex_descriptor = typename storage_type::vertex_descriptor;
-  using vertices_size_type = typename storage_type::vertices_size_type;
-
   using edge_descriptor = typename storage_type::edge_descriptor;
-  using edges_size_type = typename storage_type::edges_size_type;
-  using degree_size_type = edges_size_type;
 
   using vertex_stored_impl = typename storage_type::vertex_stored_type;
   using vertex_value_impl = typename storage_type::vertex_value_type;
@@ -184,7 +177,7 @@ class adjacency_list {
   // Edges should be represented as pairs of vertex indices.
   template <std::ranges::input_range EdgeRange>
   requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>>
-  adjacency_list(vertices_size_type num_vertices, const EdgeRange& e_range, graph_property_type graph_prop = {})
+  adjacency_list(std::size_t num_vertices, const EdgeRange& e_range, graph_property_type graph_prop = {})
       : m_pack(), m_graph_prop(std::move(graph_prop)) {
     std::vector<vertex_descriptor> tmp_vs(num_vertices);
     for (auto& v : tmp_vs) {
@@ -201,7 +194,7 @@ class adjacency_list {
   template <std::ranges::input_range EdgeRange, std::ranges::input_range EdgePropRange>
   requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>> &&
       std::constructible_from<edge_property_type, std::ranges::range_reference_t<EdgePropRange>>
-      adjacency_list(vertices_size_type num_vertices, const EdgeRange& e_range, const EdgePropRange& ep_range,
+      adjacency_list(std::size_t num_vertices, const EdgeRange& e_range, const EdgePropRange& ep_range,
                      graph_property_type graph_prop = {})
       : m_pack(), m_graph_prop(std::move(graph_prop)) {
     std::vector<vertex_descriptor> tmp_vs(num_vertices);
@@ -220,7 +213,7 @@ class adjacency_list {
   template <std::ranges::input_range VertexPropRange, std::ranges::input_range EdgeRange>
   requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>> &&
       std::constructible_from<vertex_property_type, std::ranges::range_reference_t<VertexPropRange>>
-      adjacency_list(vertices_size_type num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
+      adjacency_list(std::size_t num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
                      graph_property_type graph_prop = {})
       : m_pack(), m_graph_prop(std::move(graph_prop)) {
     std::vector<vertex_descriptor> tmp_vs(num_vertices);
@@ -240,7 +233,7 @@ class adjacency_list {
   requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>> &&
       std::constructible_from<vertex_property_type, std::ranges::range_reference_t<VertexPropRange>> &&
       std::constructible_from<edge_property_type, std::ranges::range_reference_t<EdgePropRange>>
-      adjacency_list(vertices_size_type num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
+      adjacency_list(std::size_t num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
                      const EdgePropRange& ep_range, graph_property_type graph_prop = {})
       : m_pack(), m_graph_prop(std::move(graph_prop)) {
     std::vector<vertex_descriptor> tmp_vs(num_vertices);
@@ -340,7 +333,7 @@ void swap(BAGL_ADJACENCY_LIST& lhs, BAGL_ADJACENCY_LIST& rhs) noexcept {
 }
 
 /***********************************************************************************************
- *                             IncidenceGraphConcept
+ *                             IncidenceGraph
  * ********************************************************************************************/
 
 template <BAGL_ADJACENCY_LIST_ARGS>
@@ -364,7 +357,7 @@ std::size_t out_degree(typename BAGL_ADJACENCY_LIST::vertex_descriptor v, const 
 }
 
 /***********************************************************************************************
- *                             BidirectionalGraphConcept
+ *                             BidirectionalGraph
  * ********************************************************************************************/
 
 template <BAGL_ADJACENCY_LIST_ARGS>
@@ -387,7 +380,7 @@ std::enable_if_t<!std::is_same_v<DirectedS, directed_s>, std::size_t> degree(
 }
 
 /***********************************************************************************************
- *                             VertexListGraphConcept
+ *                             VertexListGraph
  * ********************************************************************************************/
 
 template <BAGL_ADJACENCY_LIST_ARGS>
@@ -406,7 +399,7 @@ auto vertex(std::size_t i, const BAGL_ADJACENCY_LIST& g) {
 }
 
 /***********************************************************************************************
- *                             EdgeListGraphConcept
+ *                             EdgeListGraph
  * ********************************************************************************************/
 
 template <BAGL_ADJACENCY_LIST_ARGS>
@@ -420,7 +413,7 @@ auto num_edges(const BAGL_ADJACENCY_LIST& g) {
 }
 
 /***********************************************************************************************
- *                             AdjacencyGraphConcept
+ *                             AdjacencyGraph
  * ********************************************************************************************/
 
 template <BAGL_ADJACENCY_LIST_ARGS>
@@ -429,7 +422,7 @@ auto adjacent_vertices(typename BAGL_ADJACENCY_LIST::vertex_descriptor v, const 
 }
 
 /***********************************************************************************************
- *                             InvAdjacencyGraphConcept
+ *                             InvAdjacencyGraph
  * ********************************************************************************************/
 
 template <BAGL_ADJACENCY_LIST_ARGS>
@@ -439,7 +432,7 @@ std::enable_if_t<!std::is_same_v<DirectedS, directed_s>> inv_adjacent_vertices(
 }
 
 /***********************************************************************************************
- *                             AdjacencyMatrixConcept
+ *                             AdjacencyMatrix
  * ********************************************************************************************/
 
 template <BAGL_ADJACENCY_LIST_ARGS>
@@ -449,7 +442,7 @@ auto edge(typename BAGL_ADJACENCY_LIST::vertex_descriptor u, typename BAGL_ADJAC
 }
 
 /*******************************************************************************************
- *                  MutableGraph concept
+ *                  MutableGraph
  ******************************************************************************************/
 
 // auto add_vertex(BAGL_ADJACENCY_LIST& g); -> variadic overload
@@ -482,7 +475,7 @@ void remove_edge(const typename BAGL_ADJACENCY_LIST::edge_descriptor& e, BAGL_AD
 }
 
 /*******************************************************************************************
- *                    MutableIncidenceGraph concept
+ *                    MutableIncidenceGraph
  ******************************************************************************************/
 
 template <BAGL_ADJACENCY_LIST_ARGS, typename EdgePred>
@@ -491,7 +484,7 @@ void remove_out_edge_if(typename BAGL_ADJACENCY_LIST::vertex_descriptor u, EdgeP
 }
 
 /*******************************************************************************************
- *                    MutableBidirectionalGraph concept
+ *                    MutableBidirectionalGraph
  ******************************************************************************************/
 
 template <BAGL_ADJACENCY_LIST_ARGS, typename EdgePred>
@@ -501,7 +494,7 @@ std::enable_if_t<!std::is_same_v<DirectedS, directed_s>> remove_in_edge_if(
 }
 
 /*******************************************************************************************
- *                    MutableEdgeListGraph concept
+ *                    MutableEdgeListGraph
  ******************************************************************************************/
 
 template <BAGL_ADJACENCY_LIST_ARGS, typename EdgePred>
@@ -510,7 +503,7 @@ void remove_edge_if(EdgePred pred, BAGL_ADJACENCY_LIST& g) {
 }
 
 /*******************************************************************************************
- *                  MutablePropertyGraph concept
+ *                  MutablePropertyGraph
  ******************************************************************************************/
 
 template <BAGL_ADJACENCY_LIST_ARGS, typename... VPArgs>
@@ -961,12 +954,9 @@ class adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, 
                                                         EdgeProperties>;
 
   using vertex_descriptor = typename bidir_storage_type::vertex_descriptor;
-  using vertices_size_type = typename bidir_storage_type::vertices_size_type;
 
   using bidir_edge_descriptor = typename bidir_storage_type::edge_descriptor;
   using edge_descriptor = container_detail::undir_edge_desc<bidir_edge_descriptor>;
-  using edges_size_type = typename bidir_storage_type::edges_size_type;
-  using degree_size_type = edges_size_type;
 
   using vertex_stored_impl = typename bidir_storage_type::vertex_stored_type;
   using vertex_value_impl = typename bidir_storage_type::vertex_value_type;
@@ -1032,7 +1022,7 @@ class adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, 
   // Edges should be represented as pairs of vertex indices.
   template <std::ranges::input_range EdgeRange>
   requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>>
-  adjacency_list(vertices_size_type num_vertices, const EdgeRange& e_range, graph_property_type graph_prop = {})
+  adjacency_list(std::size_t num_vertices, const EdgeRange& e_range, graph_property_type graph_prop = {})
       : m_pack(), m_graph_prop(std::move(graph_prop)) {
     std::vector<vertex_descriptor> tmp_vs(num_vertices);
     for (auto& v : tmp_vs) {
@@ -1049,7 +1039,7 @@ class adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, 
   template <std::ranges::input_range EdgeRange, std::ranges::input_range EdgePropRange>
   requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>> &&
       std::constructible_from<edge_property_type, std::ranges::range_reference_t<EdgePropRange>>
-      adjacency_list(vertices_size_type num_vertices, const EdgeRange& e_range, const EdgePropRange& ep_range,
+      adjacency_list(std::size_t num_vertices, const EdgeRange& e_range, const EdgePropRange& ep_range,
                      graph_property_type graph_prop = {})
       : m_pack(), m_graph_prop(std::move(graph_prop)) {
     std::vector<vertex_descriptor> tmp_vs(num_vertices);
@@ -1068,7 +1058,7 @@ class adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, 
   template <std::ranges::input_range VertexPropRange, std::ranges::input_range EdgeRange>
   requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>> &&
       std::constructible_from<vertex_property_type, std::ranges::range_reference_t<VertexPropRange>>
-      adjacency_list(vertices_size_type num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
+      adjacency_list(std::size_t num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
                      graph_property_type graph_prop = {})
       : m_pack(), m_graph_prop(std::move(graph_prop)) {
     std::vector<vertex_descriptor> tmp_vs(num_vertices);
@@ -1088,7 +1078,7 @@ class adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, 
   requires std::constructible_from<std::pair<std::size_t, std::size_t>, std::ranges::range_value_t<EdgeRange>> &&
       std::constructible_from<vertex_property_type, std::ranges::range_reference_t<VertexPropRange>> &&
       std::constructible_from<edge_property_type, std::ranges::range_reference_t<EdgePropRange>>
-      adjacency_list(vertices_size_type num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
+      adjacency_list(std::size_t num_vertices, const VertexPropRange& vp_range, const EdgeRange& e_range,
                      const EdgePropRange& ep_range, graph_property_type graph_prop = {})
       : m_pack(), m_graph_prop(std::move(graph_prop)) {
     std::vector<vertex_descriptor> tmp_vs(num_vertices);
@@ -1166,7 +1156,7 @@ class adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, 
   adjacency_list<OutEdgeListS, VertexListS, undirected_s, VertexProperties, EdgeProperties, GraphProperties>
 
 /***********************************************************************************************
- *                             IncidenceGraphConcept
+ *                             IncidenceGraph
  * ********************************************************************************************/
 
 template <BAGL_ADJACENCY_LIST_UNDIR_ARGS>
@@ -1197,7 +1187,7 @@ std::size_t out_degree(typename BAGL_ADJACENCY_LIST_UNDIR::vertex_descriptor v, 
 }
 
 /***********************************************************************************************
- *                             BidirectionalGraphConcept
+ *                             BidirectionalGraph
  * ********************************************************************************************/
 
 template <BAGL_ADJACENCY_LIST_UNDIR_ARGS>
@@ -1217,7 +1207,7 @@ std::size_t degree(typename BAGL_ADJACENCY_LIST_UNDIR::vertex_descriptor v, cons
 }
 
 /***********************************************************************************************
- *                             EdgeListGraphConcept
+ *                             EdgeListGraph
  * ********************************************************************************************/
 
 template <BAGL_ADJACENCY_LIST_UNDIR_ARGS>
@@ -1231,7 +1221,7 @@ auto num_edges(const BAGL_ADJACENCY_LIST_UNDIR& g) {
 }
 
 /***********************************************************************************************
- *                             AdjacencyMatrixConcept
+ *                             AdjacencyMatrix
  * ********************************************************************************************/
 
 template <BAGL_ADJACENCY_LIST_UNDIR_ARGS>
@@ -1250,7 +1240,7 @@ auto edge(typename BAGL_ADJACENCY_LIST_UNDIR::vertex_descriptor u,
 }
 
 /*******************************************************************************************
- *                  MutableGraph concept
+ *                  MutableGraph
  ******************************************************************************************/
 
 template <BAGL_ADJACENCY_LIST_UNDIR_ARGS>
@@ -1263,7 +1253,7 @@ auto add_edge(typename BAGL_ADJACENCY_LIST_UNDIR::vertex_descriptor u,
 }
 
 /*******************************************************************************************
- *                  MutablePropertyGraph concept
+ *                  MutablePropertyGraph
  ******************************************************************************************/
 
 template <BAGL_ADJACENCY_LIST_UNDIR_ARGS, typename EProp>
@@ -1275,7 +1265,7 @@ auto add_edge(typename BAGL_ADJACENCY_LIST_UNDIR::vertex_descriptor u,
 }
 
 /*******************************************************************************************
- *                    MutableIncidenceGraph concept
+ *                    MutableIncidenceGraph
  ******************************************************************************************/
 
 template <BAGL_ADJACENCY_LIST_UNDIR_ARGS, typename EdgePred>
@@ -1287,7 +1277,7 @@ void remove_out_edge_if(typename BAGL_ADJACENCY_LIST_UNDIR::vertex_descriptor u,
 }
 
 /*******************************************************************************************
- *                    MutableBidirectionalGraph concept
+ *                    MutableBidirectionalGraph
  ******************************************************************************************/
 
 template <BAGL_ADJACENCY_LIST_UNDIR_ARGS, typename EdgePred>
@@ -1299,7 +1289,7 @@ void remove_in_edge_if(typename BAGL_ADJACENCY_LIST_UNDIR::vertex_descriptor v, 
 }
 
 /*******************************************************************************************
- *                    MutableEdgeListGraph concept
+ *                    MutableEdgeListGraph
  ******************************************************************************************/
 
 template <BAGL_ADJACENCY_LIST_UNDIR_ARGS, typename EdgePred>

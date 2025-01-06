@@ -45,7 +45,7 @@ void write_graphml(std::ostream& out, const dynamic_graph_observer& g, bool orde
 
 template <concepts::VertexAndEdgeListGraph Graph>
 void write_graphml(std::ostream& out, const Graph& g, const dynamic_properties& dp, bool ordered_vertices = false) {
-  dynamic_graph_observer_wrapper<Graph> mg(g, dp);
+  dynamic_graph_observer_wrapper<const Graph> mg(g, dp);
   write_graphml(out, mg, ordered_vertices);
 }
 

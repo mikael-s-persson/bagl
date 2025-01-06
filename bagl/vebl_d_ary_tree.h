@@ -56,10 +56,6 @@ class vebl_d_ary_tree {
   using vertex_descriptor = std::size_t;
   using edge_descriptor = bfl_detail::bfltree_edge_desc;
 
-  using vertices_size_type = std::size_t;
-  using edges_size_type = vertices_size_type;
-  using degree_size_type = vertices_size_type;
-
   /**
    * This static member function outputs the null-vertex (invalid vertex descriptor).
    * \return A null-vertex descriptor (invalid vertex descriptor).
@@ -93,7 +89,7 @@ class vebl_d_ary_tree {
 
   // private:
   container_type m_vertices;
-  vertices_size_type m_vertex_count{0};
+  std::size_t m_vertex_count{0};
   graph_property_type m_graph_prop;
 
   bfl_detail::vebl_depth_records m_depth_recs;
@@ -111,11 +107,11 @@ class vebl_d_ary_tree {
    * Construct the D-ary BF-tree with a given reserved depth.
    * \param aDepth The depth of the graph to reserve space for.
    */
-  explicit vebl_d_ary_tree(vertices_size_type aDepth = 0) : m_graph_prop() {
+  explicit vebl_d_ary_tree(std::size_t aDepth = 0) : m_graph_prop() {
     m_depth_recs.T.push_back(0);
     m_depth_recs.B.push_back(1);
     m_depth_recs.D.push_back(0);
-    for (vertices_size_type i = 0; i < aDepth; ++i) {
+    for (std::size_t i = 0; i < aDepth; ++i) {
       bfl_detail::extend_vebl_depth_records<Arity>(m_depth_recs);
     }
     m_vertices.resize(bfl_detail::s_treesize<Arity>(aDepth));
@@ -405,9 +401,7 @@ struct tree_storage_traits<vebl_d_ary_tree_storage<Arity>> {
 
   using edge_parallel_category = disallow_parallel_edge_tag;
 
-  using vertices_size_type = std::size_t;
   using vertex_descriptor = std::size_t;
-  using edges_size_type = std::size_t;
   using edge_descriptor = bfl_detail::bfltree_edge_desc;
 };
 
@@ -538,7 +532,7 @@ auto vertices(const BAGL_VEBL_D_ARY_TREE& g) {
  * \return The size of the tree (the number of vertices it contains).
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-typename BAGL_VEBL_D_ARY_TREE::vertices_size_type num_vertices(const BAGL_VEBL_D_ARY_TREE& g) {
+std::size_t num_vertices(const BAGL_VEBL_D_ARY_TREE& g) {
   return g.m_vertex_count;
 }
 
@@ -560,7 +554,7 @@ auto edges(const BAGL_VEBL_D_ARY_TREE& g) {
  * Returns the number of edges in the tree.
  */
 template <BAGL_VEBL_D_ARY_TREE_ARGS>
-typename BAGL_VEBL_D_ARY_TREE::vertices_size_type num_edges(const BAGL_VEBL_D_ARY_TREE& g) {
+std::size_t num_edges(const BAGL_VEBL_D_ARY_TREE& g) {
   return num_vertices(g) - 1;
 }
 

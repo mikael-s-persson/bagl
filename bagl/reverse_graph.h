@@ -77,10 +77,6 @@ class reverse_graph {
   using edge_parallel_category = typename Traits::edge_parallel_category;
   using traversal_category = typename Traits::traversal_category;
 
-  using degree_size_type = typename Traits::degree_size_type;
-  using vertices_size_type = typename Traits::vertices_size_type;
-  using edges_size_type = typename Traits::edges_size_type;
-
   using vertex_property_type = vertex_property_type<base_type>;
   using edge_property_type = edge_property_type<base_type>;
   using graph_property_type = graph_property_type<base_type>;

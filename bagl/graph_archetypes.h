@@ -33,9 +33,6 @@ struct incidence_graph_archetype : public Base {
   using base_trav_cat = typename Base::traversal_category;
   struct traversal_category : public incidence_graph_tag, public base_trav_cat {};
   using vertex_descriptor = Vertex;
-  using degree_size_type = std::size_t;
-  using vertices_size_type = std::size_t;
-  using edges_size_type = std::size_t;
   struct edge_descriptor {
     edge_descriptor() = default;
     explicit edge_descriptor(const graph_archetypes_detail::null_graph_archetype& /*unused*/) {}
@@ -76,9 +73,6 @@ struct adjacency_graph_archetype : public Base {
   using base_trav_cat = typename Base::traversal_category;
   struct traversal_category : public adjacency_graph_tag, public base_trav_cat {};
   using vertex_descriptor = Vertex;
-  using degree_size_type = std::size_t;
-  using vertices_size_type = std::size_t;
-  using edges_size_type = std::size_t;
   using edge_descriptor = semiregular_archetype<3424234>;
 
   using directed_category = Directed;
@@ -107,11 +101,7 @@ struct vertex_list_graph_archetype : public Base {
   using base_trav_cat = typename Base::traversal_category;
   struct traversal_category : public vertex_list_graph_tag, public base_trav_cat {};
   using vertex_descriptor = Vertex;
-  using degree_size_type = std::size_t;
   using edge_descriptor = typename Incidence::edge_descriptor;
-
-  using vertices_size_type = std::size_t;
-  using edges_size_type = std::size_t;
 
   using directed_category = Directed;
   using edge_parallel_category = ParallelCategory;

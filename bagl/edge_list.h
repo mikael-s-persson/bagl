@@ -85,7 +85,7 @@ template <class G, class EI, class T, class D>
 auto edges(const edge_list_impl<G, EI, T, D>& g_) {
   const G& g = static_cast<const G&>(g_);
   using edge_iterator = typename edge_list_impl<G, EI, T, D>::edge_iterator;
-  return std::ranges::subrange(edge_iterator(g._first), edge_iterator(g._last));
+  return std::ranges::subrange(edge_iterator(g.first_), edge_iterator(g.last_));
 }
 template <class G, class EI, class T, class D>
 auto source(typename edge_list_impl<G, EI, T, D>::edge_descriptor e, const edge_list_impl<G, EI, T, D>& /*unused*/) {
@@ -149,17 +149,17 @@ class edge_list_impl_ra {
 template <class G, class EI, class T, class D>
 auto edges(const edge_list_impl_ra<G, EI, T, D>& g_) {
   const G& g = static_cast<const G&>(g_);
-  return std::ranges::iota_view(D{0}, D{g._last - g._first});
+  return std::ranges::iota_view(D{0}, D{g.last_ - g.first_});
 }
 template <class G, class EI, class T, class D>
 auto source(typename edge_list_impl_ra<G, EI, T, D>::edge_descriptor e, const edge_list_impl_ra<G, EI, T, D>& g_) {
   const G& g = static_cast<const G&>(g_);
-  return g._first[e].first;
+  return g.first_[e].first;
 }
 template <class G, class EI, class T, class D>
 auto target(typename edge_list_impl_ra<G, EI, T, D>::edge_descriptor e, const edge_list_impl_ra<G, EI, T, D>& g_) {
   const G& g = static_cast<const G&>(g_);
-  return g._first[e].second;
+  return g.first_[e].second;
 }
 template <class E>
 class el_ra_edge_property_map : public put_get_helper<el_ra_edge_property_map<E> > {
@@ -206,19 +206,17 @@ class edge_list : public std::conditional_t<std::is_convertible_v<Cat, std::rand
   using directed_category = directed_tag;
   using edge_parallel_category = allow_parallel_edge_tag;
   using traversal_category = edge_list_graph_tag;
-  using edges_size_type = std::size_t;
-  using vertices_size_type = std::size_t;
-  using degree_size_type = std::size_t;
-  edge_list(EdgeIter first, EdgeIter last) : _first(first), _last(last), m_num_edges(std::distance(first, last)) {}
-  edge_list(EdgeIter first, EdgeIter last, edges_size_type E) : _first(first), _last(last), m_num_edges(E) {}
+  edge_list(EdgeIter first, EdgeIter last) : first_(first), last_(last), num_edges_(std::distance(first, last)) {}
+  edge_list(EdgeIter first, EdgeIter last, std::size_t E) : first_(first), last_(last), num_edges_(E) {}
 
-  EdgeIter _first, _last;
-  edges_size_type m_num_edges;
+  EdgeIter first_;
+  EdgeIter last_;
+  std::size_t num_edges_;
 };
 
 template <class EdgeIter, class T, class D, class Cat>
 std::size_t num_edges(const edge_list<EdgeIter, T, D, Cat>& el) {
-  return el.m_num_edges;
+  return el.num_edges_;
 }
 
 template <class EdgeIter>

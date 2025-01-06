@@ -26,15 +26,13 @@ class metis_input_exception : public metis_exception {};
 
 class metis_reader {
  public:
-  using vertices_size_type = std::size_t;
-  using edges_size_type = std::size_t;
   using vertex_weight_type = double;
   using edge_weight_type = double;
 
   class edge_iterator {
    public:
     using iterator_category = std::input_iterator_tag;
-    using value_type = std::pair<vertices_size_type, vertices_size_type>;
+    using value_type = std::pair<std::size_t, std::size_t>;
     using reference = const value_type&;
     using pointer = const value_type*;
     using difference_type = std::ptrdiff_t;
@@ -121,12 +119,12 @@ class metis_reader {
     return std::ranges::subrange{edge_weight_iterator(this), edge_weight_iterator(nullptr)};
   }
 
-  [[nodiscard]] vertices_size_type num_vertices() const { return n_vertices_; }
-  [[nodiscard]] edges_size_type num_edges() const { return n_edges_; }
+  [[nodiscard]] std::size_t num_vertices() const { return n_vertices_; }
+  [[nodiscard]] std::size_t num_edges() const { return n_edges_; }
 
   [[nodiscard]] std::size_t num_vertex_weights() const { return n_vertex_weights_; }
 
-  [[nodiscard]] vertex_weight_type vertex_weight(vertices_size_type v, std::size_t n) {
+  [[nodiscard]] vertex_weight_type vertex_weight(std::size_t v, std::size_t n) {
     return vertex_weights_[v * num_vertex_weights() + n];
   }
 
@@ -139,14 +137,14 @@ class metis_reader {
   std::istream& in_;
 
   // Information about the current METIS file
-  vertices_size_type n_vertices_ = 0;
-  edges_size_type n_edges_ = 0;
+  std::size_t n_vertices_ = 0;
+  std::size_t n_edges_ = 0;
   std::size_t n_vertex_weights_ = 0;
   bool edge_weights_ = false;
 
   // Information about the current edge/vertex
   std::istringstream line_in_;
-  std::pair<vertices_size_type, vertices_size_type> edge_{};
+  std::pair<std::size_t, std::size_t> edge_{};
   std::vector<vertex_weight_type> vertex_weights_;
   edge_weight_type edge_weight_ = 0.0;
 };

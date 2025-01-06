@@ -48,9 +48,6 @@ struct linked_tree_traits {
 
   /** This meta-value tells if the vertex storage is random-access, or not. */
   static constexpr bool edge_rand_access = container_detail::is_random_access_v<OutEdgeListS>;
-
-  using vertices_size_type = std::size_t;
-  using edges_size_type = std::size_t;
 };
 
 struct linked_tree_tag {};
@@ -112,11 +109,7 @@ class linked_tree {
                                                                        VertexProperties, EdgeProperties>;
 
   using vertex_descriptor = typename storage_type::vertex_descriptor;
-  using vertices_size_type = typename storage_type::vertices_size_type;
-
   using edge_descriptor = typename storage_type::edge_descriptor;
-  using edges_size_type = typename storage_type::edges_size_type;
-  using degree_size_type = edges_size_type;
 
   using vertex_stored_impl = typename storage_type::vertex_stored_type;
   using vertex_value_impl = typename storage_type::vertex_value_type;
@@ -433,7 +426,7 @@ auto edges(const BAGL_LINKED_TREE& g) {
  * \return The number of edges in the tree.
  */
 template <BAGL_LINKED_TREE_ARGS>
-typename BAGL_LINKED_TREE::edges_size_type num_edges(const BAGL_LINKED_TREE& g) {
+std::size_t num_edges(const BAGL_LINKED_TREE& g) {
   std::size_t tmp = g.m_pack.size();
   if (tmp > 0) {
     return tmp - 1;

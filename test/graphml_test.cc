@@ -38,7 +38,7 @@ TEST(GraphMLTest, RoundTrip) {
   EXPECT_THAT(get(edge_weight, g, edge(vertex(1, g), vertex(2, g), g).first), ::testing::DoubleNear(0.8, 0.00001));
   EXPECT_EQ(get("description", dp, &g), "Root graph.");
 
-  std::stringstream outstr("graphml_test_out.xml");
+  std::stringstream outstr;
   write_graphml(outstr, g, dp);
 
   Graph g2;

@@ -148,7 +148,6 @@ class filtered_graph : public filtered_graph_base<Graph> {
   auto get_out_edges(vertex_descriptor u) const {
     return out_edges(u, this->g_) | std::views::filter(OutEdgePred{edge_pred_, vertex_pred_, *this});
   }
-  using degree_size_type = graph_degree_size_type_t<Graph>;
 
   // BidirectionalGraph requirements
   auto get_in_edges(vertex_descriptor u) const {
@@ -157,11 +156,9 @@ class filtered_graph : public filtered_graph_base<Graph> {
 
   // VertexListGraph requirements
   auto get_vertices() const { return vertices(this->g_) | std::views::filter(vertex_pred_); }
-  using vertices_size_type = graph_vertices_size_type_t<Graph>;
 
   // EdgeListGraph requirements
   auto get_edges() const { return edges(this->g_) | std::views::filter(EdgePred{edge_pred_, vertex_pred_, *this}); }
-  using edges_size_type = graph_edges_size_type_t<Graph>;
 
   using graph_tag = filtered_graph_tag;
 

@@ -138,15 +138,6 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
 
   static vertex_descriptor null_vertex() { return std::numeric_limits<vertex_descriptor>::max(); }
 
-  // For VertexListGraph
-  using vertices_size_type = std::size_t;
-
-  // For EdgeListGraph
-  using edges_size_type = std::size_t;
-
-  // For IncidenceGraph
-  using degree_size_type = std::size_t;
-
   // For internal use
   using graph_tag = csr_graph_tag;
 
@@ -518,7 +509,7 @@ class compressed_sparse_row_graph<directed_s, VertexProperty, EdgeProperty, Grap
   template <std::ranges::forward_range ERange, std::ranges::output_range<EdgeProperty> OutputRange>
   requires std::constructible_from<edge_descriptor, std::ranges::range_value_t<ERange>>
   void remove_edges_sorted_internal(const ERange& sorted_rg, OutputRange& e_out_rg) {
-    forward_.add_edges_sorted_internal(sorted_rg, identity_property_map(), e_out_rg);
+    forward_.remove_edges_sorted_internal(sorted_rg, identity_property_map(), e_out_rg);
   }
 
   // Add edges from a range of (source, target) pairs that are unsorted
@@ -595,15 +586,6 @@ class compressed_sparse_row_graph<bidirectional_s, VertexProperty, EdgeProperty,
                               edge_list_graph_tag {};
 
   static vertex_descriptor null_vertex() { return std::numeric_limits<vertex_descriptor>::max(); }
-
-  // For VertexListGraph
-  using vertices_size_type = std::size_t;
-
-  // For EdgeListGraph
-  using edges_size_type = std::size_t;
-
-  // For IncidenceGraph
-  using degree_size_type = std::size_t;
 
   // For internal use
   using graph_tag = csr_graph_tag;
@@ -706,7 +688,7 @@ class compressed_sparse_row_graph<bidirectional_s, VertexProperty, EdgeProperty,
   //   Internal helper function
   //   Note that numedges must be doubled for undirected source graphs
   template <typename Graph, typename VertexIndexMap>
-  void assign(const Graph& g, const VertexIndexMap& vi, vertices_size_type numverts, edges_size_type numedges) {
+  void assign(const Graph& g, const VertexIndexMap& vi, std::size_t numverts, std::size_t numedges) {
     forward_.assign(g, vi, numverts, numedges);
     vertex_properties_.resize(numverts);
     set_up_backward_property_links();
