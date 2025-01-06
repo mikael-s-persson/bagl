@@ -15,6 +15,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "bagl/graph_concepts.h"
 #include "bagl/graph_mutability_traits.h"
 #include "bagl/graph_traits.h"
 #include "bagl/properties.h"
@@ -63,7 +64,7 @@ auto global(T x) {
 // assumed that the edge vertices are assigned automatically, they are
 // explicitly assigned here.
 
-template <typename Graph>
+template <concepts::Graph Graph>
 class subgraph {
   using Traits = graph_traits<Graph>;
   using ChildrenList = std::vector<std::unique_ptr<subgraph<Graph>>>;
@@ -329,22 +330,22 @@ graph_vertex_descriptor_t<subgraph<G>> add_vertex(graph_vertex_descriptor_t<subg
 //===========================================================================
 // Functions required by the IncidenceGraph concept
 
-template <typename G>
+template <concepts::Graph G>
 auto out_edges(graph_vertex_descriptor_t<G> v, const subgraph<G>& g) {
   return out_edges(v, g.m_graph);
 }
 
-template <typename G>
+template <concepts::Graph G>
 auto out_degree(graph_vertex_descriptor_t<G> v, const subgraph<G>& g) {
   return out_degree(v, g.m_graph);
 }
 
-template <typename G>
+template <concepts::Graph G>
 auto source(graph_edge_descriptor_t<G> e, const subgraph<G>& g) {
   return source(e, g.m_graph);
 }
 
-template <typename G>
+template <concepts::Graph G>
 auto target(graph_edge_descriptor_t<G> e, const subgraph<G>& g) {
   return target(e, g.m_graph);
 }
@@ -352,17 +353,17 @@ auto target(graph_edge_descriptor_t<G> e, const subgraph<G>& g) {
 //===========================================================================
 // Functions required by the BidirectionalGraph concept
 
-template <typename G>
+template <concepts::Graph G>
 auto in_edges(graph_vertex_descriptor_t<G> v, const subgraph<G>& g) {
   return in_edges(v, g.m_graph);
 }
 
-template <typename G>
+template <concepts::Graph G>
 auto in_degree(graph_vertex_descriptor_t<G> v, const subgraph<G>& g) {
   return in_degree(v, g.m_graph);
 }
 
-template <typename G>
+template <concepts::Graph G>
 auto degree(graph_vertex_descriptor_t<G> v, const subgraph<G>& g) {
   return degree(v, g.m_graph);
 }
@@ -370,7 +371,7 @@ auto degree(graph_vertex_descriptor_t<G> v, const subgraph<G>& g) {
 //===========================================================================
 // Functions required by the AdjacencyGraph concept
 
-template <typename G>
+template <concepts::Graph G>
 auto adjacent_vertices(graph_vertex_descriptor_t<G> v, const subgraph<G>& g) {
   return adjacent_vertices(v, g.m_graph);
 }
@@ -378,12 +379,12 @@ auto adjacent_vertices(graph_vertex_descriptor_t<G> v, const subgraph<G>& g) {
 //===========================================================================
 // Functions required by the VertexListGraph concept
 
-template <typename G>
+template <concepts::Graph G>
 auto vertices(const subgraph<G>& g) {
   return vertices(g.m_graph);
 }
 
-template <typename G>
+template <concepts::Graph G>
 auto num_vertices(const subgraph<G>& g) {
   return num_vertices(g.m_graph);
 }
@@ -391,12 +392,12 @@ auto num_vertices(const subgraph<G>& g) {
 //===========================================================================
 // Functions required by the EdgeListGraph concept
 
-template <typename G>
+template <concepts::Graph G>
 auto edges(const subgraph<G>& g) {
   return edges(g.m_graph);
 }
 
-template <typename G>
+template <concepts::Graph G>
 auto num_edges(const subgraph<G>& g) {
   return num_edges(g.m_graph);
 }
@@ -404,7 +405,7 @@ auto num_edges(const subgraph<G>& g) {
 //===========================================================================
 // Functions required by the AdjacencyMatrix concept
 
-template <typename G>
+template <concepts::Graph G>
 auto edge(graph_vertex_descriptor_t<G> u, graph_vertex_descriptor_t<G> v, const subgraph<G>& g) {
   return edge(u, v, g.m_graph);
 }
@@ -458,7 +459,7 @@ std::pair<graph_edge_descriptor_t<Graph>, bool> add_edge_recur_up(Vertex u_globa
 // and v. In addition, the edge will be added to any (all) other subgraphs that
 // contain vertex descriptors u and v.
 
-template <typename G, typename... EPArgs>
+template <concepts::Graph G, typename... EPArgs>
 std::pair<graph_edge_descriptor_t<G>, bool> add_edge(graph_vertex_descriptor_t<G> u, graph_vertex_descriptor_t<G> v,
                                                      subgraph<G>& g, EPArgs&&... ep_args) {
   if (g.is_root()) {
@@ -512,7 +513,7 @@ void children_remove_edge(Edge e_global, Children& c) {
 
 }  // namespace subgraph_detail
 
-template <typename G>
+template <concepts::Graph G>
 void remove_edge(graph_vertex_descriptor_t<G> u, graph_vertex_descriptor_t<G> v, subgraph<G>& g) {
   auto u_global = g.local_to_global(u);
   auto v_global = g.local_to_global(v);
@@ -521,7 +522,7 @@ void remove_edge(graph_vertex_descriptor_t<G> u, graph_vertex_descriptor_t<G> v,
   subgraph_detail::children_remove_edge(u_global, v_global, root.m_children);
 }
 
-template <typename G>
+template <concepts::Graph G>
 void remove_edge(typename subgraph<G>::edge_descriptor e, subgraph<G>& g) {
   auto e_global = g.local_to_global(e);
 #ifndef NDEBUG
@@ -534,7 +535,7 @@ void remove_edge(typename subgraph<G>::edge_descriptor e, subgraph<G>& g) {
 }
 
 // This is slow, but there may not be a good way to do it safely otherwise
-template <typename Predicate, typename G>
+template <typename Predicate, concepts::Graph G>
 void remove_edge_if(Predicate p, subgraph<G>& g) {
   while (true) {
     bool any_removed = false;
@@ -551,7 +552,7 @@ void remove_edge_if(Predicate p, subgraph<G>& g) {
   }
 }
 
-template <typename G>
+template <concepts::Graph G>
 void clear_vertex(graph_vertex_descriptor_t<G> v, subgraph<G>& g) {
   while (true) {
     auto p_rg = out_edges(v, g);
@@ -578,7 +579,7 @@ auto add_vertex_recur_up(subgraph<G>& g, VPArgs&&... vp_args) {
 }
 }  // namespace subgraph_detail
 
-template <typename G, typename... VPArgs>
+template <concepts::Graph G, typename... VPArgs>
 auto add_vertex(subgraph<G>& g, VPArgs&&... vp_args) {
   if (g.is_root()) {
     auto u_global = add_vertex(g.m_graph, std::forward<VPArgs>(vp_args)...);
@@ -615,7 +616,7 @@ void remove_vertex_recur_down(Vertex u_global, subgraph<Graph>& g) {
 }
 }  // namespace subgraph_detail
 
-template <typename G>
+template <concepts::Graph G>
 void remove_vertex(graph_vertex_descriptor_t<G> u, subgraph<G>& g) {
   auto u_global = g.local_to_global(u);
 #ifndef NDEBUG
@@ -803,26 +804,26 @@ struct graph_property_selector<subgraph_tag> {
 // ==================================================
 // get(p, g), get(p, g, k), and put(p, g, k, v)
 // ==================================================
-template <typename G, typename Property>
+template <concepts::Graph G, typename Property>
 auto get(Property p, subgraph<G>& g) {
   using PMap = property_map_t<subgraph<G>, Property>;
   return PMap(&g, p);
 }
 
-template <typename G, typename Property>
+template <concepts::Graph G, typename Property>
 auto get(Property p, const subgraph<G>& g) {
   using PMap = property_map_const_t<subgraph<G>, Property>;
   return PMap(&g, p);
 }
 
-template <typename G, typename Property, typename Key>
+template <concepts::Graph G, typename Property, typename Key>
 auto get(Property p, const subgraph<G>& g, const Key& k) {
   using PMap = property_map_const_t<subgraph<G>, Property>;
   PMap pmap(&g, p);
   return pmap[k];
 }
 
-template <typename G, typename Property, typename Key, typename Value>
+template <concepts::Graph G, typename Property, typename Key, typename Value>
 void put(Property p, subgraph<G>& g, const Key& k, const Value& val) {
   using PMap = property_map_t<subgraph<G>, Property>;
   PMap pmap(&g, p);
@@ -833,13 +834,13 @@ void put(Property p, subgraph<G>& g, const Key& k, const Value& val) {
 // get(global(p), g)
 // NOTE: get(global(p), g, k) and put(global(p), g, k, v) not supported
 // ==================================================
-template <typename G, typename Property>
+template <concepts::Graph G, typename Property>
 auto get(global_property<Property> p, subgraph<G>& g) {
   using Map = property_map_t<subgraph<G>, global_property<Property>>;
   return Map(&g, p.value);
 }
 
-template <typename G, typename Property>
+template <concepts::Graph G, typename Property>
 auto get(global_property<Property> p, const subgraph<G>& g) {
   using Map = property_map_const_t<subgraph<G>, global_property<Property>>;
   return Map(&g, p.value);
@@ -849,31 +850,31 @@ auto get(global_property<Property> p, const subgraph<G>& g) {
 // get(local(p), g)
 // NOTE: get(local(p), g, k) and put(local(p), g, k, v) not supported
 // ==================================================
-template <typename G, typename Property>
+template <concepts::Graph G, typename Property>
 auto get(local_property<Property> p, subgraph<G>& g) {
   using Map = property_map_t<subgraph<G>, local_property<Property>>;
   return Map(&g, p.value);
 }
 
-template <typename G, typename Property>
+template <concepts::Graph G, typename Property>
 auto get(local_property<Property> p, const subgraph<G>& g) {
   using Map = property_map_const_t<subgraph<G>, local_property<Property>>;
   return Map(&g, p.value);
 }
 
-template <typename G, typename Tag>
+template <concepts::Graph G, typename Tag>
 auto& get_property(subgraph<G>& g, Tag tag) {
   return get_property(g.m_graph, tag);
 }
 
-template <typename G, typename Tag>
+template <concepts::Graph G, typename Tag>
 const auto& get_property(const subgraph<G>& g, Tag tag) {
   return get_property(g.m_graph, tag);
 }
 
 //===========================================================================
 // Miscellaneous Functions
-template <typename G>
+template <concepts::Graph G>
 auto vertex(std::size_t n, const subgraph<G>& g) {
   return vertex(n, g.m_graph);
 }

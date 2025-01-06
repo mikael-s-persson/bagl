@@ -17,20 +17,31 @@ namespace bagl {
 
 namespace graph_traits_detail {
 
+BAGL_GRAPH_HAS_TRAIT_MEMBER(vertex_descriptor, void)
+BAGL_GRAPH_HAS_TRAIT_MEMBER(edge_descriptor, void)
+
+BAGL_GRAPH_HAS_TRAIT_MEMBER(directed_category, void)
+BAGL_GRAPH_HAS_TRAIT_MEMBER(edge_parallel_category, void)
+BAGL_GRAPH_HAS_TRAIT_MEMBER(traversal_category, void)
+
 BAGL_GRAPH_HAS_TRAIT_MEMBER(graph_property_type, no_property)
 BAGL_GRAPH_HAS_TRAIT_MEMBER(edge_property_type, no_property)
 BAGL_GRAPH_HAS_TRAIT_MEMBER(vertex_property_type, no_property)
+
+BAGL_GRAPH_HAS_TRAIT_MEMBER(graph_bundled, no_property)
+BAGL_GRAPH_HAS_TRAIT_MEMBER(edge_bundled, no_property)
+BAGL_GRAPH_HAS_TRAIT_MEMBER(vertex_bundled, no_property)
 
 }  // namespace graph_traits_detail
 
 template <typename G>
 struct graph_traits {
-  using vertex_descriptor = typename G::vertex_descriptor;
-  using edge_descriptor = typename G::edge_descriptor;
+  using vertex_descriptor = graph_traits_detail::get_vertex_descriptor_or_not<G>;
+  using edge_descriptor = graph_traits_detail::get_edge_descriptor_or_not<G>;
 
-  using directed_category = typename G::directed_category;
-  using edge_parallel_category = typename G::edge_parallel_category;
-  using traversal_category = typename G::traversal_category;
+  using directed_category = graph_traits_detail::get_directed_category_or_not<G>;
+  using edge_parallel_category = graph_traits_detail::get_edge_parallel_category_or_not<G>;
+  using traversal_category = graph_traits_detail::get_traversal_category_or_not<G>;
 
   static vertex_descriptor null_vertex() { return G::null_vertex(); }
 };
@@ -172,13 +183,13 @@ template <typename G>
 using vertex_property_type = graph_traits_detail::get_vertex_property_type_or_not<G>;
 
 template <typename G>
-using graph_bundle_type = typename G::graph_bundled;
+using graph_bundle_type = graph_traits_detail::get_graph_bundled_or_not<G>;
 
 template <typename G>
-using vertex_bundle_type = typename G::vertex_bundled;
+using vertex_bundle_type = graph_traits_detail::get_vertex_bundled_or_not<G>;
 
 template <typename G>
-using edge_bundle_type = typename G::edge_bundled;
+using edge_bundle_type = graph_traits_detail::get_edge_bundled_or_not<G>;
 
 namespace graph_traits_detail {
 
