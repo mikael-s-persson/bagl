@@ -185,8 +185,8 @@ class any_range_interface {
   virtual ~any_range_interface() = default;
 
   [[nodiscard]] virtual std::unique_ptr<any_range_interface<Reference>> clone() const = 0;
-  [[nodiscard]] virtual any_iterator<Reference> begin() const = 0;
-  [[nodiscard]] virtual any_iterator<Reference> end() const = 0;
+  [[nodiscard]] virtual any_iterator<Reference> begin() = 0;
+  [[nodiscard]] virtual any_iterator<Reference> end() = 0;
 };
 
 template <typename Reference = std::any>
@@ -221,19 +221,20 @@ template <std::ranges::common_range BaseRange, typename Reference = std::ranges:
 class any_range_wrapper : public any_range_interface<Reference> {
  public:
   using Self = any_range_wrapper<BaseRange, Reference>;
-  using Iter = std::ranges::iterator_t<const BaseRange>;
+  using Iter = std::ranges::iterator_t<BaseRange>;
   any_range_wrapper() = default;
   explicit any_range_wrapper(BaseRange rg) : range_(std::move(rg)) {}
 
   [[nodiscard]] std::unique_ptr<any_range_interface<Reference>> clone() const override {
     return std::make_unique<Self>(range_);
   }
-  [[nodiscard]] any_iterator<Reference> begin() const override {
+  [[nodiscard]] any_iterator<Reference> begin() override {
     return any_iterator<Reference>{std::make_unique<any_iterator_wrapper<Iter, Reference>>(range_.begin())};
   }
-  [[nodiscard]] any_iterator<Reference> end() const override {
+  [[nodiscard]] any_iterator<Reference> end() override {
     return any_iterator<Reference>{std::make_unique<any_iterator_wrapper<Iter, Reference>>(range_.end())};
   }
+
  private:
   BaseRange range_;
 };

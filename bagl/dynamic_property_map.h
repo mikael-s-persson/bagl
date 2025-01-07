@@ -85,6 +85,19 @@ class dynamic_property_map {  // NOLINT
   [[nodiscard]] virtual bool is_key_of_type(const std::type_info& info) const = 0;
   [[nodiscard]] virtual const std::type_info& value() const = 0;
   [[nodiscard]] virtual bool is_value_of_type(const std::type_info& info) const = 0;
+
+  template <typename Value>
+  Value get_as(const std::any& key) {
+    if constexpr (std::is_reference_v<Value>) {
+      if constexpr (std::is_const_v<std::remove_reference_t<Value>>) {
+        return *(static_cast<std::remove_reference_t<Value>*>(get_const_pointer(key)));
+      } else {
+        return *(static_cast<std::remove_reference_t<Value>*>(get_pointer(key)));
+      }
+    } else {
+      return std::any_cast<Value>(get_value(key));
+    }
+  }
 };
 
 template <typename ValueType>
@@ -438,11 +451,11 @@ Value get(const std::string& name, const dynamic_properties& dp, const Key& key)
   for (auto [i, i_end] = dp.equal_range(name); i != i_end; ++i) {
     if constexpr (std::is_same_v<Key, std::any>) {
       if (i->second->is_key_of_type(key.type())) {
-        return std::any_cast<Value>(i->second->get_value(key));
+        return i->second->get_as<Value>(key);
       }
     } else {
       if (i->second->is_key_of_type(typeid(key))) {
-        return std::any_cast<Value>(i->second->get_value(key));
+        return i->second->get_as<Value>(key);
       }
     }
   }
@@ -454,11 +467,11 @@ Value get(const std::string& name, const dynamic_properties& dp, const Key& key,
   for (auto [i, i_end] = dp.equal_range(name); i != i_end; ++i) {
     if constexpr (std::is_same_v<Key, std::any>) {
       if (i->second->is_key_of_type(key.type())) {
-        return std::any_cast<Value>(i->second->get_value(key));
+        return i->second->get_as<Value>(key);
       }
     } else {
       if (i->second->is_key_of_type(typeid(key))) {
-        return std::any_cast<Value>(i->second->get_value(key));
+        return i->second->get_as<Value>(key);
       }
     }
   }

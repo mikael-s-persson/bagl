@@ -147,6 +147,10 @@ class dynamic_graph_observer {
   // ReadableVertexIndexMap / ReadableEdgeIndexMap
   [[nodiscard]] virtual std::size_t get_index_of_edge(const edge_descriptor& e) const = 0;
   [[nodiscard]] virtual std::size_t get_index_of_vertex(const vertex_descriptor& u) const = 0;
+
+  // Equality of vertices or edges
+  [[nodiscard]] virtual bool are_vertices_equal(const vertex_descriptor& u, const vertex_descriptor& v) const = 0;
+  [[nodiscard]] virtual bool are_edges_equal(const edge_descriptor& e, const edge_descriptor& f) const = 0;
 };
 
 class dynamic_graph_mutator : public dynamic_graph_observer {
@@ -219,6 +223,8 @@ class dynamic_graph_observer_wrapper : public Base {
       }
     }
   }
+
+  [[nodiscard]] std::add_const_t<Graph>& real_graph() const { return g_; }
 
   [[nodiscard]] bool is_directed() const override { return is_directed_graph_v<Graph>; }
   [[nodiscard]] bool allows_parallel_edges() const override { return allows_parallel_edges_v<Graph>; }
@@ -391,6 +397,14 @@ class dynamic_graph_observer_wrapper : public Base {
       auto it = eindex_.find(std::any_cast<real_edge_descriptor>(e));
       return it != eindex_.end() ? it->second : 0;
     }
+  }
+
+  // Equality of vertices or edges
+  [[nodiscard]] bool are_vertices_equal(const vertex_descriptor& u, const vertex_descriptor& v) const override {
+    return std::any_cast<real_vertex_descriptor>(u) == std::any_cast<real_vertex_descriptor>(v);
+  }
+  [[nodiscard]] bool are_edges_equal(const edge_descriptor& e, const edge_descriptor& f) const override {
+    return std::any_cast<real_edge_descriptor>(e) == std::any_cast<real_edge_descriptor>(f);
   }
 
  protected:
@@ -610,6 +624,9 @@ class dynamic_graph_mutator_wrapper : public dynamic_graph_observer_wrapper<Grap
   using edge_descriptor = typename Base::edge_descriptor;
 
   dynamic_graph_mutator_wrapper(Graph& g, dynamic_properties& dp) : Base(g, dp) {}
+
+  [[nodiscard]] const Graph& real_graph() const { return this->g_; }
+  [[nodiscard]] Graph& real_graph() { return this->g_; }
 
   [[nodiscard]] dynamic_properties& get_mutable_properties() override {
     return this->dp_;

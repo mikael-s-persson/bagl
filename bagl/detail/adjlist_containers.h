@@ -933,7 +933,7 @@ struct adjlist_vertex_container {
   // NOTE: This WORKS for ALL vertex container types.
   auto in_edges(vertex_descriptor v) const {
     if constexpr (!std::is_same_v<DirectedS, directed_s>) {
-      return get_stored_vertex(v).get_in_edges();
+      return std::ranges::subrange(get_stored_vertex(v).get_in_edges());
     } else {
       return int{};
     }
