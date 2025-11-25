@@ -153,6 +153,19 @@ class dynamic_graph_observer {
   [[nodiscard]] virtual bool are_edges_equal(const edge_descriptor& e, const edge_descriptor& f) const = 0;
 };
 
+inline const std::any& maybe_as_any(const dynamic_graph_observer::vertex_descriptor& k) {
+  return k.base;
+}
+inline std::any& maybe_as_any(dynamic_graph_observer::vertex_descriptor& k) {
+  return k.base;
+}
+inline const std::any& maybe_as_any(const dynamic_graph_observer::edge_descriptor& k) {
+  return k.base;
+}
+inline std::any& maybe_as_any(dynamic_graph_observer::edge_descriptor& k) {
+  return k.base;
+}
+
 class dynamic_graph_mutator : public dynamic_graph_observer {
  public:
   using vertex_descriptor = dynamic_graph_observer::vertex_descriptor;
@@ -238,6 +251,13 @@ class dynamic_graph_observer_wrapper : public Base {
   using real_edge_descriptor = graph_edge_descriptor_t<Graph>;
   using key_type = dynamic_graph_observer::key_type;
 
+  static real_vertex_descriptor as_real_vertex_descriptor(const dynamic_graph_observer::vertex_descriptor& v) {
+    return std::any_cast<real_vertex_descriptor>(v.base);
+  }
+  static real_edge_descriptor as_real_edge_descriptor(const dynamic_graph_observer::edge_descriptor& v) {
+    return std::any_cast<real_edge_descriptor>(v.base);
+  }
+
   [[nodiscard]] key_type classify_key(const std::type_info& key_info) const override {
     if (key_info == typeid(Graph*)) {
       return key_type::graph;
@@ -266,18 +286,18 @@ class dynamic_graph_observer_wrapper : public Base {
     return graph_property_type{get_property(g_, graph_all)};
   }
   [[nodiscard]] vertex_property_type get_vertex_property(const vertex_descriptor& u) const override {
-    return vertex_property_type{get_property(g_, std::any_cast<real_vertex_descriptor>(u))};
+    return vertex_property_type{get_property(g_, as_real_vertex_descriptor(u))};
   }
   [[nodiscard]] edge_property_type get_edge_property(const edge_descriptor& e) const override {
-    return edge_property_type{get_property(g_, std::any_cast<real_edge_descriptor>(e))};
+    return edge_property_type{get_property(g_, as_real_edge_descriptor(e))};
   }
 
   [[nodiscard]] graph_bundled get_graph_bundled() const override { return graph_bundled{get(g_, graph_bundle)}; }
   [[nodiscard]] vertex_bundled get_vertex_bundled(const vertex_descriptor& u) const override {
-    return vertex_bundled{get(vertex_bundle, g_, std::any_cast<real_vertex_descriptor>(u))};
+    return vertex_bundled{get(vertex_bundle, g_, as_real_vertex_descriptor(u))};
   }
   [[nodiscard]] edge_bundled get_edge_bundled(const edge_descriptor& e) const override {
-    return edge_bundled{get(edge_bundle, g_, std::any_cast<real_edge_descriptor>(e))};
+    return edge_bundled{get(edge_bundle, g_, as_real_edge_descriptor(e))};
   }
 
   [[nodiscard]] std::any get_graph_key() const override { return &g_; }
@@ -317,14 +337,14 @@ class dynamic_graph_observer_wrapper : public Base {
   // IncidenceGraph
   [[nodiscard]] std::size_t get_out_degree(const vertex_descriptor& u) const override {
     if constexpr (concepts::IncidenceGraph<Graph>) {
-      return out_degree(std::any_cast<real_vertex_descriptor>(u), g_);
+      return out_degree(as_real_vertex_descriptor(u), g_);
     } else {
       return 0;
     }
   }
   [[nodiscard]] edge_range get_out_edges(const vertex_descriptor& u) const override {
     if constexpr (concepts::IncidenceGraph<Graph>) {
-      return make_any_range_to<edge_descriptor>(out_edges(std::any_cast<real_vertex_descriptor>(u), g_) |
+      return make_any_range_to<edge_descriptor>(out_edges(as_real_vertex_descriptor(u), g_) |
                                                 std::views::transform(real_to_any_edge_desc()));
     } else {
       return make_any_range_to<edge_descriptor>(std::ranges::empty_view<edge_descriptor>());
@@ -334,14 +354,14 @@ class dynamic_graph_observer_wrapper : public Base {
   // BidirectionalGraph
   [[nodiscard]] std::size_t get_in_degree(const vertex_descriptor& u) const override {
     if constexpr (concepts::BidirectionalGraph<Graph>) {
-      return in_degree(std::any_cast<real_vertex_descriptor>(u), g_);
+      return in_degree(as_real_vertex_descriptor(u), g_);
     } else {
       return 0;
     }
   }
   [[nodiscard]] edge_range get_in_edges(const vertex_descriptor& u) const override {
     if constexpr (concepts::BidirectionalGraph<Graph>) {
-      return make_any_range_to<edge_descriptor>(in_edges(std::any_cast<real_vertex_descriptor>(u), g_) |
+      return make_any_range_to<edge_descriptor>(in_edges(as_real_vertex_descriptor(u), g_) |
                                                 std::views::transform(real_to_any_edge_desc()));
     } else {
       return make_any_range_to<edge_descriptor>(std::ranges::empty_view<edge_descriptor>());
@@ -349,7 +369,7 @@ class dynamic_graph_observer_wrapper : public Base {
   }
   [[nodiscard]] std::size_t get_degree(const vertex_descriptor& u) const override {
     if constexpr (concepts::BidirectionalGraph<Graph>) {
-      return degree(std::any_cast<real_vertex_descriptor>(u), g_);
+      return degree(as_real_vertex_descriptor(u), g_);
     } else {
       return 0;
     }
@@ -357,14 +377,14 @@ class dynamic_graph_observer_wrapper : public Base {
 
   [[nodiscard]] vertex_descriptor get_source(const edge_descriptor& e) const override {
     if constexpr (concepts::IncidenceGraph<Graph>) {
-      return vertex_descriptor{source(std::any_cast<real_edge_descriptor>(e), g_)};
+      return vertex_descriptor{source(as_real_edge_descriptor(e), g_)};
     } else {
       return vertex_descriptor{graph_traits<Graph>::null_vertex()};
     }
   }
   [[nodiscard]] vertex_descriptor get_target(const edge_descriptor& e) const override {
     if constexpr (concepts::IncidenceGraph<Graph>) {
-      return vertex_descriptor{target(std::any_cast<real_edge_descriptor>(e), g_)};
+      return vertex_descriptor{target(as_real_edge_descriptor(e), g_)};
     } else {
       return vertex_descriptor{graph_traits<Graph>::null_vertex()};
     }
@@ -374,7 +394,7 @@ class dynamic_graph_observer_wrapper : public Base {
   [[nodiscard]] std::pair<edge_descriptor, bool> get_edge(const vertex_descriptor& u,
                                                           const vertex_descriptor& v) const override {
     if constexpr (concepts::AdjacencyMatrix<Graph>) {
-      auto [e, e_exists] = edge(std::any_cast<real_vertex_descriptor>(u), std::any_cast<real_vertex_descriptor>(v), g_);
+      auto [e, e_exists] = edge(as_real_vertex_descriptor(u), as_real_vertex_descriptor(v), g_);
       return {edge_descriptor{e}, e_exists};
     } else {
       return {edge_descriptor{real_edge_descriptor{}}, false};
@@ -384,27 +404,27 @@ class dynamic_graph_observer_wrapper : public Base {
   // ReadableVertexIndexMap / ReadableEdgeIndexMap
   [[nodiscard]] std::size_t get_index_of_vertex(const vertex_descriptor& u) const override {
     if constexpr (has_property_map_v<Graph, vertex_index_t>) {
-      return get(vertex_index, g_, std::any_cast<real_vertex_descriptor>(u));
+      return get(vertex_index, g_, as_real_vertex_descriptor(u));
     } else {
-      auto it = vindex_.find(std::any_cast<real_vertex_descriptor>(u));
+      auto it = vindex_.find(as_real_vertex_descriptor(u));
       return it != vindex_.end() ? it->second : 0;
     }
   }
   [[nodiscard]] std::size_t get_index_of_edge(const edge_descriptor& e) const override {
     if constexpr (has_property_map_v<Graph, edge_index_t>) {
-      return get(edge_index, g_, std::any_cast<real_edge_descriptor>(e));
+      return get(edge_index, g_, as_real_edge_descriptor(e));
     } else {
-      auto it = eindex_.find(std::any_cast<real_edge_descriptor>(e));
+      auto it = eindex_.find(as_real_edge_descriptor(e));
       return it != eindex_.end() ? it->second : 0;
     }
   }
 
   // Equality of vertices or edges
   [[nodiscard]] bool are_vertices_equal(const vertex_descriptor& u, const vertex_descriptor& v) const override {
-    return std::any_cast<real_vertex_descriptor>(u) == std::any_cast<real_vertex_descriptor>(v);
+    return as_real_vertex_descriptor(u) == as_real_vertex_descriptor(v);
   }
   [[nodiscard]] bool are_edges_equal(const edge_descriptor& e, const edge_descriptor& f) const override {
-    return std::any_cast<real_edge_descriptor>(e) == std::any_cast<real_edge_descriptor>(f);
+    return as_real_edge_descriptor(e) == as_real_edge_descriptor(f);
   }
 
  protected:
@@ -525,7 +545,7 @@ class dynamic_subgraph_observer_wrapper : public dynamic_graph_observer_wrapper<
   // IncidenceGraph
   [[nodiscard]] std::size_t get_out_degree(const vertex_descriptor& u) const override {
     if constexpr (concepts::IncidenceGraph<Graph>) {
-      return out_degree(sub_g_.global_to_local(std::any_cast<real_vertex_descriptor>(u)), sub_g_);
+      return out_degree(sub_g_.global_to_local(as_real_vertex_descriptor(u)), sub_g_);
     } else {
       return 0;
     }
@@ -533,7 +553,7 @@ class dynamic_subgraph_observer_wrapper : public dynamic_graph_observer_wrapper<
   [[nodiscard]] edge_range get_out_edges(const vertex_descriptor& u) const override {
     if constexpr (concepts::IncidenceGraph<Graph>) {
       return make_any_range_to<edge_descriptor>(
-          out_edges(sub_g_.global_to_local(std::any_cast<real_vertex_descriptor>(u)), sub_g_) |
+          out_edges(sub_g_.global_to_local(as_real_vertex_descriptor(u)), sub_g_) |
           std::views::transform(real_to_any_edge_desc()));
     } else {
       return make_any_range_to<edge_descriptor>(std::ranges::empty_view<real_edge_descriptor>());
@@ -543,7 +563,7 @@ class dynamic_subgraph_observer_wrapper : public dynamic_graph_observer_wrapper<
   // IncidenceGraph
   [[nodiscard]] std::size_t get_in_degree(const vertex_descriptor& u) const override {
     if constexpr (concepts::BidirectionalGraph<Graph>) {
-      return in_degree(sub_g_.global_to_local(std::any_cast<real_vertex_descriptor>(u)), sub_g_);
+      return in_degree(sub_g_.global_to_local(as_real_vertex_descriptor(u)), sub_g_);
     } else {
       return 0;
     }
@@ -551,7 +571,7 @@ class dynamic_subgraph_observer_wrapper : public dynamic_graph_observer_wrapper<
   [[nodiscard]] edge_range get_in_edges(const vertex_descriptor& u) const override {
     if constexpr (concepts::BidirectionalGraph<Graph>) {
       return make_any_range_to<edge_descriptor>(
-          in_edges(sub_g_.global_to_local(std::any_cast<real_vertex_descriptor>(u)), sub_g_) |
+          in_edges(sub_g_.global_to_local(as_real_vertex_descriptor(u)), sub_g_) |
           std::views::transform(real_to_any_edge_desc()));
     } else {
       return make_any_range_to<edge_descriptor>(std::ranges::empty_view<real_edge_descriptor>());
@@ -559,7 +579,7 @@ class dynamic_subgraph_observer_wrapper : public dynamic_graph_observer_wrapper<
   }
   [[nodiscard]] std::size_t get_degree(const vertex_descriptor& u) const override {
     if constexpr (concepts::BidirectionalGraph<Graph>) {
-      return degree(sub_g_.global_to_local(std::any_cast<real_vertex_descriptor>(u)), sub_g_);
+      return degree(sub_g_.global_to_local(as_real_vertex_descriptor(u)), sub_g_);
     } else {
       return 0;
     }
@@ -569,8 +589,8 @@ class dynamic_subgraph_observer_wrapper : public dynamic_graph_observer_wrapper<
   [[nodiscard]] std::pair<edge_descriptor, bool> get_edge(const vertex_descriptor& u,
                                                           const vertex_descriptor& v) const override {
     if constexpr (concepts::AdjacencyMatrix<Graph>) {
-      auto [e_global, e_found] = edge(std::any_cast<real_vertex_descriptor>(u),
-                                      std::any_cast<real_vertex_descriptor>(v), sub_g_.root().underlying());
+      auto [e_global, e_found] = edge(as_real_vertex_descriptor(u),
+                                      as_real_vertex_descriptor(v), sub_g_.root().underlying());
       if (e_found) {
         return {edge_descriptor{e_global}, sub_g_.find_edge(e_global).second};
       }
@@ -622,6 +642,8 @@ class dynamic_graph_mutator_wrapper : public dynamic_graph_observer_wrapper<Grap
  public:
   using vertex_descriptor = typename Base::vertex_descriptor;
   using edge_descriptor = typename Base::edge_descriptor;
+  using Base::as_real_vertex_descriptor;
+  using Base::as_real_edge_descriptor;
 
   dynamic_graph_mutator_wrapper(Graph& g, dynamic_properties& dp) : Base(g, dp) {}
 
@@ -635,28 +657,28 @@ class dynamic_graph_mutator_wrapper : public dynamic_graph_observer_wrapper<Grap
   vertex_descriptor do_add_vertex() override { return vertex_descriptor{add_vertex(this->g_)}; }
 
   void do_clear_vertex(const vertex_descriptor& u) override {
-    clear_vertex(std::any_cast<real_vertex_descriptor>(u), this->g_);
+    clear_vertex(as_real_vertex_descriptor(u), this->g_);
   }
 
   void do_remove_vertex(const vertex_descriptor& u) override {
-    remove_vertex(std::any_cast<real_vertex_descriptor>(u), this->g_);
+    remove_vertex(as_real_vertex_descriptor(u), this->g_);
   }
 
   std::pair<edge_descriptor, bool> do_add_edge(const vertex_descriptor& source,
                                                const vertex_descriptor& target) override {
-    auto [e, added] = add_edge(std::any_cast<real_vertex_descriptor>(source),
-                               std::any_cast<real_vertex_descriptor>(target), this->g_);
+    auto [e, added] = add_edge(as_real_vertex_descriptor(source),
+                               as_real_vertex_descriptor(target), this->g_);
     return {edge_descriptor{e}, added};
   }
 
   void do_remove_edge(const edge_descriptor& e) override {
-    remove_edge(std::any_cast<real_edge_descriptor>(e), this->g_);
+    remove_edge(as_real_edge_descriptor(e), this->g_);
   }
 
   void do_remove_out_edge_if(const vertex_descriptor& u, std::function<bool(const edge_descriptor&)> pred) override {
     if constexpr (concepts::MutableIncidenceGraph<Graph>) {
       remove_out_edge_if(
-          std::any_cast<real_vertex_descriptor>(u),
+          as_real_vertex_descriptor(u),
           [p = std::move(pred)](const real_edge_descriptor& e) { return p(edge_descriptor{e}); }, this->g_);
     }
   }
@@ -664,7 +686,7 @@ class dynamic_graph_mutator_wrapper : public dynamic_graph_observer_wrapper<Grap
   void do_remove_in_edge_if(const vertex_descriptor& u, std::function<bool(const edge_descriptor&)> pred) override {
     if constexpr (concepts::MutableBidirectionalGraph<Graph>) {
       remove_in_edge_if(
-          std::any_cast<real_vertex_descriptor>(u),
+          as_real_vertex_descriptor(u),
           [p = std::move(pred)](const real_edge_descriptor& e) { return p(edge_descriptor{e}); }, this->g_);
     }
   }
@@ -684,7 +706,7 @@ class dynamic_graph_mutator_wrapper : public dynamic_graph_observer_wrapper<Grap
 
   void set_vertex_property(const std::string& name, const vertex_descriptor& vertex, const std::string& value,
                            const std::string& value_type) override {
-    bool type_found = put_property(name, std::any_cast<real_vertex_descriptor>(vertex), value, value_type);
+    bool type_found = put_property(name, as_real_vertex_descriptor(vertex), value, value_type);
     if (!type_found) {
       throw std::bad_any_cast();
     }
@@ -692,7 +714,7 @@ class dynamic_graph_mutator_wrapper : public dynamic_graph_observer_wrapper<Grap
 
   void set_edge_property(const std::string& name, const edge_descriptor& edge, const std::string& value,
                          const std::string& value_type) override {
-    bool type_found = put_property(name, std::any_cast<real_edge_descriptor>(edge), value, value_type);
+    bool type_found = put_property(name, as_real_edge_descriptor(edge), value, value_type);
     if (!type_found) {
       throw std::bad_any_cast();
     }

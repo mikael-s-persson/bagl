@@ -186,7 +186,7 @@ void make_dynamic_properties(TG& g, dynamic_properties& p) {
 
 template <typename TG>
 void read_data(std::istream& is, TG& g) {
-  dynamic_properties p;
+  dynamic_properties p{ignore_other_properties};
   make_dynamic_properties(g, p);
   read_graphviz(is, g, p);
   int i = 0;

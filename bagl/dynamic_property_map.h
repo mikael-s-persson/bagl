@@ -421,12 +421,18 @@ auto get_dynamic_property_map(const std::string& name, const dynamic_properties&
   throw dynamic_get_failure(name);
 }
 
+template <typename Key>
+decltype(auto) maybe_as_any(Key&& k) {
+  return std::forward<Key>(k);
+}
+
 template <typename Key, typename Value>
 bool put(const std::string& name, dynamic_properties& dp, const Key& key, const Value& value) {
+  const auto& key_as_any = maybe_as_any(key);
   for (auto [i, i_end] = dp.equal_range(name); i != i_end; ++i) {
-    if constexpr (std::is_same_v<Key, std::any>) {
-      if (i->second->is_key_of_type(key.type())) {
-        i->second->put_value(key, value);
+    if constexpr (std::is_same_v<decltype(key_as_any), const std::any&>) {
+      if (i->second->is_key_of_type(key_as_any.type())) {
+        i->second->put_value(key_as_any, value);
         return true;
       }
     } else {
@@ -448,10 +454,11 @@ bool put(const std::string& name, dynamic_properties& dp, const Key& key, const 
 
 template <typename Value, typename Key>
 Value get(const std::string& name, const dynamic_properties& dp, const Key& key) {
+  const auto& key_as_any = maybe_as_any(key);
   for (auto [i, i_end] = dp.equal_range(name); i != i_end; ++i) {
-    if constexpr (std::is_same_v<Key, std::any>) {
-      if (i->second->is_key_of_type(key.type())) {
-        return i->second->get_as<Value>(key);
+    if constexpr (std::is_same_v<decltype(key_as_any), const std::any&>) {
+      if (i->second->is_key_of_type(key_as_any.type())) {
+        return i->second->get_as<Value>(key_as_any);
       }
     } else {
       if (i->second->is_key_of_type(typeid(key))) {
@@ -464,10 +471,11 @@ Value get(const std::string& name, const dynamic_properties& dp, const Key& key)
 
 template <typename Value, typename Key>
 Value get(const std::string& name, const dynamic_properties& dp, const Key& key, Value* /*unused*/) {
+  const auto& key_as_any = maybe_as_any(key);
   for (auto [i, i_end] = dp.equal_range(name); i != i_end; ++i) {
-    if constexpr (std::is_same_v<Key, std::any>) {
-      if (i->second->is_key_of_type(key.type())) {
-        return i->second->get_as<Value>(key);
+    if constexpr (std::is_same_v<decltype(key_as_any), const std::any&>) {
+      if (i->second->is_key_of_type(key_as_any.type())) {
+        return i->second->get_as<Value>(key_as_any);
       }
     } else {
       if (i->second->is_key_of_type(typeid(key))) {
@@ -480,10 +488,11 @@ Value get(const std::string& name, const dynamic_properties& dp, const Key& key,
 
 template <typename Key>
 std::string get(const std::string& name, const dynamic_properties& dp, const Key& key) {
+  const auto& key_as_any = maybe_as_any(key);
   for (auto [i, i_end] = dp.equal_range(name); i != i_end; ++i) {
-    if constexpr (std::is_same_v<Key, std::any>) {
-      if (i->second->is_key_of_type(key.type())) {
-        return i->second->get_string(key);
+    if constexpr (std::is_same_v<decltype(key_as_any), const std::any&>) {
+      if (i->second->is_key_of_type(key_as_any.type())) {
+        return i->second->get_string(key_as_any);
       }
     } else {
       if (i->second->is_key_of_type(typeid(key))) {

@@ -27,9 +27,52 @@
 
 namespace bagl {
 
+//
+// This is an example of using the read and write functions to load and store a modified graphviz dot file.
+//
+// In this example, we just read a graphviz graph with some basic common properties, and then change the
+// background color of the graph and write it out.
+//
+//  struct VertexBundle {
+//    std::string name;   // Stores node id's (aka names).
+//    std::string shape;  // Stores the 'shape' attribute of each node.
+//  };
+//  struct EdgeBundle {
+//    std::string color;  // Stores the 'color' attribute of each edge.
+//    std::string label;  // Stores the 'label' attribute of each edge.
+//  };
+//  struct GraphBundle {
+//    std::string name;    // Stores the name of the graph (e.g., the "some_name" in "digraph some_name {..").
+//    std::string rankdir; // Stores the 'rankdir' attribute of the graph.
+//  };
+//
+//  using DiGraph = bagl::adjacency_list<bagl::vec_s, bagl::vec_s, bagl::directed_s,
+//                                       VertexBundle, EdgeBundle, GraphBundle>;
+//  DiGraph g;
+//
+//  // Set up the dynamic properties for all attributes we want to read / capture from the dot file.
+//  bagl::dynamic_properties dp(bagl::ignore_other_properties);
+//  dp.property<bagl::graph_vertex_descriptor_t<DiGraph>>("name", get(&VertexBundle::name, g));
+//  dp.property<bagl::graph_vertex_descriptor_t<DiGraph>>("shape", get(&VertexBundle::shape, g));
+//  dp.property<bagl::graph_edge_descriptor_t<DiGraph>>("color", get(&EdgeBundle::color, g));
+//  dp.property<bagl::graph_edge_descriptor_t<DiGraph>>("label", get(&EdgeBundle::label, g));
+//  dp.property<DiGraph*>("graph_name", get(&GraphBundle::name, g));
+//  dp.property<DiGraph*>("rankdir", get(&GraphBundle::rankdir, g));
+//
+//  // Read dot file from std::cin. Storing the node id's in the "name" property.
+//  if (!read_graphviz(std::cin, g, dp, "name")) {
+//    exit(1);
+//  }
+//
+//  // Add a single-valued property for the graph to set the "bgcolor" attribute to "lightblue".
+//  dp.property<DiGraph*>("bgcolor", bagl::single_property_map("lightblue"));
+//  // Write out the graph, with the attributes we captured and the new background color.
+//  write_graphviz(std::cout, g, dp, "name", bagl::dummy_property_map{});
+//
+
 // Default writer of graphviz attributes, writes nothing.
 struct default_writer {
-  void operator()(std::ostream&, const std::any&) const {}
+  void operator()(std::ostream&, const std::string&, const std::any&) const {}
 };
 
 // Writer of graphviz attributes from all properties in a dynamic properties map.
@@ -38,14 +81,14 @@ class dynamic_properties_graphviz_writer {
   explicit dynamic_properties_graphviz_writer(const dynamic_properties& dp, bool with_brackets = true)
       : dp_(&dp), with_brackets_(with_brackets) {}
 
-  void operator()(std::ostream& out, const std::any& key) const;
+  void operator()(std::ostream& out, const std::string& node_id_pmap, const std::any& key) const;
 
  private:
   const dynamic_properties* dp_ = nullptr;
   bool with_brackets_ = true;
 };
 
-using graphviz_attr_writer = std::function<void(std::ostream&, const std::any&)>;
+using graphviz_attr_writer = std::function<void(std::ostream&, const std::string&, const std::any&)>;
 
 void write_graphviz(std::ostream& out, const dynamic_graph_observer& g, graphviz_attr_writer vpw,
                     graphviz_attr_writer epw, graphviz_attr_writer gpw, const std::string& node_id_pmap);
@@ -61,8 +104,10 @@ void write_graphviz(std::ostream& out, const Graph& g, dynamic_properties& dp, g
 template <concepts::VertexListGraph Graph, concepts::ReadableVertexPropertyMap<Graph> NodeIDMap>
 void write_graphviz(std::ostream& out, const Graph& g, dynamic_properties& dp, const std::string& node_id_pmap_name,
                     NodeIDMap id) {
-  dynamic_graph_observer_wrapper<const Graph> mg(g,
-                                                 dp.property<graph_vertex_descriptor_t<Graph>>(node_id_pmap_name, id));
+  if constexpr (!std::is_same_v<NodeIDMap, dummy_property_map>) {
+    dp.property<graph_vertex_descriptor_t<Graph>>(node_id_pmap_name, id);
+  }
+  dynamic_graph_observer_wrapper<const Graph> mg(g, dp);
   write_graphviz(out, mg,
                  /*vertex_writer=*/dynamic_properties_graphviz_writer(dp),
                  /*edge_writer=*/dynamic_properties_graphviz_writer(dp),

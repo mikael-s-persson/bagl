@@ -84,30 +84,37 @@ void write_graphviz_impl(std::ostream& out, const dynamic_graph_observer& g, con
       write_graphviz_impl(out, child, vpw, epw, gpw, node_id_pmap, vertex_printed, edge_printed);
     }
   } else {
-    out << " G {\n";
+    std::string gname;
+    try {
+      gname = escape_dot_string(get("graph_name", g.get_properties(), g.get_graph_key()));
+    } catch (dynamic_get_failure) {}
+    if (gname.empty()) {
+      gname = "G";
+    }
+    out << " " << gname << " {\n";
   }
 
-  gpw(out, g.get_graph_key());  // print graph properties
+  gpw(out, node_id_pmap, g.get_graph_key());  // print graph properties
 
   // Print out vertices and edges not in the subgraphs.
-  for (auto v : g.get_vertices()) {
+  for (const auto v : g.get_vertices()) {
     std::size_t v_id = g.get_index_of_vertex(v);
     if (!vertex_printed.contains(v_id)) {
       vertex_printed.insert(v_id);
       out << escape_dot_string(get(node_id_pmap, g.get_properties(), v));
-      vpw(out, v);  // print vertex attributes
+      vpw(out, node_id_pmap, maybe_as_any(v));  // print vertex attributes
       out << ";\n";
     }
   }
 
   const std::string_view edge_delimiter = (g.is_directed() ? " -> " : " -- ");
-  for (auto e : g.get_edges()) {
+  for (const auto e : g.get_edges()) {
     std::size_t e_id = g.get_index_of_edge(e);
     if (!edge_printed.contains(e_id)) {
       edge_printed.insert(e_id);
       out << escape_dot_string(get(node_id_pmap, g.get_properties(), g.get_source(e))) << edge_delimiter
           << escape_dot_string(get(node_id_pmap, g.get_properties(), g.get_target(e))) << " ";
-      epw(out, e);  // print edge attributes
+      epw(out, node_id_pmap, maybe_as_any(e));  // print edge attributes
       out << ";\n";
     }
   }
@@ -116,10 +123,10 @@ void write_graphviz_impl(std::ostream& out, const dynamic_graph_observer& g, con
 
 }  // namespace
 
-void dynamic_properties_graphviz_writer::operator()(std::ostream& out, const std::any& key) const {
+void dynamic_properties_graphviz_writer::operator()(std::ostream& out, const std::string& node_id_pmap, const std::any& key) const {
   bool first = true;
   for (const auto& [name, pmap] : *dp_) {
-    if (!pmap->is_key_of_type(key.type())) {
+    if (!pmap->is_key_of_type(key.type()) || node_id_pmap == name || name == "graph_name") {
       continue;
     }
     if (with_brackets_) {
@@ -644,25 +651,32 @@ struct parser {
       default:
         error("Wanted a graph name or left brace");
     }
-    if (peek().type == token::left_brace)
+    current_graph_props()["graph_name"] = name;
+    if (peek().type == token::left_brace) {
       get();
-    else
+    } else {
       error("Wanted a left brace to start the graph");
+    }
     parse_stmt_list();
-    if (peek().type == token::right_brace)
+    if (peek().type == token::right_brace) {
       get();
-    else
+    } else {
       error("Wanted a right brace to end the graph");
-    if (peek().type == token::eof) {
-    } else
+    }
+    if (peek().type != token::eof) {
       error("Wanted end of file");
+    }
   }
 
   void parse_stmt_list() {
     while (true) {
-      if (peek().type == token::right_brace) return;
+      if (peek().type == token::right_brace) {
+        return;
+      }
       parse_stmt();
-      if (peek().type == token::semicolon) get();
+      if (peek().type == token::semicolon) {
+        get();
+      }
     }
   }
 
@@ -679,7 +693,9 @@ struct parser {
         token id = get();
         if (id.type == token::identifier && peek().type == token::equal) {  // Graph property
           get();
-          if (peek().type != token::identifier) error("Wanted identifier as right side of =");
+          if (peek().type != token::identifier) {
+            error("Wanted identifier as right side of =");
+          }
           token id2 = get();
           current_graph_props()[id.normalized_value] = id2.normalized_value;
         } else {
