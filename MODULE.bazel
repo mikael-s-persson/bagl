@@ -19,7 +19,7 @@ register_toolchains("@llvm_toolchain//:all")
 bazel_dep(name = "bazel_cc_meta", version = "0.0.0")
 git_override(
     module_name = "bazel_cc_meta",
-    commit = "0d33290dd79fc1cf41d04712692e0cb194347db8",
+    commit = "ccabddc2a9016b3ee0a620e32ee6e71ecc8aa5f6",
     remote = "https://github.com/mikael-s-persson/bazel_cc_meta",
 )
 
