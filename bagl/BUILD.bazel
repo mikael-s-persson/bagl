@@ -45,7 +45,6 @@ cc_library(
         "detail/array_binary_tree.h",
         "detail/augment.h",
         "detail/bfl_tree_ranges.h",
-        "detail/compressed_sparse_row_struct.h",
         "detail/container_generators.h",
         "detail/disjoint_sets.h",
         "detail/histogram_sort.h",
@@ -179,6 +178,9 @@ cc_library(
         "wavefront.h",
         "write_dimacs.h",
         "zip_range.h",
+    ],
+    textual_hdrs = [
+        "detail/compressed_sparse_row_struct.h",
     ],
     visibility = ["//visibility:public"],
 )
