@@ -1,7 +1,14 @@
 module(name = "bagl")
 
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
 bazel_dep(name = "bazel_skylib", version = "1.9.0")
 bazel_dep(name = "platforms", version = "1.0.0")
+
+bazel_dep(name = "rules_python", version = "1.7.0")
+bazel_dep(name = "rules_cc", version = "0.2.16")
+bazel_dep(name = "rules_shell", version = "0.6.1")
+bazel_dep(name = "buildozer", version = "8.2.1")
 
 bazel_dep(name = "toolchains_llvm", version = "1.6.0")
 
@@ -15,14 +22,16 @@ use_repo(llvm, "llvm_toolchain")
 
 register_toolchains("@llvm_toolchain//:all")
 
-# bazel run @bazel_cc_meta//cc_meta:refresh_all
-bazel_dep(name = "bazel_cc_meta", version = "0.0.0")
-git_override(
-    module_name = "bazel_cc_meta",
-    commit = "ccabddc2a9016b3ee0a620e32ee6e71ecc8aa5f6",
-    remote = "https://github.com/mikael-s-persson/bazel_cc_meta",
+# Aspects to extract C++ metadata and fix dependency issues.
+# bazel run //:cc_meta_refresh_all
+# bazel run @bazel_cc_meta//cc_meta:fix_deps
+http_archive(
+    name = "bazel_cc_meta",
+    integrity = "sha256-LznhQ9l2kwHgCkVwYsUJAjlyAM5WlvFrUflTR4atxbw=",
+    strip_prefix = "bazel_cc_meta-0.1.0",
+    urls = ["https://github.com/mikael-s-persson/bazel_cc_meta/archive/refs/tags/v0.1.0.tar.gz"],
 )
 
 bazel_dep(name = "tinyxml2", version = "10.0.0")
 
-bazel_dep(name = "googletest", version = "1.17.0.bcr.2", repo_name = "com_google_googletest")
+bazel_dep(name = "googletest", version = "1.17.0.bcr.2")
