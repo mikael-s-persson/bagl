@@ -20,9 +20,11 @@
 #include <functional>
 #include <iostream>
 #include <map>
+#include <memory_resource>
 #include <regex>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -87,7 +89,8 @@ void write_graphviz_impl(std::ostream& out, const dynamic_graph_observer& g, con
     std::string gname;
     try {
       gname = escape_dot_string(get("graph_name", g.get_properties(), g.get_graph_key()));
-    } catch (dynamic_get_failure) {}
+    } catch (dynamic_get_failure) {
+    }
     if (gname.empty()) {
       gname = "G";
     }
@@ -123,7 +126,8 @@ void write_graphviz_impl(std::ostream& out, const dynamic_graph_observer& g, con
 
 }  // namespace
 
-void dynamic_properties_graphviz_writer::operator()(std::ostream& out, const std::string& node_id_pmap, const std::any& key) const {
+void dynamic_properties_graphviz_writer::operator()(std::ostream& out, const std::string& node_id_pmap,
+                                                    const std::any& key) const {
   bool first = true;
   for (const auto& [name, pmap] : *dp_) {
     if (!pmap->is_key_of_type(key.type()) || node_id_pmap == name || name == "graph_name") {
@@ -188,11 +192,10 @@ struct token {
     invalid
   };
   token_type type;
-  std::string normalized_value;  // May have double-quotes removed and/or
-                                 // some escapes replaced
-  token(token_type a_type, const std::string& a_normalized_value)
-      : type(a_type), normalized_value(a_normalized_value) {}
-  token() : type(invalid), normalized_value("") {}
+  std::string_view normalized_value;  // May have double-quotes removed and/or
+                                      // some escapes replaced
+  token(token_type a_type, std::string_view a_normalized_value) : type(a_type), normalized_value(a_normalized_value) {}
+  token() : type(invalid) {}
   friend std::ostream& operator<<(std::ostream& o, const token& t) {
     switch (t.type) {
       case token::kw_strict:
@@ -273,11 +276,13 @@ struct token {
   }
 };
 
-bad_graphviz_syntax lex_error(const std::string& errmsg, char bad_char) {
-  if (bad_char == '\0') {
+bad_graphviz_syntax lex_error(const std::string& errmsg, std::string::const_iterator begin,
+                              std::string::const_iterator end) {
+  if (begin == end) {
     return bad_graphviz_syntax(errmsg + " (at end of input)");
   } else {
-    return bad_graphviz_syntax(errmsg + " (char is '" + bad_char + "')");
+    return bad_graphviz_syntax(errmsg + " (char is '" + *begin + "') (in '" +
+                               std::string(begin, std::find(begin, end, '\n')) + "')");
   }
 }
 
@@ -286,42 +291,41 @@ bad_graphviz_syntax parse_error(const std::string& errmsg, const token& bad_toke
 }
 
 struct tokenizer {
+  using str_iter = std::string::const_iterator;
+  using match_results = std::pmr::match_results<str_iter>;
+  using sub_match = std::sub_match<std::string::const_iterator>;
+
   std::string::const_iterator begin, end;
   std::vector<token> lookahead;
+  std::list<std::string> mutated_tokens;
   // Precomputed regexes
-  std::regex stuff_to_skip;
+  std::regex slash_slash_comment;
+  std::regex slash_star_comment;
+  std::regex hash_comment;
   std::regex basic_id_token;
-  std::regex punctuation_token;
   std::regex number_token;
   std::regex quoted_string_token;
   std::regex xml_tag_token;
-  std::regex cdata;
+  std::unordered_map<std::string, token::token_type> keywords;
+
+  std::string scratch_str;
 
   tokenizer(const std::string& str) : begin(str.begin()), end(str.end()) {
-    std::string whitespace = R"((?:\s+))";
-    std::string slash_slash_comment = R"((?://.*?$))";
-    std::string slash_star_comment = R"((?:/\*.*?\*/))";
-    std::string hash_comment = R"((?:^#.*?$))";
-    std::string backslash_newline = R"((?:[\\][\n]))";
+    slash_slash_comment = R"(^//(?:.*\\\n)*.*\n)";
+    slash_star_comment = R"(^/\*[\s\S]*?\*/)";
+    hash_comment = R"(^#(?:.*\\\n)*.*\n)";  // This allows whitespaces before #, which DOT format doesn't.
 
-    stuff_to_skip = "^(?:" + whitespace + "|" + slash_slash_comment + "|" + slash_star_comment + "|" + hash_comment +
-                    "|" + backslash_newline + ")*";
     basic_id_token = R"(^([[:alpha:]_](?:\w*)))";
-    punctuation_token = R"(^([\]\[{};=,:+()@]|[-][>-]))";
     number_token = R"(^([-]?(?:(?:\.\d+)|(?:\d+(?:\.\d*)?))))";
     quoted_string_token = R"(^("(?:[^"\\]|(?:[\\].))*"))";
     xml_tag_token = R"(^<(/?)(?:[^!?'"]|(?:'[^']*?')|(?:"[^"]*?"))*?(/?)>)";
-    cdata = R"(^<\!\[CDATA\[.*?\]\]>)";
-  }
 
-  void skip() {
-    std::match_results<std::string::const_iterator> results;
-    bool found = std::regex_search(begin, end, results, stuff_to_skip);
-    assert(found);
-    (void)found;
-    std::sub_match<std::string::const_iterator> sm1 = results.suffix();
-    assert(sm1.second == end);
-    begin = sm1.first;
+    keywords["strict"] = token::kw_strict;
+    keywords["graph"] = token::kw_graph;
+    keywords["digraph"] = token::kw_digraph;
+    keywords["node"] = token::kw_node;
+    keywords["edge"] = token::kw_edge;
+    keywords["subgraph"] = token::kw_subgraph;
   }
 
   token get_token_raw() {
@@ -330,109 +334,133 @@ struct tokenizer {
       lookahead.erase(lookahead.begin());
       return t;
     }
-    skip();
+    // Use the stack for sub-match allocation, do not fall back to heap.
+    std::array<std::byte, 8 * sizeof(sub_match)> sub_match_buffer;
+    std::pmr::monotonic_buffer_resource sub_match_pool{sub_match_buffer.data(), sub_match_buffer.size(),
+                                                       std::pmr::null_memory_resource()};
+    match_results results{&sub_match_pool};
+    // Skip the stuff to skip (aka white spaces, comments, etc.)
+    while (begin != end) {
+      // Skip over spaces.
+      if (std::isspace(*begin) != 0) {
+        ++begin;
+        continue;
+      }
+      // Skip over newline if
+      if (*begin == '\\') {
+        const auto saved_begin = begin++;
+        if (begin != end && *begin == '\r') {
+          ++begin;
+        }
+        if (begin != end && *begin == '\n') {
+          ++begin;
+          continue;
+        }
+        begin = saved_begin;
+        break;
+      }
+      // Check of C pre-processor annotations.
+      if (*begin == '#' && std::regex_search(begin, end, results, hash_comment)) {
+        begin = results.suffix().first;
+        continue;
+      }
+      // Check of C comments.
+      if (*begin == '/' && (std::regex_search(begin, end, results, slash_slash_comment) ||
+                            std::regex_search(begin, end, results, slash_star_comment))) {
+        begin = results.suffix().first;
+        continue;
+      }
+      break;
+    }
     if (begin == end) return token(token::eof, "");
     // Look for keywords first
-    bool found;
-    std::match_results<std::string::const_iterator> results;
-    found = std::regex_search(begin, end, results, basic_id_token);
-    if (found) {
-      std::string str = results[1].str();
-      std::string str_lower = str;
-      for (char& c : str_lower) {
+    if ((*begin == '_' || std::isalpha(*begin) != 0) && std::regex_search(begin, end, results, basic_id_token)) {
+      const std::string_view str(&*(begin + results.position(1)), results.length(1));
+      scratch_str = str;
+      for (char& c : scratch_str) {
         c = std::tolower(c);
       }
       begin = results.suffix().first;
-      if (str_lower == "strict") {
-        return token(token::kw_strict, str);
-      } else if (str_lower == "graph") {
-        return token(token::kw_graph, str);
-      } else if (str_lower == "digraph") {
-        return token(token::kw_digraph, str);
-      } else if (str_lower == "node") {
-        return token(token::kw_node, str);
-      } else if (str_lower == "edge") {
-        return token(token::kw_edge, str);
-      } else if (str_lower == "subgraph") {
-        return token(token::kw_subgraph, str);
+      if (keywords.contains(scratch_str)) {
+        return token(keywords[scratch_str], str);
       } else {
         return token(token::identifier, str);
       }
     }
-    found = std::regex_search(begin, end, results, punctuation_token);
-    if (found) {
-      std::string str = results[1].str();
-      begin = results.suffix().first;
-      switch (str[0]) {
-        case '[':
-          return token(token::left_bracket, str);
-        case ']':
-          return token(token::right_bracket, str);
-        case '{':
-          return token(token::left_brace, str);
-        case '}':
-          return token(token::right_brace, str);
-        case ';':
-          return token(token::semicolon, str);
-        case '=':
-          return token(token::equal, str);
-        case ',':
-          return token(token::comma, str);
-        case ':':
-          return token(token::colon, str);
-        case '+':
-          return token(token::plus, str);
-        case '(':
-          return token(token::left_paren, str);
-        case ')':
-          return token(token::right_paren, str);
-        case '@':
-          return token(token::at, str);
-        case '-': {
-          switch (str[1]) {
+    // Check for punctuations and operators.
+    switch (*begin) {
+      case '[':
+        return token(token::left_bracket, std::string_view{&*begin++, 1});
+      case ']':
+        return token(token::right_bracket, std::string_view{&*begin++, 1});
+      case '{':
+        return token(token::left_brace, std::string_view{&*begin++, 1});
+      case '}':
+        return token(token::right_brace, std::string_view{&*begin++, 1});
+      case ';':
+        return token(token::semicolon, std::string_view{&*begin++, 1});
+      case '=':
+        return token(token::equal, std::string_view{&*begin++, 1});
+      case ',':
+        return token(token::comma, std::string_view{&*begin++, 1});
+      case ':':
+        return token(token::colon, std::string_view{&*begin++, 1});
+      case '+':
+        return token(token::plus, std::string_view{&*begin++, 1});
+      case '(':
+        return token(token::left_paren, std::string_view{&*begin++, 1});
+      case ')':
+        return token(token::right_paren, std::string_view{&*begin++, 1});
+      case '@':
+        return token(token::at, std::string_view{&*begin++, 1});
+      case '-': {
+        const auto saved_begin = begin++;
+        if (begin != end) {
+          switch (*begin) {
             case '-':
-              return token(token::dash_dash, str);
+              ++begin;
+              return token(token::dash_dash, std::string_view{&*saved_begin, 2});
             case '>':
-              return token(token::dash_greater, str);
+              ++begin;
+              return token(token::dash_greater, std::string_view{&*saved_begin, 2});
             default:
-              assert(!"Definition of punctuation_token does "
-                                      "not match switch statement");
+              break;
           }
-          // Prevent static analyzers complaining about fallthrough:
-          break;
         }
-        default:
-          assert(!"Definition of punctuation_token does not "
-                                  "match switch statement");
+        begin = saved_begin;
+        // Prevent static analyzers complaining about fallthrough:
+        break;
       }
+      default:
+        break;
     }
-    found = std::regex_search(begin, end, results, number_token);
-    if (found) {
-      std::string str = results[1].str();
+    // Check for numbers.
+    if ((*begin == '-' || *begin == '.' || std::isdigit(*begin) != 0) &&
+        std::regex_search(begin, end, results, number_token)) {
+      const std::string_view str(&*(begin + results.position(1)), results.length(1));
       begin = results.suffix().first;
       return token(token::identifier, str);
     }
-    found = std::regex_search(begin, end, results, quoted_string_token);
-    if (found) {
-      std::string str = results[1].str();
+    if (*begin == '"' && std::regex_search(begin, end, results, quoted_string_token)) {
+      const std::string_view str(&*(begin + results.position(1)), results.length(1));
       begin = results.suffix().first;
-      // Remove the beginning and ending quotes
       assert(str.size() >= 2);
-      str.erase(str.begin());
-      str.erase(str.end() - 1);
       // Unescape quotes in the middle, but nothing else (see format
       // spec)
-      for (size_t i = 0; i + 1 < str.size() /* May change */; ++i) {
+      // Start at 1 (after quote)
+      std::string& res_str = mutated_tokens.emplace_back();
+      res_str.reserve(str.size());
+      for (size_t i = 1; i + 1 < str.size(); ++i) {
         if (str[i] == '\\' && str[i + 1] == '"') {
-          str.erase(str.begin() + i);
-          // Don't need to adjust i
+          res_str += '"';  // Add quote.
+          ++i;             // Skip escape seq.
         } else if (str[i] == '\\' && str[i + 1] == '\n') {
-          str.erase(str.begin() + i);
-          str.erase(str.begin() + i);
-          --i;  // Invert ++ that will be applied
+          ++i;  // Skip escape seq, remove newline.
+        } else {
+          res_str += str[i];
         }
       }
-      return token(token::quoted_string, str);
+      return token(token::quoted_string, res_str);
     }
     if (*begin == '<') {
       std::string::const_iterator saved_begin = begin;
@@ -443,25 +471,27 @@ struct tokenizer {
           ++begin;
           continue;
         }
-        found = std::regex_search(begin, end, results, xml_tag_token);
-        if (found) {
-          begin = results.suffix().first;
-          if (results[1].str() == "/") {  // Close tag
+        if (std::regex_search(begin, end, results, xml_tag_token)) {
+          if (*(begin + results.position(1)) == '/') {  // Close tag
             --counter;
-          } else if (results[2].str() == "/") {  // Empty tag
-          } else {                               // Open tag
+          } else if (*(begin + results.position(2)) == '/') {  // Empty tag
+          } else {                                             // Open tag
             ++counter;
           }
-          continue;
-        }
-        found = std::regex_search(begin, end, results, cdata);
-        if (found) {
           begin = results.suffix().first;
           continue;
+        }
+        const std::string_view maybe_cdata(&*begin, end - begin);
+        if (maybe_cdata.starts_with("<![CDATA[")) {
+          const auto pos = maybe_cdata.find("]]>");
+          if (pos != maybe_cdata.npos) {
+            begin += pos + 3;
+            continue;
+          }
         }
         throw_lex_error("Invalid contents in HTML string");
       } while (counter > 0);
-      return token(token::identifier, std::string(saved_begin, begin));
+      return token(token::identifier, std::string_view(&*saved_begin, begin - saved_begin));
     } else {
       throw_lex_error("Invalid character");
       return token();
@@ -479,20 +509,21 @@ struct tokenizer {
   token get_token() {  // Handle string concatenation
     token t = get_token_raw();
     if (t.type != token::quoted_string) return t;
-    std::string str = t.normalized_value;
+    std::string& res_str = mutated_tokens.emplace_back();
+    res_str = t.normalized_value;
     while (peek_token_raw().type == token::plus) {
       get_token_raw();
       token t2 = get_token_raw();
       if (t2.type != token::quoted_string) {
         throw_lex_error("Must have quoted string after string concatenation");
       }
-      str += t2.normalized_value;
+      res_str += t2.normalized_value;
     }
-    return token(token::identifier, str);  // Note that quoted_string does not get
-                                           // passed to the parser
+    // Note that quoted_string does not get passed to the parser
+    return token(token::identifier, res_str);
   }
 
-  void throw_lex_error(const std::string& errmsg) { throw lex_error(errmsg, (begin == end ? '\0' : *begin)); }
+  void throw_lex_error(const std::string& errmsg) { throw lex_error(errmsg, begin, end); }
 };
 
 typedef std::string node_name;
@@ -697,7 +728,7 @@ struct parser {
             error("Wanted identifier as right side of =");
           }
           token id2 = get();
-          current_graph_props()[id.normalized_value] = id2.normalized_value;
+          current_graph_props()[std::string{id.normalized_value}] = id2.normalized_value;
         } else {
           edge_endpoint ep = parse_endpoint_rest(id);
           if (peek().type == token::dash_dash || peek().type == token::dash_greater) {  // Edge
@@ -841,12 +872,12 @@ struct parser {
         if (!id.location.empty()) error("Duplicate port location");
         switch (peek().type) {
           case token::identifier: {
-            id.location.push_back(get().normalized_value);
+            id.location.emplace_back(std::string{get().normalized_value});
             switch (peek().type) {
               case token::colon: {
                 get();
                 if (peek().type != token::identifier) error("Wanted identifier as port location");
-                id.location.push_back(get().normalized_value);
+                id.location.emplace_back(std::string{get().normalized_value});
                 goto parse_more;
               }
               default:
@@ -859,14 +890,14 @@ struct parser {
               error(
                   "Wanted identifier as first element of port "
                   "location");
-            id.location.push_back(get().normalized_value);
+            id.location.emplace_back(std::string{get().normalized_value});
             if (peek().type != token::comma) error("Wanted comma between parts of port location");
             get();
             if (peek().type != token::identifier)
               error(
                   "Wanted identifier as second element of port "
                   "location");
-            id.location.push_back(get().normalized_value);
+            id.location.emplace_back(std::string{get().normalized_value});
             if (peek().type != token::right_paren) error("Wanted right parenthesis to close port location");
             get();
             goto parse_more;
@@ -992,14 +1023,14 @@ struct parser {
           case token::right_bracket:
             break;
           case token::identifier: {
-            std::string lhs = get().normalized_value;
+            std::string_view lhs = get().normalized_value;
             std::string rhs = "true";
             if (peek().type == token::equal) {
               get();
               if (peek().type != token::identifier) error("Wanted identifier as value of attribute");
               rhs = get().normalized_value;
             }
-            props[lhs] = rhs;
+            props[std::string{lhs}] = rhs;
             break;
           }
           default:

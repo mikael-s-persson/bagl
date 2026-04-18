@@ -268,6 +268,28 @@ TEST(GraphVizTest, CommentsEmbeddedInStrings) {
   test_graph<Models::DiGraph>(gv, 2, Masses(), Weights());
 }
 
+// Comments embedded in strings
+TEST(GraphVizTest, ManyCommentsAndSkippables) {
+  std::string gv(R"""(digraph { // some one-liner continued \
+still talking...
+a0 [ label = "//depot/path/to/file_14#4" \
+];
+# pre-proc style comment
+a1 [ /* annoying intruding comment 
+over many lines */ label = "//depot/path/to/file_29#9" ];
+# pre-proc comment \
+continued on next line \
+and the next.
+                
+
+
+    a0 -> a1 [\
+     color=gray ];
+               }
+)""");
+  test_graph<Models::DiGraph>(gv, 2, Masses(), Weights());
+}
+
 TEST(GraphVizTest, BasicCSRDirectedGraph) {
   auto sample = sample_directed_full();
 
